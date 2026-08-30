@@ -116,6 +116,9 @@ export type EndingCondition = {
 };
 export type HotelStats = { hotelCondition: number; security: number; foodSustainability: number; waterSustainability: number; crime: number; survivorPopulation: number; averageTrust: number; resources: number };
 export type Reputations = { community: number; military: number; refugee: number; merchant: number; humanitarian: number };
+export type FacilityId = "water_purifier" | "food_production" | "armory" | "trade_network";
+export type HotelActionId = "repair_hotel" | "community_outreach" | "security_patrol" | "trade_run";
+export type FacilityDefinition = { id: FacilityId; name: string; description: string; cost: Partial<Resources>; statChanges: Partial<HotelStats>; reputationChanges: Partial<Reputations> };
 export type ActiveRelationship = { sourceId: string; targetId: string; type: string; value: number; distanceMultiplier: 1 | 1.5 | 2; weightedValue: number };
 export type ActiveSynergy = { id: string; name: string; guestIds: string[]; affectedRoomNumbers: number[]; description: string };
 
@@ -130,7 +133,7 @@ export type GamePhase =
   | "ending";
 
 export type GameState = {
-  version: 5;
+  version: 6;
   phase: GamePhase;
   day: number;
   rooms: Room[];
@@ -156,4 +159,6 @@ export type GameState = {
   fatherStoryProgress: number;
   endingRelatedFlags: EventFlags;
   activeEndingId: EndingId | null;
+  actionPoints: number;
+  maxActionPoints: number;
 };

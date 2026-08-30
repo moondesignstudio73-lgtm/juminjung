@@ -35,6 +35,8 @@ export function resolveDay(state: GameState): GameState {
   ];
   const eleanor = guests.find((guest) => guest.id === "eleanor");
   const stayingAfter = guests.filter((guest) => guest.status === "STAYING");
+  const acceptedSurvivors = guests.filter((guest) => guest.checkedInDay !== null && guest.status !== "REFUSED" && guest.alive);
+  const produced = { food: state.facilities.food_production ? 2 : 0, water: state.facilities.water_purifier ? 2 : 0 };
   const nextState: GameState = {
     ...state,
     day: nextDay,
@@ -43,8 +45,8 @@ export function resolveDay(state: GameState): GameState {
     rooms: recalculateRoomEffects(emptied, guests),
     resources: {
       ...state.resources,
-      food: Math.max(0, state.resources.food - consumed.food),
-      water: Math.max(0, state.resources.water - consumed.water),
+      food: Math.max(0, state.resources.food - consumed.food + produced.food),
+      water: Math.max(0, state.resources.water - consumed.water + produced.water),
       fuel: Math.max(0, state.resources.fuel - consumed.fuel),
     },
     flags: {
@@ -57,10 +59,11 @@ export function resolveDay(state: GameState): GameState {
     hotelStats: {
       ...state.hotelStats,
       security: state.resources.security,
-      survivorPopulation: stayingAfter.filter((guest) => guest.alive).length,
-      averageTrust: stayingAfter.length ? Math.round(stayingAfter.reduce((sum, guest) => sum + guest.trust, 0) / stayingAfter.length) : 0,
+      survivorPopulation: acceptedSurvivors.length,
+      averageTrust: acceptedSurvivors.length ? Math.round(acceptedSurvivors.reduce((sum, guest) => sum + guest.trust, 0) / acceptedSurvivors.length) : 0,
       resources: Math.min(100, Math.round((state.resources.food + state.resources.water + state.resources.fuel) / 3)),
     },
+    actionPoints: state.maxActionPoints,
   };
   nextState.worldState = determineWorldState(nextState);
   const endings = evaluateEndings(nextState);

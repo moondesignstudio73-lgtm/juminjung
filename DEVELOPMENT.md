@@ -17,13 +17,16 @@ Understood as: grow the published browser game into an open-duration hotel survi
 - Unbounded DAY progression; DAY records survival time but never triggers an ending by itself
 - Seven data-driven ending routes that unlock optional final events without stopping normal management
 - A soft-pressure World State derived from time, scarcity, threat, and hotel stability
+- Two daily action points for repair, community, patrol, and trade decisions
+- Four buildable facilities with resource costs, passive production, stat changes, and faction reputation effects
+- Save v6 restoration for facilities, reputations, and remaining daily actions
 
 ## Next system priorities
 
 - Turn the five featured event-chain stages into authored choice scenes with explicit conditions and consequences
 - Apply relationship weights to conditional guest events and surface relationship changes in the journal
-- Add action points and meaningful daytime hotel actions
-- Add conditional night events, shortage consequences, monster threat, and reputation
+- Add conditional night events, shortage consequences, monster threat, and reputation-driven visitor reactions
+- Add facility upgrades and balance the resource economy across long campaigns
 - Expand HOTEL LOG into an accessible journal and author each unlocked final event and epilogue
 
 ## Main NPC catalog

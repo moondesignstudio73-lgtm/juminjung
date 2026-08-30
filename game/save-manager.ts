@@ -25,19 +25,19 @@ function mergeGuest(catalogGuest: ReturnType<typeof createGuests>[number], saved
 }
 
 export function createInitialGameState(): GameState {
-  return { version: 5, phase: "title", day: 0, rooms: createRooms(), guests: createGuests(), resources: createResources(), flags: createEventFlags(), asked: [], inspected: [], negotiated: false, held: false, decision: null, assignmentMode: null, selectedRoomNumber: null, eventHistory: [], lastDaySummary: null, worldState: "STABLE", hotelStats: { hotelCondition: 60, security: 35, foodSustainability: 0, waterSustainability: 0, crime: 0, survivorPopulation: 0, averageTrust: 0, resources: 40 }, reputations: { community: 0, military: 0, refugee: 0, merchant: 0, humanitarian: 0 }, facilities: {}, availableEndings: [], completedEndingFlags: [], endingProgress: {}, fatherStoryProgress: 0, endingRelatedFlags: {}, activeEndingId: null };
+  return { version: 6, phase: "title", day: 0, rooms: createRooms(), guests: createGuests(), resources: createResources(), flags: createEventFlags(), asked: [], inspected: [], negotiated: false, held: false, decision: null, assignmentMode: null, selectedRoomNumber: null, eventHistory: [], lastDaySummary: null, worldState: "STABLE", hotelStats: { hotelCondition: 60, security: 35, foodSustainability: 0, waterSustainability: 0, crime: 0, survivorPopulation: 0, averageTrust: 0, resources: 40 }, reputations: { community: 0, military: 0, refugee: 0, merchant: 0, humanitarian: 0 }, facilities: {}, availableEndings: [], completedEndingFlags: [], endingProgress: {}, fatherStoryProgress: 0, endingRelatedFlags: {}, activeEndingId: null, actionPoints: 2, maxActionPoints: 2 };
 }
 
 export function restoreGameState(raw: string | null): GameState {
   if (!raw) return createInitialGameState();
   try {
     const decoded = JSON.parse(raw) as { version?: number; rooms?: unknown; guests?: unknown };
-    if (![2, 3, 4, 5].includes(decoded.version ?? 0) || !Array.isArray(decoded.rooms) || !Array.isArray(decoded.guests)) return createInitialGameState();
+    if (![2, 3, 4, 5, 6].includes(decoded.version ?? 0) || !Array.isArray(decoded.rooms) || !Array.isArray(decoded.guests)) return createInitialGameState();
     const parsed = decoded as unknown as Partial<GameState>;
     const base = createInitialGameState();
     const savedGuests = parsed.guests!;
     const guests = createGuests().map((catalogGuest) => mergeGuest(catalogGuest, savedGuests.find((guest) => guest.id === catalogGuest.id)));
-    const state = { ...base, ...parsed, version: 5, phase: parsed.phase === "ending" && !parsed.activeEndingId ? "report" : parsed.phase ?? base.phase, resources: { ...base.resources, ...parsed.resources }, flags: { ...base.flags, ...parsed.flags }, hotelStats: { ...base.hotelStats, ...parsed.hotelStats }, reputations: { ...base.reputations, ...parsed.reputations }, facilities: { ...base.facilities, ...parsed.facilities }, endingRelatedFlags: { ...base.endingRelatedFlags, ...parsed.endingRelatedFlags }, rooms: parsed.rooms!, guests, eventHistory: parsed.eventHistory ?? [], lastDaySummary: parsed.lastDaySummary ?? null, availableEndings: parsed.availableEndings ?? [], completedEndingFlags: parsed.completedEndingFlags ?? [], endingProgress: parsed.endingProgress ?? {}, activeEndingId: parsed.activeEndingId ?? null } as GameState;
+    const state = { ...base, ...parsed, version: 6, phase: parsed.phase === "ending" && !parsed.activeEndingId ? "report" : parsed.phase ?? base.phase, resources: { ...base.resources, ...parsed.resources }, flags: { ...base.flags, ...parsed.flags }, hotelStats: { ...base.hotelStats, ...parsed.hotelStats }, reputations: { ...base.reputations, ...parsed.reputations }, facilities: { ...base.facilities, ...parsed.facilities }, endingRelatedFlags: { ...base.endingRelatedFlags, ...parsed.endingRelatedFlags }, rooms: parsed.rooms!, guests, eventHistory: parsed.eventHistory ?? [], lastDaySummary: parsed.lastDaySummary ?? null, availableEndings: parsed.availableEndings ?? [], completedEndingFlags: parsed.completedEndingFlags ?? [], endingProgress: parsed.endingProgress ?? {}, activeEndingId: parsed.activeEndingId ?? null, actionPoints: parsed.actionPoints ?? base.maxActionPoints, maxActionPoints: parsed.maxActionPoints ?? base.maxActionPoints } as GameState;
     return { ...state, rooms: recalculateRoomEffects(state.rooms, state.guests) };
   } catch { return createInitialGameState(); }
 }
