@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createGuests } from "../game/guest-data.ts";
-import { getGuestVisualState, getNightEventPortraitGuestIds } from "../game/guest-visual-manager.ts";
+import { getGuestVisualState, getNightEventPortraits } from "../game/guest-visual-manager.ts";
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
 
 const guest = (id: string) => createGuests().find((item) => item.id === id)!;
@@ -23,11 +23,14 @@ test("등록된 모든 반신 일러스트는 실제 1024×1536 PNG 자산을 �
   }
 });
 
-test("관계 야간 사건은 두 NPC의 대치 초상화 ID를 제공한다", () => {
-  assert.deepEqual(getNightEventPortraitGuestIds("owen_hayes_standoff"), ["owen", "hayes"]);
-  assert.deepEqual(getNightEventPortraitGuestIds("medical_shift"), ["eleanor", "ruth"]);
-  assert.deepEqual(getNightEventPortraitGuestIds("lily_vale_breakthrough"), ["lily", "vale"]);
-  assert.equal(getNightEventPortraitGuestIds("quiet_watch"), null);
+test("관계 야간 사건은 두 NPC와 사건 전용 표정을 제공한다", () => {
+  const standoff = getNightEventPortraits("owen_hayes_standoff");
+  assert.deepEqual(standoff, [{ guestId: "owen", expression: "angry" }, { guestId: "hayes", expression: "angry" }]);
+  assert.deepEqual(getNightEventPortraits("medical_shift"), [{ guestId: "eleanor" }, { guestId: "ruth" }]);
+  assert.deepEqual(getNightEventPortraits("lily_vale_breakthrough"), [{ guestId: "lily" }, { guestId: "vale" }]);
+  assert.equal(getNightEventPortraits("quiet_watch"), null);
+  assert.equal(getGuestVisualState(guest("owen"), standoff?.[0].expression).asset, "/juminjung/assets/portraits/owen/angry-v1.png");
+  assert.equal(getGuestVisualState(guest("hayes"), standoff?.[1].expression).asset, "/juminjung/assets/portraits/hayes/angry-v1.png");
 });
 
 test("도착 대기 중인 방문자는 젖은 옷 상태로 표시된다", () => {

@@ -35,13 +35,13 @@ Understood as: grow the published browser game into an open-duration hotel survi
 - HOTEL JOURNAL exposes the complete reverse-chronological record with check-in, checkout, resource, and event filters plus relationship details
 - Every ending route now has a distinct three-scene final event and epilogue; progress saves mid-scene and completion returns to open-ended operation
 - All 20 main NPCs now appear as large authored half-body 2D sprites at the front desk and in their story scenes
-- The portrait catalog selects authored assets per expression with a neutral fallback; Eleanor and Ruth have distinct afraid and injured variants, Mr. White has a suspicious variant, and save restoration refreshes variant paths from the catalog
-- Relationship night events can stage two available character portraits around the central choice panel; Owen and Hayes face off during their military standoff, while Lily and Vale compare outbreak evidence during their investigation breakthrough
+- The portrait catalog selects authored assets per expression with a neutral fallback; Eleanor and Ruth have afraid and injured variants, Mr. White has a suspicious variant, Owen and Hayes have angry variants, and save restoration refreshes variant paths from the catalog
+- Relationship night events can stage two character portraits with event-authored expression overrides; Owen and Hayes face off angrily during their military standoff, while Lily and Vale compare outbreak evidence during their investigation breakthrough
 - Guest visual state is derived from Health, Stress, infection, and arrival status, exposing wet, exhausted, bandaged, bloodied, and infection-suspected presentation layers
 
 ## Next system priorities
 
-- Expand authored expression and condition variants from Eleanor, Ruth, and Mr. White to the remaining 17-character portrait catalog
+- Expand authored expression and condition variants from Eleanor, Ruth, Mr. White, Owen, and Hayes to the remaining 15-character portrait catalog
 
 ## Main NPC catalog
 

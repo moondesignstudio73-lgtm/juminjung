@@ -22,8 +22,8 @@ import { buildFacility, canBuildFacility, performHotelAction } from '@/game/hote
 import { canChooseNightChoice, selectNightEvent } from '@/game/night-event-manager';
 import { getHotelLogEntries } from '@/game/hotel-log-manager';
 import { applyVisitorCheckInBenefits, getEligibleVisitor, getVisitorReaction, getVisitorReactionById, markVisitorRefused } from '@/game/visitor-manager';
-import { getGuestVisualState, getNightEventPortraitGuestIds } from '@/game/guest-visual-manager';
-import type { FacilityId, GameState, Guest, HotelActionId, Room } from '@/game/types';
+import { getGuestVisualState, getNightEventPortraits } from '@/game/guest-visual-manager';
+import type { FacilityId, GameState, Guest, GuestExpression, HotelActionId, Room } from '@/game/types';
 
 type UiSave = GameState & { prologue: number };
 const makeInitial = (): UiSave => ({ ...createInitialGameState(), prologue: 0 });
@@ -213,8 +213,8 @@ function Status({ icon: Icon, label, value }: { icon: typeof Fuel; label: string
   return <div className="resource-line"><Icon/><span>{label}</span><i><b style={{width:`${value}%`}} /></i><em>{value}</em></div>;
 }
 
-function CharacterSprite({ guest, context }: { guest: Guest; context: 'desk' | 'story' | 'event-left' | 'event-right' }) {
-  const visual = getGuestVisualState(guest);
+function CharacterSprite({ guest, context, expression }: { guest: Guest; context: 'desk' | 'story' | 'event-left' | 'event-right'; expression?: GuestExpression }) {
+  const visual = getGuestVisualState(guest, expression);
   if (!visual.asset) return null;
   return <figure className={`character-sprite ${context} expression-${visual.expression} ${visual.modifiers.map((item)=>`state-${item.toLowerCase()}`).join(' ')}`} data-expression={visual.expression} aria-label={`${guest.name} · ${visual.label}`}>
     <img src={visual.asset} alt={`${guest.name}의 ${visual.expression} 표정 반신 일러스트`} />
@@ -259,10 +259,10 @@ function HotelManagement({ state, guest, hasStayingGuest, onBuild, onAction, onM
 
 function NightEvent({ state, onChoose }: { state:UiSave; onChoose:(eventId:string,choiceId:string)=>void }) {
   const event = selectNightEvent(state);
-  const portraitIds = getNightEventPortraitGuestIds(event.id);
-  const leftGuest = portraitIds ? state.guests.find((guest)=>guest.id===portraitIds[0]) : undefined;
-  const rightGuest = portraitIds ? state.guests.find((guest)=>guest.id===portraitIds[1]) : undefined;
-  return <main className="event-screen"><div className="event-light"/><Radio className="event-icon"/>{leftGuest&&<CharacterSprite guest={leftGuest} context="event-left"/>}{rightGuest&&<CharacterSprite guest={rightGuest} context="event-right"/>}<p className="scene-index">DAY {state.day} · 오전 2:13 · THREAT {String(state.flags.monster_threat??0)}</p><section><span>야간 사건 · {state.worldState}</span><h1>{event.title}</h1><p>{event.description}</p><blockquote>{event.quote}</blockquote><div className="night-choices">{event.choices.map((choice)=><Button key={choice.id} disabled={!canChooseNightChoice(state,choice)} onClick={()=>onChoose(event.id,choice.id)}><span>{choice.label}</span><small>{choice.description}</small><ChevronRight/></Button>)}</div></section></main>;
+  const portraits = getNightEventPortraits(event.id);
+  const leftGuest = portraits ? state.guests.find((guest)=>guest.id===portraits[0].guestId) : undefined;
+  const rightGuest = portraits ? state.guests.find((guest)=>guest.id===portraits[1].guestId) : undefined;
+  return <main className="event-screen"><div className="event-light"/><Radio className="event-icon"/>{leftGuest&&<CharacterSprite guest={leftGuest} context="event-left" expression={portraits?.[0].expression}/>} {rightGuest&&<CharacterSprite guest={rightGuest} context="event-right" expression={portraits?.[1].expression}/>}<p className="scene-index">DAY {state.day} · 오전 2:13 · THREAT {String(state.flags.monster_threat??0)}</p><section><span>야간 사건 · {state.worldState}</span><h1>{event.title}</h1><p>{event.description}</p><blockquote>{event.quote}</blockquote><div className="night-choices">{event.choices.map((choice)=><Button key={choice.id} disabled={!canChooseNightChoice(state,choice)} onClick={()=>onChoose(event.id,choice.id)}><span>{choice.label}</span><small>{choice.description}</small><ChevronRight/></Button>)}</div></section></main>;
 }
 
 function StoryChoiceScene({ state, onChoose }: { state:UiSave; onChoose:(eventId:string,choiceId:string)=>void }) {

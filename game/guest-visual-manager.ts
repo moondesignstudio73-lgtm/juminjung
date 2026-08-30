@@ -9,17 +9,19 @@ export type GuestVisualState = {
   label: string;
 };
 
-const NIGHT_EVENT_GUESTS: Partial<Record<string, [string, string]>> = {
-  medical_shift: ["eleanor", "ruth"],
-  owen_hayes_standoff: ["owen", "hayes"],
-  lily_vale_breakthrough: ["lily", "vale"],
+export type NightEventPortrait = { guestId: string; expression?: GuestExpression };
+
+const NIGHT_EVENT_PORTRAITS: Partial<Record<string, [NightEventPortrait, NightEventPortrait]>> = {
+  medical_shift: [{ guestId: "eleanor" }, { guestId: "ruth" }],
+  owen_hayes_standoff: [{ guestId: "owen", expression: "angry" }, { guestId: "hayes", expression: "angry" }],
+  lily_vale_breakthrough: [{ guestId: "lily" }, { guestId: "vale" }],
 };
 
-export function getNightEventPortraitGuestIds(eventId: string): [string, string] | null {
-  return NIGHT_EVENT_GUESTS[eventId] ?? null;
+export function getNightEventPortraits(eventId: string): [NightEventPortrait, NightEventPortrait] | null {
+  return NIGHT_EVENT_PORTRAITS[eventId] ?? null;
 }
 
-export function getGuestVisualState(guest: Guest): GuestVisualState {
+export function getGuestVisualState(guest: Guest, expressionOverride?: GuestExpression): GuestVisualState {
   const modifiers: GuestVisualModifier[] = [];
   const infected = guest.infectionState === "INFECTED" || guest.infectionState === "INFECTED_SUSPECTED";
   const injured = guest.infectionState === "INJURED" || guest.health <= 45;
@@ -37,6 +39,7 @@ export function getGuestVisualState(guest: Guest): GuestVisualState {
   else if (guest.riskLevel >= 70 || guest.trust <= 10) expression = "suspicious";
   else if (guest.trust >= 75 && guest.stress <= 35) expression = "happy";
   else if (guest.stress >= 60) expression = "sad";
+  if (expressionOverride) expression = expressionOverride;
 
   const labels: Record<GuestVisualModifier, string> = {
     WET: "젖은 옷",
