@@ -19,13 +19,15 @@ Understood as: grow the published browser game into an open-duration hotel survi
 - A soft-pressure World State derived from time, scarcity, threat, and hotel stability
 - Two daily action points for repair, community, patrol, and trade decisions
 - Four buildable facilities with resource costs, passive production, stat changes, and faction reputation effects
-- Save v6 restoration for facilities, reputations, and remaining daily actions
+- Save v7 restoration for facilities, reputations, remaining daily actions, and pending night choices
+- Conditional night events driven by World State, shortages, Monster Threat, Security, and resources
+- Two-choice night outcomes that alter resources, hotel stats, faction reputation, flags, and guest condition
 
 ## Next system priorities
 
 - Turn the five featured event-chain stages into authored choice scenes with explicit conditions and consequences
 - Apply relationship weights to conditional guest events and surface relationship changes in the journal
-- Add conditional night events, shortage consequences, monster threat, and reputation-driven visitor reactions
+- Add reputation-driven visitor reactions and authored follow-up scenes for night-event consequences
 - Add facility upgrades and balance the resource economy across long campaigns
 - Expand HOTEL LOG into an accessible journal and author each unlocked final event and epilogue
 

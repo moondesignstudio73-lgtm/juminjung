@@ -1,7 +1,7 @@
 import type { EventFlags } from "./types.ts";
 
 export function createEventFlags(): EventFlags {
-  return { eleanor_checked_in: false, eleanor_room: 0 };
+  return { eleanor_checked_in: false, eleanor_room: 0, monster_threat: 0, faction_pressure: 0 };
 }
 
 export function setGuestRoomFlags(flags: EventFlags, roomNumber: number | null): EventFlags {

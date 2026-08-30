@@ -119,6 +119,10 @@ export type Reputations = { community: number; military: number; refugee: number
 export type FacilityId = "water_purifier" | "food_production" | "armory" | "trade_network";
 export type HotelActionId = "repair_hotel" | "community_outreach" | "security_patrol" | "trade_run";
 export type FacilityDefinition = { id: FacilityId; name: string; description: string; cost: Partial<Resources>; statChanges: Partial<HotelStats>; reputationChanges: Partial<Reputations> };
+export type NightEventCondition = { worldStates?: WorldState[]; minimumDay?: number; dayModulo?: number; minimumThreat?: number; maximumSecurity?: number; maximumResource?: Partial<Resources>; shortage?: "food" | "water"; requiresGuests?: boolean };
+export type NightEventEffect = { resources?: Partial<Resources>; hotelStats?: Partial<HotelStats>; reputations?: Partial<Reputations>; flags?: EventFlags; threat?: number; allGuestStress?: number; targetGuestHealth?: number };
+export type NightEventChoice = { id: string; label: string; description: string; requiredResources?: Partial<Resources>; effect: NightEventEffect };
+export type NightEventDefinition = { id: string; title: string; description: string; quote: string; priority: number; condition: NightEventCondition; choices: NightEventChoice[] };
 export type ActiveRelationship = { sourceId: string; targetId: string; type: string; value: number; distanceMultiplier: 1 | 1.5 | 2; weightedValue: number };
 export type ActiveSynergy = { id: string; name: string; guestIds: string[]; affectedRoomNumbers: number[]; description: string };
 
@@ -133,7 +137,7 @@ export type GamePhase =
   | "ending";
 
 export type GameState = {
-  version: 6;
+  version: 7;
   phase: GamePhase;
   day: number;
   rooms: Room[];
@@ -161,4 +165,7 @@ export type GameState = {
   activeEndingId: EndingId | null;
   actionPoints: number;
   maxActionPoints: number;
+  selectedNightEventId: string | null;
+  selectedNightChoiceId: string | null;
+  lastNightEventId: string | null;
 };

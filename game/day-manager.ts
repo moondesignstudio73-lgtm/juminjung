@@ -3,12 +3,16 @@ import { checkoutGuest } from "./room-manager.ts";
 import { advanceHotelStories } from "./story-event-manager.ts";
 import { evaluateEndings } from "./ending-manager.ts";
 import { determineWorldState } from "./world-state-manager.ts";
+import { applyNightChoice, selectNightEvent } from "./night-event-manager.ts";
 import type { DaySummary, GameState, HotelLogEntry } from "./types.ts";
 
 export function advanceDay(day: number): number { return Math.max(0, day) + 1; }
 
 export function resolveDay(state: GameState): GameState {
   if (state.phase !== "night") throw new Error("DAY 정산은 야간 단계에서 한 번만 실행할 수 있습니다.");
+  const selectedEvent = selectNightEvent(state);
+  const night = applyNightChoice(state, state.selectedNightEventId ?? selectedEvent.id, state.selectedNightChoiceId ?? selectedEvent.choices.at(-1)!.id);
+  state = night.state;
   const story = advanceHotelStories(state.guests, state.day, state.rooms);
   const staying = story.guests.filter((guest) => guest.status === "STAYING" && guest.currentRoomNumber !== null);
   const stayingIds = new Set(staying.map((guest) => guest.id));
@@ -29,6 +33,7 @@ export function resolveDay(state: GameState): GameState {
   const nextDay = advanceDay(state.day);
   const summary: DaySummary = { completedDay: state.day, nextDay, occupiedGuests: staying.length, consumed, checkedOutGuestIds };
   const entries: HotelLogEntry[] = [
+    night.entry,
     ...story.entries,
     { day: state.day, type: "RESOURCE", message: `식량 ${consumed.food}, 물 ${consumed.water}, 연료 ${consumed.fuel} 소비` },
     ...checkedOutGuestIds.map((guestId): HotelLogEntry => ({ day: nextDay, type: "CHECK_OUT", message: `${state.guests.find((guest) => guest.id === guestId)?.name ?? guestId} · 숙박 종료 자동 체크아웃` })),
@@ -58,12 +63,15 @@ export function resolveDay(state: GameState): GameState {
     lastDaySummary: summary,
     hotelStats: {
       ...state.hotelStats,
-      security: state.resources.security,
+      security: state.hotelStats.security,
       survivorPopulation: acceptedSurvivors.length,
       averageTrust: acceptedSurvivors.length ? Math.round(acceptedSurvivors.reduce((sum, guest) => sum + guest.trust, 0) / acceptedSurvivors.length) : 0,
       resources: Math.min(100, Math.round((state.resources.food + state.resources.water + state.resources.fuel) / 3)),
     },
     actionPoints: state.maxActionPoints,
+    selectedNightEventId: null,
+    selectedNightChoiceId: null,
+    lastNightEventId: night.event.id,
   };
   nextState.worldState = determineWorldState(nextState);
   const endings = evaluateEndings(nextState);

@@ -17,10 +17,10 @@ import { completeEventStage } from '@/game/story-event-manager';
 import { getEndingCondition } from '@/game/ending-manager';
 import { FACILITIES } from '@/game/facility-data';
 import { buildFacility, canBuildFacility, performHotelAction } from '@/game/hotel-action-manager';
+import { canChooseNightChoice, selectNightEvent } from '@/game/night-event-manager';
 import { getEligibleVisitor, markVisitorRefused } from '@/game/visitor-manager';
 import type { FacilityId, GameState, Guest, HotelActionId, Room } from '@/game/types';
 
-type Decision = GameState['decision'];
 type UiSave = GameState & { prologue: number };
 const makeInitial = (): UiSave => ({ ...createInitialGameState(), prologue: 0 });
 
@@ -133,7 +133,7 @@ export default function Home() {
   }
   if (save.phase === 'assignment') return <RoomAssignment day={save.day} rooms={save.rooms} guest={save.assignmentMode === 'move' ? managedGuest : visitor} selected={save.selectedRoomNumber} mode={save.assignmentMode!} onSelect={(roomNumber) => update({ selectedRoomNumber: roomNumber })} onConfirm={confirmRoom} onCancel={() => update({ phase: save.assignmentMode === 'move' ? 'management' : 'desk', assignmentMode: null, selectedRoomNumber: null })} />;
   if (save.phase === 'management') return <HotelManagement state={save} guest={managedGuest} hasStayingGuest={Boolean(stayingGuest)} onBuild={(id) => setSave((current) => ({ ...buildFacility(current, id).state, prologue: current.prologue }))} onAction={(id) => setSave((current) => ({ ...performHotelAction(current, id).state, prologue: current.prologue }))} onMove={() => openAssignment('move')} onCheckout={checkout} onContinue={() => update({ phase: 'night' })} />;
-  if (save.phase === 'night') return <NightEvent day={save.day} decision={save.decision!} guestName={managedGuest.name} roomNumber={managedGuest.currentRoomNumber} onContinue={() => setSave((current) => ({ ...resolveDay(current), prologue: current.prologue }))} />;
+  if (save.phase === 'night') return <NightEvent state={save} onChoose={(eventId,choiceId) => setSave((current) => ({ ...resolveDay({ ...current, selectedNightEventId:eventId, selectedNightChoiceId:choiceId }), prologue: current.prologue }))} />;
   if (save.phase === 'report') return <MorningReport state={save} onStartEnding={(endingId) => update({ activeEndingId: endingId, phase: 'ending' })} onNext={() => { const nextVisitor = getEligibleVisitor(save.guests, save.day); const staying = save.guests.some((guest) => guest.status === 'STAYING'); update({ phase: nextVisitor ? 'desk' : staying ? 'management' : 'desk', decision: staying ? 'checkin' : null, asked: [], inspected: [], negotiated: false, held: false }); if (nextVisitor) setDialogue(nextVisitor.introDialogue); }} onReset={reset} />;
   if (save.phase === 'ending') return <CampaignEnding state={save} onReset={reset} onReturn={() => update({ activeEndingId: null, phase: 'report' })} onComplete={() => save.activeEndingId && update({ completedEndingFlags: [...new Set([...save.completedEndingFlags, save.activeEndingId])], availableEndings: save.availableEndings.filter((id) => id !== save.activeEndingId), endingProgress: { ...save.endingProgress, [save.activeEndingId]: 'COMPLETED' }, activeEndingId: null, phase: 'report' })} />;
 
@@ -234,9 +234,9 @@ function HotelManagement({ state, guest, hasStayingGuest, onBuild, onAction, onM
   </main>;
 }
 
-function NightEvent({ day, decision, guestName, roomNumber, onContinue }: { day:number; decision: Exclude<Decision,null>; guestName:string; roomNumber:number|null; onContinue:()=>void }) {
-  const accepted=decision==='checkin';
-  return <main className="event-screen"><div className="event-light"/><Radio className="event-icon"/><p className="scene-index">DAY {day} · 오전 2:13</p><section><span>야간 사건 · {accepted?`${roomNumber}호`:'동쪽 철문'}</span><h1>{accepted?'복도에서 들린 발소리':'세 번의 노크, 그리고 침묵'}</h1><p>{accepted?`${guestName}의 방문이 호텔의 밤을 바꾸었다. 복도 센서가 한 번 켜졌지만 침입 흔적은 없다. 투숙객들의 Health, Stress, 관계와 객실 Aura가 다음 조건부 사건의 원인이 된다.`:'라디오에서 잡음과 함께 낯선 목소리가 흘러나온다. 해 뜰 무렵 철문에는 발자국 하나 남아 있지 않다.'}</p><blockquote>{accepted?`“오늘 밤은 넘겼습니다.” — ${guestName}`:'같은 목소리가 한 번 더 말한다. “문을 열어.”'}</blockquote><Button onClick={onContinue}>밤을 넘긴다 <ChevronRight/></Button></section></main>;
+function NightEvent({ state, onChoose }: { state:UiSave; onChoose:(eventId:string,choiceId:string)=>void }) {
+  const event = selectNightEvent(state);
+  return <main className="event-screen"><div className="event-light"/><Radio className="event-icon"/><p className="scene-index">DAY {state.day} · 오전 2:13 · THREAT {String(state.flags.monster_threat??0)}</p><section><span>야간 사건 · {state.worldState}</span><h1>{event.title}</h1><p>{event.description}</p><blockquote>{event.quote}</blockquote><div className="night-choices">{event.choices.map((choice)=><Button key={choice.id} disabled={!canChooseNightChoice(state,choice)} onClick={()=>onChoose(event.id,choice.id)}><span>{choice.label}</span><small>{choice.description}</small><ChevronRight/></Button>)}</div></section></main>;
 }
 
 function MorningReport({ state, onNext, onReset, onStartEnding }: { state:UiSave; onNext:()=>void; onReset:()=>void; onStartEnding:(endingId:GameState['availableEndings'][number])=>void }) {
