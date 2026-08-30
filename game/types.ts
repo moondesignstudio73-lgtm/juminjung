@@ -3,7 +3,7 @@ export type DiseaseType = "NORMAL_DISEASE" | "MONSTER_INFECTION" | "STORY_DISEAS
 
 export type Position = { x: number; y: number };
 
-export type AuraMetric = "diseaseChance" | "breakdownRisk" | "stress" | "security" | "foodUse" | "trade" | "information" | "monsterThreat" | "theftRisk" | "trust";
+export type AuraMetric = "diseaseChance" | "injuryRecovery" | "breakdownRisk" | "stress" | "security" | "foodUse" | "trade" | "information" | "monsterThreat" | "theftRisk" | "trust";
 export type RoomEffect = {
   id: string;
   sourceGuestId: string;
@@ -93,6 +93,8 @@ export type DaySummary = {
 };
 
 export type EventFlags = Record<string, boolean | number | string>;
+export type ActiveRelationship = { sourceId: string; targetId: string; type: string; value: number; distanceMultiplier: 1 | 1.5 | 2; weightedValue: number };
+export type ActiveSynergy = { id: string; name: string; guestIds: string[]; affectedRoomNumbers: number[]; description: string };
 
 export type GamePhase =
   | "title"

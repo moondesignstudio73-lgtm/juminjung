@@ -6,12 +6,14 @@ import {
   BedDouble, ChevronRight, CircleHelp, Droplets, Fuel, HeartPulse,
   Inspect, PackageSearch, Radio, RotateCcw, Shield, Soup, Volume2, VolumeX,
 } from 'lucide-react';
-import { getAffectedRoomNumbers, recalculateRoomEffects } from '@/game/aura-effect-manager';
+import { getActiveAuraSynergies, getAffectedRoomNumbers, recalculateRoomEffects } from '@/game/aura-effect-manager';
 import { resolveDay } from '@/game/day-manager';
 import { setGuestRoomFlags } from '@/game/event-manager';
 import { ELEANOR_ID } from '@/game/guest-data';
 import { clearBrowserGame, createInitialGameState, loadBrowserGame, saveBrowserGame } from '@/game/save-manager';
 import { assignGuest, checkoutGuest, isRoomSelectable, moveGuest } from '@/game/room-manager';
+import { getActiveRelationships } from '@/game/relationship-manager';
+import { completeEventStage } from '@/game/story-event-manager';
 import { getEligibleVisitor, markVisitorRefused } from '@/game/visitor-manager';
 import type { GameState, Guest, Room } from '@/game/types';
 
@@ -51,6 +53,7 @@ export default function Home() {
   const [muted, setMuted] = useState(false);
   const eligibleVisitor = getEligibleVisitor(save.guests, save.day);
   const visitor = eligibleVisitor ?? save.guests.find((guest) => guest.status === 'STAYING') ?? save.guests[0];
+  const managedGuest = [...save.guests].filter((guest) => guest.status === 'STAYING').sort((a,b) => (b.checkedInDay ?? 0) - (a.checkedInDay ?? 0))[0] ?? visitor;
 
   useEffect(() => {
     const restored = loadBrowserGame();
@@ -78,29 +81,32 @@ export default function Home() {
   const openAssignment = (mode: 'checkin' | 'move') => update({ phase: 'assignment', assignmentMode: mode, selectedRoomNumber: null });
   const confirmRoom = () => {
     if (save.selectedRoomNumber === null) return;
-    const guests = save.guests.map((guest) => guest.id === visitor.id ? {
+    const assignmentGuest = save.assignmentMode === 'move' ? managedGuest : visitor;
+    const positionedGuests = save.guests.map((guest) => guest.id === assignmentGuest.id ? {
       ...guest,
       currentRoomNumber: save.selectedRoomNumber,
       status: 'STAYING' as const,
       checkedInDay: guest.checkedInDay ?? save.day,
       remainingNights: save.assignmentMode === 'checkin' ? guest.stayDuration : guest.remainingNights,
     } : guest);
+    const arrival = save.assignmentMode === 'checkin' ? completeEventStage(positionedGuests, assignmentGuest.id, 'ARRIVAL') : { guests: positionedGuests, entry: null };
+    const guests = arrival.guests;
     const positioned = save.assignmentMode === 'move'
-      ? moveGuest(save.rooms, visitor.id, save.selectedRoomNumber)
-      : assignGuest(save.rooms, save.selectedRoomNumber, visitor.id);
+      ? moveGuest(save.rooms, assignmentGuest.id, save.selectedRoomNumber)
+      : assignGuest(save.rooms, save.selectedRoomNumber, assignmentGuest.id);
     const reward = save.assignmentMode === 'checkin' ? Object.fromEntries(Object.keys(save.resources).map((key) => [key, save.resources[key as keyof typeof save.resources] + (visitor.offer[key as keyof typeof visitor.offer] ?? 0) + (save.negotiated ? visitor.negotiatedOffer[key as keyof typeof visitor.negotiatedOffer] ?? 0 : 0)])) as typeof save.resources : save.resources;
     update({
       guests,
       rooms: recalculateRoomEffects(positioned, guests),
-      flags: visitor.id === ELEANOR_ID ? setGuestRoomFlags(save.flags, save.selectedRoomNumber) : save.flags,
+      flags: assignmentGuest.id === ELEANOR_ID ? setGuestRoomFlags(save.flags, save.selectedRoomNumber) : save.flags,
       resources: reward,
-      eventHistory: save.assignmentMode === 'checkin' ? [...save.eventHistory, { day: save.day, type: 'CHECK_IN' as const, message: `${visitor.name} · ${save.selectedRoomNumber}호 체크인` }] : save.eventHistory,
+      eventHistory: save.assignmentMode === 'checkin' ? [...save.eventHistory, { day: save.day, type: 'CHECK_IN' as const, message: `${visitor.name} · ${save.selectedRoomNumber}호 체크인` }, ...(arrival.entry ? [{ ...arrival.entry, day: save.day }] : [])] : save.eventHistory,
       decision: 'checkin', phase: 'management', assignmentMode: null,
     });
   };
   const checkout = () => {
-    const guests = save.guests.map((guest) => guest.id === visitor.id ? { ...guest, currentRoomNumber: null, status: 'CHECKED_OUT' as const, remainingNights: 0 } : guest);
-    update({ guests, rooms: recalculateRoomEffects(checkoutGuest(save.rooms, visitor.id), guests), flags: visitor.id === ELEANOR_ID ? setGuestRoomFlags(save.flags, null) : save.flags, eventHistory: [...save.eventHistory, { day: save.day, type: 'CHECK_OUT', message: `${visitor.name} · 수동 체크아웃` }], decision: null, phase: 'desk' });
+    const guests = save.guests.map((guest) => guest.id === managedGuest.id ? { ...guest, currentRoomNumber: null, status: 'CHECKED_OUT' as const, remainingNights: 0 } : guest);
+    update({ guests, rooms: recalculateRoomEffects(checkoutGuest(save.rooms, managedGuest.id), guests), flags: managedGuest.id === ELEANOR_ID ? setGuestRoomFlags(save.flags, null) : save.flags, eventHistory: [...save.eventHistory, { day: save.day, type: 'CHECK_OUT', message: `${managedGuest.name} · 수동 체크아웃` }], decision: null, phase: 'desk' });
   };
 
   if (save.phase === 'title') return <TitleScreen onStart={() => update({ phase: 'prologue' })} muted={muted} setMuted={setMuted} />;
@@ -121,9 +127,8 @@ export default function Home() {
       </main>
     );
   }
-  const managedGuest = [...save.guests].filter((guest) => guest.status === 'STAYING').sort((a,b) => (b.checkedInDay ?? 0) - (a.checkedInDay ?? 0))[0] ?? visitor;
-  if (save.phase === 'assignment') return <RoomAssignment day={save.day} rooms={save.rooms} guest={visitor} selected={save.selectedRoomNumber} mode={save.assignmentMode!} onSelect={(roomNumber) => update({ selectedRoomNumber: roomNumber })} onConfirm={confirmRoom} onCancel={() => update({ phase: save.assignmentMode === 'move' ? 'management' : 'desk', assignmentMode: null, selectedRoomNumber: null })} />;
-  if (save.phase === 'management') return <HotelManagement day={save.day} rooms={save.rooms} guest={managedGuest} resources={save.resources} onMove={() => openAssignment('move')} onCheckout={checkout} onContinue={() => update({ phase: 'night' })} />;
+  if (save.phase === 'assignment') return <RoomAssignment day={save.day} rooms={save.rooms} guest={save.assignmentMode === 'move' ? managedGuest : visitor} selected={save.selectedRoomNumber} mode={save.assignmentMode!} onSelect={(roomNumber) => update({ selectedRoomNumber: roomNumber })} onConfirm={confirmRoom} onCancel={() => update({ phase: save.assignmentMode === 'move' ? 'management' : 'desk', assignmentMode: null, selectedRoomNumber: null })} />;
+  if (save.phase === 'management') return <HotelManagement day={save.day} rooms={save.rooms} guest={managedGuest} allGuests={save.guests} resources={save.resources} onMove={() => openAssignment('move')} onCheckout={checkout} onContinue={() => update({ phase: 'night' })} />;
   if (save.phase === 'night') return <NightEvent day={save.day} decision={save.decision!} guestName={managedGuest.name} roomNumber={managedGuest.currentRoomNumber} onContinue={() => setSave((current) => ({ ...resolveDay(current), prologue: current.prologue }))} />;
   if (save.phase === 'report') return <MorningReport state={save} onNext={() => { const nextVisitor = getEligibleVisitor(save.guests, save.day); const staying = save.guests.some((guest) => guest.status === 'STAYING'); update({ phase: nextVisitor ? 'desk' : staying ? 'management' : 'desk', decision: staying ? 'checkin' : null, asked: [], inspected: [], negotiated: false, held: false }); if (nextVisitor) setDialogue(nextVisitor.introDialogue); }} onReset={reset} />;
   if (save.phase === 'ending') return <CampaignEnding state={save} onReset={reset} />;
@@ -213,9 +218,11 @@ function RoomAssignment({ day, rooms, guest, selected, mode, onSelect, onConfirm
   </main>;
 }
 
-function HotelManagement({ day, rooms, guest, resources, onMove, onCheckout, onContinue }: { day:number; rooms:Room[]; guest:Guest; resources:GameState['resources']; onMove:()=>void; onCheckout:()=>void; onContinue:()=>void }) {
+function HotelManagement({ day, rooms, guest, allGuests, resources, onMove, onCheckout, onContinue }: { day:number; rooms:Room[]; guest:Guest; allGuests:Guest[]; resources:GameState['resources']; onMove:()=>void; onCheckout:()=>void; onContinue:()=>void }) {
   const affected = getAffectedRoomNumbers(rooms, guest);
-  return <main className="room-screen"><header><div><p className="eyebrow">JUJU HOTEL · 운영 현황</p><h1>객실 관리</h1></div><div className="day-chip"><span>DAY {day}</span><small>식량 {resources.food} · 물 {resources.water} · 연료 {resources.fuel}</small></div></header><section className="room-layout"><div className="room-board"><HotelGrid rooms={rooms} affected={affected}/></div><aside className="aura-preview"><span className="panel-label">현재 투숙객</span><h2>{guest.name} · {guest.currentRoomNumber}호</h2><p>{guest.role} · 남은 숙박 {guest.remainingNights}박</p>{guest.aura?<div className="aura-card active"><HeartPulse/><div><strong>{guest.aura.name} 활성</strong><p>{guest.aura.description}<br/>{affected.length?`영향 객실 ${affected.join(' · ')}`:'영향 범위 없음'}</p></div></div>:<p className="system-note">객실 Aura 없음 · 관계 및 숨겨진 특성 이벤트 대상</p>}<dl><div><dt>Health</dt><dd>{guest.health}</dd></div><div><dt>Stress</dt><dd>{guest.stress}</dd></div><div><dt>Trust</dt><dd>{guest.trust}</dd></div></dl><p className="system-note">오늘 밤 투숙객당 식량 1 · 물 1, 호텔 연료 1이 소비됩니다.</p><div className="management-actions"><Button variant="secondary" onClick={onMove}>객실 이동</Button><Button className="refuse" onClick={onCheckout}>체크아웃</Button><Button className="checkin" onClick={onContinue}>DAY {day} 종료 <ChevronRight/></Button></div></aside></section></main>;
+  const relationships = getActiveRelationships(rooms, allGuests);
+  const synergies = getActiveAuraSynergies(rooms, allGuests);
+  return <main className="room-screen"><header><div><p className="eyebrow">JUJU HOTEL · 운영 현황</p><h1>객실 관리</h1></div><div className="day-chip"><span>DAY {day}</span><small>식량 {resources.food} · 물 {resources.water} · 연료 {resources.fuel}</small></div></header><section className="room-layout"><div className="room-board"><HotelGrid rooms={rooms} affected={affected}/></div><aside className="aura-preview"><span className="panel-label">현재 투숙객</span><h2>{guest.name} · {guest.currentRoomNumber}호</h2><p>{guest.role} · 남은 숙박 {guest.remainingNights}박</p>{guest.aura?<div className="aura-card active"><HeartPulse/><div><strong>{guest.aura.name} 활성</strong><p>{guest.aura.description}<br/>{affected.length?`영향 객실 ${affected.join(' · ')}`:'영향 범위 없음'}</p></div></div>:<p className="system-note">객실 Aura 없음 · 관계 및 숨겨진 특성 이벤트 대상</p>}<dl><div><dt>Health</dt><dd>{guest.health}</dd></div><div><dt>Stress</dt><dd>{guest.stress}</dd></div><div><dt>Trust</dt><dd>{guest.trust}</dd></div><div><dt>활성 관계</dt><dd>{relationships.length}</dd></div><div><dt>Aura 시너지</dt><dd>{synergies.map((item)=>item.name).join(' · ')||'없음'}</dd></div></dl><p className="system-note">인접 객실 관계 이벤트 ×2 · 같은 층 ×1.5 · 다른 층 ×1. 오늘 밤 투숙객당 식량 1 · 물 1, 호텔 연료 1이 소비됩니다.</p><div className="management-actions"><Button variant="secondary" onClick={onMove}>객실 이동</Button><Button className="refuse" onClick={onCheckout}>체크아웃</Button><Button className="checkin" onClick={onContinue}>DAY {day} 종료 <ChevronRight/></Button></div></aside></section></main>;
 }
 
 function NightEvent({ day, decision, guestName, roomNumber, onContinue }: { day:number; decision: Exclude<Decision,null>; guestName:string; roomNumber:number|null; onContinue:()=>void }) {

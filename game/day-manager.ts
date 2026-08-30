@@ -1,28 +1,33 @@
-import { recalculateRoomEffects } from "./aura-effect-manager.ts";
+import { getInjuryRecovery, recalculateRoomEffects } from "./aura-effect-manager.ts";
 import { checkoutGuest } from "./room-manager.ts";
+import { advanceHotelStories } from "./story-event-manager.ts";
 import type { DaySummary, GameState, HotelLogEntry } from "./types.ts";
 
 export function advanceDay(day: number): number { return Math.min(30, Math.max(0, day) + 1); }
 
 export function resolveDay(state: GameState): GameState {
   if (state.phase !== "night") throw new Error("DAY 정산은 야간 단계에서 한 번만 실행할 수 있습니다.");
-  const staying = state.guests.filter((guest) => guest.status === "STAYING" && guest.currentRoomNumber !== null);
+  const story = advanceHotelStories(state.guests, state.day, state.rooms);
+  const staying = story.guests.filter((guest) => guest.status === "STAYING" && guest.currentRoomNumber !== null);
   const stayingIds = new Set(staying.map((guest) => guest.id));
   const consumed = { food: staying.length, water: staying.length, fuel: 1 };
   const checkedOutGuestIds: string[] = [];
-  const guests = state.guests.map((guest) => {
+  const guests = story.guests.map((guest) => {
     if (!stayingIds.has(guest.id)) return guest;
+    const room = state.rooms.find((candidate) => candidate.roomNumber === guest.currentRoomNumber);
+    const health = Math.min(100, guest.health + (room ? getInjuryRecovery(room) : 0));
     const remainingNights = Math.max(0, guest.remainingNights - 1);
     if (remainingNights === 0) {
       checkedOutGuestIds.push(guest.id);
-      return { ...guest, remainingNights, currentRoomNumber: null, status: "CHECKED_OUT" as const };
+      return { ...guest, health, remainingNights, currentRoomNumber: null, status: "CHECKED_OUT" as const };
     }
-    return { ...guest, remainingNights };
+    return { ...guest, health, remainingNights };
   });
   const emptied = checkedOutGuestIds.reduce((rooms, guestId) => checkoutGuest(rooms, guestId), state.rooms);
   const nextDay = advanceDay(state.day);
   const summary: DaySummary = { completedDay: state.day, nextDay, occupiedGuests: staying.length, consumed, checkedOutGuestIds };
   const entries: HotelLogEntry[] = [
+    ...story.entries,
     { day: state.day, type: "RESOURCE", message: `식량 ${consumed.food}, 물 ${consumed.water}, 연료 ${consumed.fuel} 소비` },
     ...checkedOutGuestIds.map((guestId): HotelLogEntry => ({ day: nextDay, type: "CHECK_OUT", message: `${state.guests.find((guest) => guest.id === guestId)?.name ?? guestId} · 숙박 종료 자동 체크아웃` })),
   ];

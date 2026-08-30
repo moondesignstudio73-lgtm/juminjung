@@ -54,7 +54,8 @@ test("DAY 2 저장 복원 후 남은 숙박과 자원, 로그가 유지된다", 
   assert.equal(restored.day, 2);
   assert.equal(restored.guests[0].remainingNights, 1);
   assert.equal(restored.resources.food, 47);
-  assert.equal(restored.eventHistory.length, 1);
+  assert.ok(restored.eventHistory.some((entry) => entry.type === "RESOURCE"));
+  assert.ok(restored.eventHistory.some((entry) => entry.type === "EVENT"));
 });
 
 test("DAY 30 정산은 반복 가능한 보고서가 아니라 종료 상태로 진입한다", () => {

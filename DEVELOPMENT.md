@@ -10,13 +10,16 @@ Understood as: grow the published browser game into a stable DAY 1 → DAY 30 ho
 - Data-driven grid Aura calculation; Eleanor's Medical Care Zone affects only `NORMAL_DISEASE`
 - Nightly food, water, and generator-fuel settlement based on actual occupancy
 - Remaining-stay countdown, automatic checkout, Aura removal, and HOTEL LOG entries
+- Four-stage guest stories that advance from arrival through resolution and persist in the hotel log
+- Relationship event strength based on room distance: adjacent ×2, same floor ×1.5, otherwise ×1, recorded when conflict stages fire
+- Eleanor + Ruth `MEDICAL WARD` Aura synergy heals 10 Health nightly in overlapping treatment rooms
 - Versioned local save restoration that recomputes derived room effects from guest source state
 - A guarded DAY boundary that reaches a terminal DAY 30 screen instead of resolving forever
 
 ## Next system priorities
 
-- Complete the five featured event chains by evaluating their stored stage conditions and choices
-- Add relationship-distance event modifiers and the Eleanor + Ruth Medical Ward synergy
+- Turn the five featured event-chain stages into authored choice scenes with explicit conditions and consequences
+- Apply relationship weights to conditional guest events and surface relationship changes in the journal
 - Add action points and meaningful daytime hotel actions
 - Add conditional night events, shortage consequences, monster threat, and reputation
 - Expand HOTEL LOG into an accessible journal and build the full DAY 30 ending evaluation
