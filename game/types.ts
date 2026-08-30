@@ -1,5 +1,6 @@
 export type RoomStatus = "EMPTY" | "OCCUPIED" | "DAMAGED" | "LOCKED";
 export type DiseaseType = "NORMAL_DISEASE" | "MONSTER_INFECTION" | "STORY_DISEASE" | "INJURY";
+export type GuestExpression = "neutral" | "happy" | "sad" | "angry" | "afraid" | "suspicious" | "injured";
 
 export type Position = { x: number; y: number };
 
@@ -41,7 +42,8 @@ export type Guest = {
   gender: string;
   description: string;
   portrait: string;
-  expressions: string[];
+  portraitVariants: Partial<Record<GuestExpression, string>>;
+  expressions: GuestExpression[];
   arrivalDay: number;
   arrivalDayRange: [number, number];
   arrivalConditions: { type: "GUEST_APPEARED" | "FLAG"; key: string; value?: boolean | number | string }[];

@@ -12,11 +12,14 @@ test("등록된 모든 반신 일러스트는 실제 1024×1536 PNG 자산을 �
   assert.deepEqual(illustrated.map((item) => item.id), ["eleanor", "walter", "mia", "daniel", "samuel", "ruth", "jack", "grace", "owen", "hayes", "lily", "noah", "victor", "rosa", "eli", "vale", "hazel", "thomas", "claire", "white"]);
   for (const item of illustrated) {
     assert.equal(getGuestVisualState(item).asset, item.portrait);
-    const relativePath = item.portrait.replace("/juminjung/", "public/");
-    const png = readFileSync(relativePath);
-    assert.deepEqual([...png.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
-    assert.equal(png.readUInt32BE(16), 1024);
-    assert.equal(png.readUInt32BE(20), 1536);
+    const assets = [item.portrait, ...Object.values(item.portraitVariants)].filter((asset): asset is string => Boolean(asset));
+    for (const asset of assets) {
+      const relativePath = asset.replace("/juminjung/", "public/");
+      const png = readFileSync(relativePath);
+      assert.deepEqual([...png.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+      assert.equal(png.readUInt32BE(16), 1024);
+      assert.equal(png.readUInt32BE(20), 1536);
+    }
   }
 });
 
@@ -50,22 +53,26 @@ test("낮은 Health만으로는 중상 표정은 나지만 출혈을 단정하�
 test("높은 Stress와 감염 의심은 감정 및 오염 상태를 우선 반영한다", () => {
   const afraid = getGuestVisualState({ ...guest("eleanor"), status: "STAYING", stress: 85 });
   assert.equal(afraid.expression, "afraid");
+  assert.equal(afraid.asset, "/juminjung/assets/portraits/eleanor/afraid-v1.png");
   const infected = getGuestVisualState({ ...guest("eleanor"), status: "STAYING", infectionState: "INFECTED_SUSPECTED" });
   assert.equal(infected.expression, "injured");
+  assert.equal(infected.asset, "/juminjung/assets/portraits/eleanor/injured-v1.png");
   assert.ok(infected.modifiers.includes("INFECTED"));
 });
 
-test("아직 전용 자산이 없는 NPC도 상태 계산은 동일하게 작동한다", () => {
-  const marcus = getGuestVisualState({ ...guest("marcus"), stress: 75 });
-  assert.equal(marcus.asset, null);
-  assert.ok(marcus.modifiers.includes("EXHAUSTED"));
+test("전용 표정 변형이 없는 NPC는 중립 초상으로 안전하게 대체된다", () => {
+  const noah = getGuestVisualState({ ...guest("noah"), status: "STAYING", stress: 75 });
+  assert.equal(noah.expression, "sad");
+  assert.equal(noah.asset, "/juminjung/assets/portraits/noah/neutral-v1.png");
+  assert.ok(noah.modifiers.includes("EXHAUSTED"));
 });
 
 test("과거 저장의 오래된 초상화 경로는 최신 카탈로그 자산으로 복원된다", () => {
   const state = createInitialGameState();
-  state.guests = state.guests.map((item) => item.id === "mia" ? { ...item, portrait: "/assets/portraits/mia/neutral.png", expressions: ["neutral"] } : item);
+  state.guests = state.guests.map((item) => item.id === "mia" ? { ...item, portrait: "/assets/portraits/mia/neutral.png", portraitVariants: { afraid: "/assets/portraits/mia/afraid.png" }, expressions: ["neutral"] } : item);
   const restored = restoreGameState(serializeGameState(state));
   const mia = restored.guests.find((item) => item.id === "mia")!;
   assert.equal(mia.portrait, "/juminjung/assets/portraits/mia/neutral-v1.png");
+  assert.deepEqual(mia.portraitVariants, {});
   assert.equal(mia.expressions.length, 7);
 });

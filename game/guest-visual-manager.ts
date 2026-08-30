@@ -1,6 +1,5 @@
-import type { Guest } from "./types.ts";
+import type { Guest, GuestExpression } from "./types.ts";
 
-export type GuestExpression = "neutral" | "happy" | "sad" | "angry" | "afraid" | "suspicious" | "injured";
 export type GuestVisualModifier = "WET" | "EXHAUSTED" | "BANDAGED" | "BLOODIED" | "INFECTED";
 
 export type GuestVisualState = {
@@ -48,7 +47,7 @@ export function getGuestVisualState(guest: Guest): GuestVisualState {
   };
 
   return {
-    asset: guest.portrait || null,
+    asset: (guest.portraitVariants?.[expression] ?? guest.portrait) || null,
     expression,
     modifiers,
     label: modifiers.map((modifier) => labels[modifier]).join(" · ") || "외관 이상 없음",

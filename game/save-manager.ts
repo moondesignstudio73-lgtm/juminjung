@@ -17,6 +17,7 @@ function mergeGuest(catalogGuest: ReturnType<typeof createGuests>[number], saved
     ...catalogGuest,
     ...savedGuest,
     portrait: catalogGuest.portrait,
+    portraitVariants: catalogGuest.portraitVariants,
     expressions: catalogGuest.expressions,
     baseTraits: [...new Set([...catalogGuest.baseTraits, ...(savedGuest.baseTraits ?? [])])],
     hiddenTraits: [...new Set([...catalogGuest.hiddenTraits, ...(savedGuest.hiddenTraits ?? [])])],
