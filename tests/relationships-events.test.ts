@@ -50,13 +50,15 @@ test("체크인 시 ARRIVAL 단계가 한 번만 완료되고 로그 항목이 �
 
 test("숙박 마지막 밤까지 LIFE, CONFLICT, RESOLUTION 단계가 순서대로 완료된다", () => {
   let guests = stayingGuests();
-  guests = completeEventStage(guests, "eleanor", "ARRIVAL").guests;
+  guests = completeEventStage(guests, "ruth", "ARRIVAL").guests;
   const firstNight = advanceHotelStories(guests, 1);
-  assert.equal(firstNight.guests[0].eventChain.find((event) => event.stage === "LIFE_AT_HOTEL")?.completed, true);
-  firstNight.guests[0].remainingNights = 1;
+  const ruth = firstNight.guests.find((guest) => guest.id === "ruth")!;
+  assert.equal(ruth.eventChain.find((event) => event.stage === "LIFE_AT_HOTEL")?.completed, true);
+  ruth.remainingNights = 1;
   const lastNight = advanceHotelStories(firstNight.guests, 2, createRooms());
-  assert.equal(lastNight.guests[0].eventChain.find((event) => event.stage === "CONFLICT")?.completed, true);
-  assert.equal(lastNight.guests[0].eventChain.find((event) => event.stage === "RESOLUTION")?.completed, true);
+  const resolvedRuth = lastNight.guests.find((guest) => guest.id === "ruth")!;
+  assert.equal(resolvedRuth.eventChain.find((event) => event.stage === "CONFLICT")?.completed, true);
+  assert.equal(resolvedRuth.eventChain.find((event) => event.stage === "RESOLUTION")?.completed, true);
   assert.ok(lastNight.entries.some((entry) => entry.message.includes("강도 80")));
 });
 

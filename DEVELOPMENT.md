@@ -19,13 +19,14 @@ Understood as: grow the published browser game into an open-duration hotel survi
 - A soft-pressure World State derived from time, scarcity, threat, and hotel stability
 - Two daily action points for repair, community, patrol, and trade decisions
 - Four buildable facilities with resource costs, passive production, stat changes, and faction reputation effects
-- Save v7 restoration for facilities, reputations, remaining daily actions, and pending night choices
+- Save v8 restoration for facilities, reputations, daily actions, night choices, and pending NPC story scenes
 - Conditional night events driven by World State, shortages, Monster Threat, Security, and resources
 - Two-choice night outcomes that alter resources, hotel stats, faction reputation, flags, and guest condition
+- Five authored NPC conflict scenes for Eleanor, Walter, Mia, Owen, and Mr. White with persistent consequences
 
 ## Next system priorities
 
-- Turn the five featured event-chain stages into authored choice scenes with explicit conditions and consequences
+- Expand authored choices from the five featured conflict scenes into their resolution stages
 - Apply relationship weights to conditional guest events and surface relationship changes in the journal
 - Add reputation-driven visitor reactions and authored follow-up scenes for night-event consequences
 - Add facility upgrades and balance the resource economy across long campaigns

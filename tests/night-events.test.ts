@@ -63,12 +63,12 @@ test("야간 선택은 정산 로그와 마지막 사건으로 저장되고 임�
   assert.ok(resolved.eventHistory.some((entry) => entry.message.includes("긴 복도, 짧은 밤")));
 });
 
-test("Save v7은 선택 중인 야간 사건과 선택지를 복원한다", () => {
+test("Save v8은 선택 중인 야간 사건과 선택지를 복원한다", () => {
   const state = createInitialGameState();
   state.selectedNightEventId = "quiet_watch";
   state.selectedNightChoiceId = "patrol";
   const restored = restoreGameState(serializeGameState(state));
-  assert.equal(restored.version, 7);
+  assert.equal(restored.version, 8);
   assert.equal(restored.selectedNightEventId, "quiet_watch");
   assert.equal(restored.selectedNightChoiceId, "patrol");
 });

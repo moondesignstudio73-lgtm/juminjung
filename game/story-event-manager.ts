@@ -1,4 +1,5 @@
 import { getActiveRelationships } from "./relationship-manager.ts";
+import { STORY_CHOICE_EVENTS } from "./story-choice-data.ts";
 import type { Guest, HotelLogEntry, Room } from "./types.ts";
 
 export function completeEventStage(guests: Guest[], guestId: string, stage: Guest["eventChain"][number]["stage"]): { guests: Guest[]; entry: HotelLogEntry | null } {
@@ -20,6 +21,10 @@ export function advanceHotelStories(guests: Guest[], day: number, rooms: Room[] 
     const ordered: Guest["eventChain"][number]["stage"][] = ["ARRIVAL", "LIFE_AT_HOTEL", "CONFLICT", "RESOLUTION"];
     for (const stage of ordered) {
       const latest = current.find((item) => item.id === guest.id)!;
+      const authoredConflict = STORY_CHOICE_EVENTS.some((event) => event.guestId === guest.id && event.stage === "CONFLICT");
+      const conflictIncomplete = latest.eventChain.some((event) => event.stage === "CONFLICT" && !event.completed);
+      if (stage === "CONFLICT" && authoredConflict) continue;
+      if (stage === "RESOLUTION" && authoredConflict && conflictIncomplete) continue;
       const allowed = stage === "ARRIVAL" || stage === "LIFE_AT_HOTEL" || (stage === "CONFLICT" && latest.remainingNights <= Math.max(1, latest.stayDuration - 1)) || (stage === "RESOLUTION" && latest.remainingNights <= 1);
       if (!allowed) continue;
       const result = completeEventStage(current, guest.id, stage);

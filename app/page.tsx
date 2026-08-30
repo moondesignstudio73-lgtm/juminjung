@@ -14,6 +14,7 @@ import { clearBrowserGame, createInitialGameState, loadBrowserGame, saveBrowserG
 import { assignGuest, checkoutGuest, isRoomSelectable, moveGuest } from '@/game/room-manager';
 import { getActiveRelationships } from '@/game/relationship-manager';
 import { completeEventStage } from '@/game/story-event-manager';
+import { applyStoryChoice, canChooseStoryChoice, getPendingStoryChoice } from '@/game/story-choice-manager';
 import { getEndingCondition } from '@/game/ending-manager';
 import { FACILITIES } from '@/game/facility-data';
 import { buildFacility, canBuildFacility, performHotelAction } from '@/game/hotel-action-manager';
@@ -23,6 +24,7 @@ import type { FacilityId, GameState, Guest, HotelActionId, Room } from '@/game/t
 
 type UiSave = GameState & { prologue: number };
 const makeInitial = (): UiSave => ({ ...createInitialGameState(), prologue: 0 });
+const routeToNight = (state:UiSave):UiSave => { const pending = getPendingStoryChoice(state); return { ...state, phase: pending ? 'story' : 'night', pendingStoryEventId: pending?.id ?? null }; };
 
 const prologue = [
   { tag: 'DAY 0 · 오후 5:16', speaker: '아버지', line: '“곧 돌아오마. 발전기 연료는 매일 확인하고, 해가 지면 문을 열어두지 마.”' },
@@ -81,7 +83,7 @@ export default function Home() {
   const inspect = (id: string) => {
     update({ inspected: [...new Set([...save.inspected, id])] }); setSelectedItem(id);
   };
-  const refuse = () => update({ guests: markVisitorRefused(save.guests, visitor.id), eventHistory: [...save.eventHistory, { day: save.day, type: 'EVENT', message: `${visitor.name} · 입실 거절` }], decision: 'refuse', phase: 'night' });
+  const refuse = () => setSave((current) => routeToNight({ ...current, guests: markVisitorRefused(current.guests, visitor.id), eventHistory: [...current.eventHistory, { day: current.day, type: 'EVENT', message: `${visitor.name} · 입실 거절` }], decision: 'refuse' }));
   const openAssignment = (mode: 'checkin' | 'move') => update({ phase: 'assignment', assignmentMode: mode, selectedRoomNumber: null });
   const confirmRoom = () => {
     if (save.selectedRoomNumber === null) return;
@@ -132,12 +134,13 @@ export default function Home() {
     );
   }
   if (save.phase === 'assignment') return <RoomAssignment day={save.day} rooms={save.rooms} guest={save.assignmentMode === 'move' ? managedGuest : visitor} selected={save.selectedRoomNumber} mode={save.assignmentMode!} onSelect={(roomNumber) => update({ selectedRoomNumber: roomNumber })} onConfirm={confirmRoom} onCancel={() => update({ phase: save.assignmentMode === 'move' ? 'management' : 'desk', assignmentMode: null, selectedRoomNumber: null })} />;
-  if (save.phase === 'management') return <HotelManagement state={save} guest={managedGuest} hasStayingGuest={Boolean(stayingGuest)} onBuild={(id) => setSave((current) => ({ ...buildFacility(current, id).state, prologue: current.prologue }))} onAction={(id) => setSave((current) => ({ ...performHotelAction(current, id).state, prologue: current.prologue }))} onMove={() => openAssignment('move')} onCheckout={checkout} onContinue={() => update({ phase: 'night' })} />;
+  if (save.phase === 'management') return <HotelManagement state={save} guest={managedGuest} hasStayingGuest={Boolean(stayingGuest)} onBuild={(id) => setSave((current) => ({ ...buildFacility(current, id).state, prologue: current.prologue }))} onAction={(id) => setSave((current) => ({ ...performHotelAction(current, id).state, prologue: current.prologue }))} onMove={() => openAssignment('move')} onCheckout={checkout} onContinue={() => setSave((current) => routeToNight(current))} />;
+  if (save.phase === 'story') return <StoryChoiceScene state={save} onChoose={(eventId,choiceId) => setSave((current) => routeToNight({ ...applyStoryChoice(current,eventId,choiceId).state, prologue:current.prologue }))} />;
   if (save.phase === 'night') return <NightEvent state={save} onChoose={(eventId,choiceId) => setSave((current) => ({ ...resolveDay({ ...current, selectedNightEventId:eventId, selectedNightChoiceId:choiceId }), prologue: current.prologue }))} />;
   if (save.phase === 'report') return <MorningReport state={save} onStartEnding={(endingId) => update({ activeEndingId: endingId, phase: 'ending' })} onNext={() => { const nextVisitor = getEligibleVisitor(save.guests, save.day); const staying = save.guests.some((guest) => guest.status === 'STAYING'); update({ phase: nextVisitor ? 'desk' : staying ? 'management' : 'desk', decision: staying ? 'checkin' : null, asked: [], inspected: [], negotiated: false, held: false }); if (nextVisitor) setDialogue(nextVisitor.introDialogue); }} onReset={reset} />;
   if (save.phase === 'ending') return <CampaignEnding state={save} onReset={reset} onReturn={() => update({ activeEndingId: null, phase: 'report' })} onComplete={() => save.activeEndingId && update({ completedEndingFlags: [...new Set([...save.completedEndingFlags, save.activeEndingId])], availableEndings: save.availableEndings.filter((id) => id !== save.activeEndingId), endingProgress: { ...save.endingProgress, [save.activeEndingId]: 'COMPLETED' }, activeEndingId: null, phase: 'report' })} />;
 
-  if (!eligibleVisitor) return <QuietDesk day={save.day} resources={save.resources} staying={save.guests.filter((guest)=>guest.status==='STAYING').length} onManage={() => update({ phase: 'management' })} onEnd={() => update({ decision: 'refuse', phase: 'night' })} />;
+  if (!eligibleVisitor) return <QuietDesk day={save.day} resources={save.resources} staying={save.guests.filter((guest)=>guest.status==='STAYING').length} onManage={() => update({ phase: 'management' })} onEnd={() => setSave((current) => routeToNight({ ...current, decision:'refuse' }))} />;
   const availableItems = visitor.offeredItems.filter((item) => !item.negotiatedOnly || save.negotiated);
   const detail = visitor.offeredItems.find((item) => item.id === selectedItem);
   const DetailIcon = detail ? itemIcons[detail.type] : Inspect;
@@ -237,6 +240,13 @@ function HotelManagement({ state, guest, hasStayingGuest, onBuild, onAction, onM
 function NightEvent({ state, onChoose }: { state:UiSave; onChoose:(eventId:string,choiceId:string)=>void }) {
   const event = selectNightEvent(state);
   return <main className="event-screen"><div className="event-light"/><Radio className="event-icon"/><p className="scene-index">DAY {state.day} · 오전 2:13 · THREAT {String(state.flags.monster_threat??0)}</p><section><span>야간 사건 · {state.worldState}</span><h1>{event.title}</h1><p>{event.description}</p><blockquote>{event.quote}</blockquote><div className="night-choices">{event.choices.map((choice)=><Button key={choice.id} disabled={!canChooseNightChoice(state,choice)} onClick={()=>onChoose(event.id,choice.id)}><span>{choice.label}</span><small>{choice.description}</small><ChevronRight/></Button>)}</div></section></main>;
+}
+
+function StoryChoiceScene({ state, onChoose }: { state:UiSave; onChoose:(eventId:string,choiceId:string)=>void }) {
+  const event = getPendingStoryChoice(state);
+  const guest = state.guests.find((item)=>item.id===event?.guestId);
+  if (!event || !guest) return <main className="event-screen"><section><h1>스토리 기록을 확인할 수 없습니다.</h1></section></main>;
+  return <main className="event-screen story-event"><div className="event-light"/><p className="scene-index">DAY {state.day} · {guest.name} · CONFLICT</p><section><span>NPC STORY EVENT</span><h1>{event.title}</h1><p>{event.description}</p><blockquote>{event.quote}</blockquote><div className="night-choices">{event.choices.map((choice)=><Button key={choice.id} disabled={!canChooseStoryChoice(state,choice)} onClick={()=>onChoose(event.id,choice.id)}><span>{choice.label}</span><small>{choice.description}</small><ChevronRight/></Button>)}</div></section></main>;
 }
 
 function MorningReport({ state, onNext, onReset, onStartEnding }: { state:UiSave; onNext:()=>void; onReset:()=>void; onStartEnding:(endingId:GameState['availableEndings'][number])=>void }) {

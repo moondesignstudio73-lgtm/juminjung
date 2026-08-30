@@ -123,6 +123,9 @@ export type NightEventCondition = { worldStates?: WorldState[]; minimumDay?: num
 export type NightEventEffect = { resources?: Partial<Resources>; hotelStats?: Partial<HotelStats>; reputations?: Partial<Reputations>; flags?: EventFlags; threat?: number; allGuestStress?: number; targetGuestHealth?: number };
 export type NightEventChoice = { id: string; label: string; description: string; requiredResources?: Partial<Resources>; effect: NightEventEffect };
 export type NightEventDefinition = { id: string; title: string; description: string; quote: string; priority: number; condition: NightEventCondition; choices: NightEventChoice[] };
+export type StoryChoiceEffect = { resources?: Partial<Resources>; hotelStats?: Partial<HotelStats>; reputations?: Partial<Reputations>; flags?: EventFlags; trust?: number; stress?: number; health?: number; threat?: number; fatherStoryProgress?: number; relationship?: { targetId: string; delta: number }; discoverTrait?: string };
+export type StoryChoice = { id: string; label: string; description: string; requiredResources?: Partial<Resources>; effect: StoryChoiceEffect };
+export type StoryChoiceEvent = { id: string; guestId: string; stage: "CONFLICT"; title: string; description: string; quote: string; choices: StoryChoice[] };
 export type ActiveRelationship = { sourceId: string; targetId: string; type: string; value: number; distanceMultiplier: 1 | 1.5 | 2; weightedValue: number };
 export type ActiveSynergy = { id: string; name: string; guestIds: string[]; affectedRoomNumbers: number[]; description: string };
 
@@ -132,12 +135,13 @@ export type GamePhase =
   | "desk"
   | "assignment"
   | "management"
+  | "story"
   | "night"
   | "report"
   | "ending";
 
 export type GameState = {
-  version: 7;
+  version: 8;
   phase: GamePhase;
   day: number;
   rooms: Room[];
@@ -168,4 +172,5 @@ export type GameState = {
   selectedNightEventId: string | null;
   selectedNightChoiceId: string | null;
   lastNightEventId: string | null;
+  pendingStoryEventId: string | null;
 };

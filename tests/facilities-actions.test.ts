@@ -51,10 +51,10 @@ test("정수·식량 시설은 야간 생산을 제공하고 다음 날 행동 �
   assert.equal(resolved.actionPoints, resolved.maxActionPoints);
 });
 
-test("Save v7은 시설·평판·행동 포인트를 복원한다", () => {
+test("Save v8은 시설·평판·행동 포인트를 복원한다", () => {
   const built = buildFacility(createInitialGameState(), "water_purifier").state;
   const restored = restoreGameState(serializeGameState(built));
-  assert.equal(restored.version, 7);
+  assert.equal(restored.version, 8);
   assert.equal(restored.facilities.water_purifier, true);
   assert.equal(restored.reputations.community, 10);
   assert.equal(restored.actionPoints, 1);
