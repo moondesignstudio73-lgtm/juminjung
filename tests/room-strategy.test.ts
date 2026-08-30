@@ -1,0 +1,71 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { getAffectedRoomNumbers, getDiseaseChance, recalculateRoomEffects } from "../game/aura-effect-manager.ts";
+import { ELEANOR_ID } from "../game/guest-data.ts";
+import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
+import { assignGuest, checkoutGuest, isRoomSelectable, moveGuest } from "../game/room-manager.ts";
+
+function placeEleanor(roomNumber: number) {
+  const state = createInitialGameState();
+  state.guests = state.guests.map((guest) => guest.id === ELEANOR_ID ? { ...guest, currentRoomNumber: roomNumber } : guest);
+  state.rooms = recalculateRoomEffects(assignGuest(state.rooms, roomNumber, ELEANOR_ID), state.guests);
+  return state;
+}
+
+test("1. 체크인은 객실 배정 단계로 진입할 수 있다", () => { const state = createInitialGameState(); state.phase = "assignment"; assert.equal(state.phase, "assignment"); });
+
+test("2. 초기 상태는 203호를 자동 배정하지 않는다", () => {
+  const state = createInitialGameState();
+  assert.equal(state.rooms.find((room) => room.roomNumber === 203)?.occupied, false);
+  assert.equal(state.guests[0].currentRoomNumber, null);
+  assert.equal(state.resources.fuel, 62);
+});
+
+test("3. 호텔은 30개의 빈 객실로 시작한다", () => {
+  const state = createInitialGameState();
+  assert.equal(state.rooms.length, 30);
+  assert.equal(state.rooms.filter(isRoomSelectable).length, 30);
+});
+
+test("4. 사용 중인 객실은 선택할 수 없다", () => {
+  const rooms = assignGuest(createInitialGameState().rooms, 203, ELEANOR_ID);
+  assert.equal(isRoomSelectable(rooms.find((room) => room.roomNumber === 203)!), false);
+  assert.throws(() => assignGuest(rooms, 203, "other"));
+});
+
+test("5. 301호 Medical Care Zone은 그리드 인접 객실을 계산한다", () => {
+  const state = placeEleanor(301);
+  assert.deepEqual(getAffectedRoomNumbers(state.rooms, state.guests[0]).sort(), [201, 202, 301, 302]);
+});
+
+test("6. Zone 내부 NORMAL_DISEASE 확률은 0이다", () => {
+  const room = placeEleanor(301).rooms.find((item) => item.roomNumber === 202)!;
+  assert.equal(getDiseaseChance(room, "NORMAL_DISEASE", 25), 0);
+  assert.equal(getDiseaseChance(room, "MONSTER_INFECTION", 25), 25);
+});
+
+test("7. Zone 외부 객실은 영향을 받지 않는다", () => {
+  const room = placeEleanor(301).rooms.find((item) => item.roomNumber === 210)!;
+  assert.equal(getDiseaseChance(room, "NORMAL_DISEASE", 25), 25);
+});
+
+test("8. 체크아웃하면 Aura가 제거된다", () => {
+  const state = placeEleanor(301);
+  const guests = state.guests.map((guest) => ({ ...guest, currentRoomNumber: null }));
+  const rooms = recalculateRoomEffects(checkoutGuest(state.rooms, ELEANOR_ID), guests);
+  assert.equal(rooms.some((room) => room.temporaryEffects.length > 0), false);
+});
+
+test("9. 객실 이동 시 Aura 범위가 재계산된다", () => {
+  const state = placeEleanor(301);
+  const guests = state.guests.map((guest) => ({ ...guest, currentRoomNumber: 110 }));
+  const rooms = recalculateRoomEffects(moveGuest(state.rooms, ELEANOR_ID, 110), guests);
+  assert.equal(rooms.find((room) => room.roomNumber === 301)?.temporaryEffects.length, 0);
+  assert.ok(rooms.find((room) => room.roomNumber === 109)?.temporaryEffects.length);
+});
+
+test("10. 저장 복원 후 객실 위치와 Aura가 복구된다", () => {
+  const restored = restoreGameState(serializeGameState(placeEleanor(301)));
+  assert.equal(restored.guests[0].currentRoomNumber, 301);
+  assert.equal(getDiseaseChance(restored.rooms.find((room) => room.roomNumber === 202)!, "NORMAL_DISEASE", 25), 0);
+});
