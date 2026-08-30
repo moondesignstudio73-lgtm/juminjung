@@ -14,17 +14,54 @@ function log(state: GameState, message: string): HotelLogEntry[] { return [...st
 export function buildFacility(state: GameState, facilityId: FacilityId): ActionResult {
   const facility = FACILITIES.find((item) => item.id === facilityId);
   if (!facility) return { state, ok: false, message: "존재하지 않는 시설입니다." };
-  if (state.facilities[facilityId]) return { state, ok: false, message: "이미 완공된 시설입니다." };
+  const currentLevel = state.facilities[facilityId] ?? 0;
+  const nextLevel = facility.levels[currentLevel];
+  if (!nextLevel) return { state, ok: false, message: "이미 최고 단계인 시설입니다." };
   if (state.actionPoints < 1) return { state, ok: false, message: "오늘 사용할 행동 포인트가 없습니다." };
-  if (!canAfford(state.resources, facility.cost)) return { state, ok: false, message: "건설 자원이 부족합니다." };
-  const spent = spend(state.resources, facility.cost);
-  const resources = facility.statChanges.security ? { ...spent, security: clamp(spent.security + facility.statChanges.security) } : spent;
-  return { ok: true, message: `${facility.name} 완공`, state: { ...state, actionPoints: state.actionPoints - 1, facilities: { ...state.facilities, [facilityId]: true }, resources, hotelStats: mergeNumbers<HotelStats>(state.hotelStats, facility.statChanges), reputations: mergeNumbers<Reputations>(state.reputations, facility.reputationChanges), eventHistory: log(state, `시설 완공 · ${facility.name}`) } };
+  if (!canAfford(state.resources, nextLevel.cost)) return { state, ok: false, message: "건설 자원이 부족합니다." };
+  const spent = spend(state.resources, nextLevel.cost);
+  const resources = spent;
+  const verb = currentLevel === 0 ? "완공" : "업그레이드";
+  return { ok: true, message: `${facility.name} LV.${nextLevel.level} ${verb}`, state: { ...state, actionPoints: state.actionPoints - 1, facilities: { ...state.facilities, [facilityId]: nextLevel.level }, resources, hotelStats: mergeNumbers<HotelStats>(state.hotelStats, nextLevel.statChanges), reputations: mergeNumbers<Reputations>(state.reputations, nextLevel.reputationChanges), eventHistory: log(state, `시설 ${verb} · ${facility.name} LV.${nextLevel.level} · ${nextLevel.name}`) } };
 }
 
 export function canBuildFacility(state: GameState, facilityId: FacilityId): boolean {
   const facility = FACILITIES.find((item) => item.id === facilityId);
-  return Boolean(facility && !state.facilities[facilityId] && state.actionPoints > 0 && canAfford(state.resources, facility.cost));
+  if (!facility) return false;
+  const nextLevel = facility.levels[state.facilities[facilityId] ?? 0];
+  return Boolean(nextLevel && state.actionPoints > 0 && canAfford(state.resources, nextLevel.cost));
+}
+
+export function getFacilityEconomy(state: GameState, available: Resources): { resources: Resources; production: Partial<Resources>; upkeep: Partial<Resources>; inactiveFacilities: FacilityId[] } {
+  let resources = { ...available };
+  const production: Partial<Resources> = {};
+  const upkeep: Partial<Resources> = {};
+  const configured = FACILITIES.flatMap((facility) => {
+    const level = state.facilities[facility.id] ?? 0;
+    const active = level ? facility.levels[level - 1] : null;
+    return active ? [{ id: facility.id, active }] : [];
+  });
+  let running = [...configured];
+  while (running.length) {
+    const requested = Object.fromEntries(Object.keys(resources).map((key) => [key, running.reduce((sum, item) => sum + Number(item.active.upkeep?.[key as keyof Resources] ?? 0), 0)])) as Resources;
+    const deficient = (Object.keys(resources) as (keyof Resources)[]).filter((key) => requested[key] > resources[key]);
+    if (!deficient.length) break;
+    const next = running.filter((item) => !deficient.some((key) => Number(item.active.upkeep?.[key] ?? 0) > 0));
+    if (next.length === running.length) break;
+    running = next;
+  }
+  const runningIds = new Set(running.map((item) => item.id));
+  const inactiveFacilities = configured.filter((item) => !runningIds.has(item.id)).map((item) => item.id);
+  for (const { active } of running) {
+    for (const [key, value] of Object.entries(active.upkeep ?? {})) upkeep[key as keyof Resources] = Number(upkeep[key as keyof Resources] ?? 0) + Number(value);
+    for (const [key, value] of Object.entries(active.production ?? {})) {
+      const resourceKey = key as keyof Resources;
+      production[resourceKey] = Number(production[resourceKey] ?? 0) + Number(value);
+    }
+  }
+  resources = spend(resources, upkeep);
+  for (const [key, value] of Object.entries(production)) resources[key as keyof Resources] += Number(value);
+  return { resources, production, upkeep, inactiveFacilities };
 }
 
 const ACTIONS: Record<HotelActionId, { name: string; cost: Partial<Resources>; resources?: Partial<Resources>; stats?: Partial<HotelStats>; reputation?: Partial<Reputations>; guestTrust?: number }> = {

@@ -90,6 +90,9 @@ export type DaySummary = {
   nextDay: number;
   occupiedGuests: number;
   consumed: { food: number; water: number; fuel: number };
+  facilityProduction?: Partial<Resources>;
+  facilityUpkeep?: Partial<Resources>;
+  inactiveFacilities?: FacilityId[];
   checkedOutGuestIds: string[];
 };
 
@@ -109,7 +112,7 @@ export type EndingCondition = {
   maximumStats?: Partial<HotelStats>;
   requiredNPCStates?: { id: string; alive?: boolean; minimumTrust?: number; completedStory?: boolean }[];
   requiredRelationships?: { sourceId: string; targetId: string; minimumValue: number }[];
-  requiredFacilities?: string[];
+  requiredFacilities?: FacilityId[];
   requiredReputation?: Partial<Reputations>;
   maximumReputation?: Partial<Reputations>;
   requiredWorldState?: WorldState[];
@@ -120,7 +123,8 @@ export type Reputations = { community: number; military: number; refugee: number
 export type VisitorReactionDefinition = { id: string; guestId: string; label: string; faction: keyof Reputations; dialogue: string; requiredFlags?: EventFlags; forbiddenFlags?: string[]; minimumReputation?: Partial<Reputations>; maximumReputation?: Partial<Reputations>; trustDelta: number; riskDelta?: number; offerBonus?: Partial<Resources> };
 export type FacilityId = "water_purifier" | "food_production" | "armory" | "trade_network";
 export type HotelActionId = "repair_hotel" | "community_outreach" | "security_patrol" | "trade_run";
-export type FacilityDefinition = { id: FacilityId; name: string; description: string; cost: Partial<Resources>; statChanges: Partial<HotelStats>; reputationChanges: Partial<Reputations> };
+export type FacilityLevelDefinition = { level: 1 | 2 | 3; name: string; description: string; cost: Partial<Resources>; production?: Partial<Resources>; upkeep?: Partial<Resources>; statChanges: Partial<HotelStats>; reputationChanges: Partial<Reputations> };
+export type FacilityDefinition = { id: FacilityId; name: string; description: string; levels: FacilityLevelDefinition[] };
 export type NightEventCondition = { worldStates?: WorldState[]; minimumDay?: number; dayModulo?: number; minimumThreat?: number; maximumSecurity?: number; maximumResource?: Partial<Resources>; shortage?: "food" | "water"; requiresGuests?: boolean; requiredFlags?: EventFlags; forbiddenFlags?: string[]; relationship?: { sourceId: string; targetId: string; minimumWeightedValue?: number; maximumWeightedValue?: number } };
 export type NightEventEffect = { resources?: Partial<Resources>; hotelStats?: Partial<HotelStats>; reputations?: Partial<Reputations>; flags?: EventFlags; threat?: number; allGuestStress?: number; targetGuestHealth?: number; guestEffects?: { guestId: string; trust?: number; stress?: number; health?: number }[]; relationshipChanges?: RelationshipChange[] };
 export type NightEventChoice = { id: string; label: string; description: string; requiredResources?: Partial<Resources>; effect: NightEventEffect };
@@ -162,7 +166,7 @@ export type GameState = {
   worldState: WorldState;
   hotelStats: HotelStats;
   reputations: Reputations;
-  facilities: Record<string, boolean>;
+  facilities: Partial<Record<FacilityId, 1 | 2 | 3>>;
   availableEndings: EndingId[];
   completedEndingFlags: EndingId[];
   endingProgress: Partial<Record<EndingId, EndingStatus>>;
