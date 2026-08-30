@@ -26,10 +26,11 @@ Understood as: grow the published browser game into an open-duration hotel survi
 - Resolution choices persist medical, father-secret, family-route, military-resistance, and THE DOOR route flags for ending evaluation and future scenes
 - Lily's decoded documents and Dr. Vale's completed research now provide the two investigation flags required by THE TRUTH
 - The morning DESTINY journal lists every visible route as IN PROGRESS, AVAILABLE, or COMPLETED while preserving hidden routes as UNKNOWN
+- Room-distance-weighted relationships now trigger one-time night choices for Eleanor/Ruth, Lily/Vale, and Owen/Hayes, changing both NPC state and relationship values
+- Structured relationship deltas from story and night choices persist in the hotel log and appear in the morning RELATIONSHIP JOURNAL
 
 ## Next system priorities
 
-- Apply relationship weights to conditional guest events and surface relationship changes in the journal
 - Add reputation-driven visitor reactions and authored follow-up scenes for night-event consequences
 - Add facility upgrades and balance the resource economy across long campaigns
 - Expand HOTEL LOG into an accessible journal and author each unlocked final event and epilogue

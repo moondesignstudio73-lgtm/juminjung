@@ -82,7 +82,8 @@ export type Resources = {
   security: number;
 };
 
-export type HotelLogEntry = { day: number; type: "CHECK_IN" | "CHECK_OUT" | "RESOURCE" | "EVENT"; message: string };
+export type RelationshipChange = { sourceId: string; targetId: string; delta: number; type?: string };
+export type HotelLogEntry = { day: number; type: "CHECK_IN" | "CHECK_OUT" | "RESOURCE" | "EVENT"; message: string; relationshipChanges?: RelationshipChange[] };
 
 export type DaySummary = {
   completedDay: number;
@@ -119,8 +120,8 @@ export type Reputations = { community: number; military: number; refugee: number
 export type FacilityId = "water_purifier" | "food_production" | "armory" | "trade_network";
 export type HotelActionId = "repair_hotel" | "community_outreach" | "security_patrol" | "trade_run";
 export type FacilityDefinition = { id: FacilityId; name: string; description: string; cost: Partial<Resources>; statChanges: Partial<HotelStats>; reputationChanges: Partial<Reputations> };
-export type NightEventCondition = { worldStates?: WorldState[]; minimumDay?: number; dayModulo?: number; minimumThreat?: number; maximumSecurity?: number; maximumResource?: Partial<Resources>; shortage?: "food" | "water"; requiresGuests?: boolean };
-export type NightEventEffect = { resources?: Partial<Resources>; hotelStats?: Partial<HotelStats>; reputations?: Partial<Reputations>; flags?: EventFlags; threat?: number; allGuestStress?: number; targetGuestHealth?: number };
+export type NightEventCondition = { worldStates?: WorldState[]; minimumDay?: number; dayModulo?: number; minimumThreat?: number; maximumSecurity?: number; maximumResource?: Partial<Resources>; shortage?: "food" | "water"; requiresGuests?: boolean; requiredFlags?: EventFlags; forbiddenFlags?: string[]; relationship?: { sourceId: string; targetId: string; minimumWeightedValue?: number; maximumWeightedValue?: number } };
+export type NightEventEffect = { resources?: Partial<Resources>; hotelStats?: Partial<HotelStats>; reputations?: Partial<Reputations>; flags?: EventFlags; threat?: number; allGuestStress?: number; targetGuestHealth?: number; guestEffects?: { guestId: string; trust?: number; stress?: number; health?: number }[]; relationshipChanges?: RelationshipChange[] };
 export type NightEventChoice = { id: string; label: string; description: string; requiredResources?: Partial<Resources>; effect: NightEventEffect };
 export type NightEventDefinition = { id: string; title: string; description: string; quote: string; priority: number; condition: NightEventCondition; choices: NightEventChoice[] };
 export type StoryChoiceEffect = { resources?: Partial<Resources>; hotelStats?: Partial<HotelStats>; reputations?: Partial<Reputations>; flags?: EventFlags; trust?: number; stress?: number; health?: number; threat?: number; fatherStoryProgress?: number; relationship?: { targetId: string; delta: number }; discoverTrait?: string };

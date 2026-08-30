@@ -55,6 +55,7 @@ test("Mia 보호 선택은 Daniel 관계와 공동체 평판을 바꾼다", () =
   const mia = result.state.guests.find((guest) => guest.id === "mia")!;
   assert.equal(mia.relationships.find((relation) => relation.targetId === "daniel")?.value, -20);
   assert.equal(result.state.flags.mia_protected, true);
+  assert.deepEqual(result.entry.relationshipChanges, [{ sourceId: "mia", targetId: "daniel", delta: -20 }]);
 });
 
 test("Owen 보호 선택은 군사 저항 경로를 시작한다", () => {

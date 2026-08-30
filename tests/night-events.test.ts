@@ -11,6 +11,13 @@ function withGuest() {
   return state;
 }
 
+function withRelationshipPair(sourceId: string, targetId: string, sourceRoom = 301, targetRoom = 310) {
+  const state = createInitialGameState();
+  state.day = 16;
+  state.guests = state.guests.map((guest) => guest.id === sourceId ? { ...guest, status: "STAYING", currentRoomNumber: sourceRoom, checkedInDay: 1 } : guest.id === targetId ? { ...guest, status: "STAYING", currentRoomNumber: targetRoom, checkedInDay: 1 } : guest);
+  return state;
+}
+
 test("식량이 투숙객 수보다 적으면 배급실 사건이 선택된다", () => {
   const state = withGuest();
   state.resources.food = 0;
@@ -71,4 +78,61 @@ test("Save v8은 선택 중인 야간 사건과 선택지를 복원한다", () =
   assert.equal(restored.version, 8);
   assert.equal(restored.selectedNightEventId, "quiet_watch");
   assert.equal(restored.selectedNightChoiceId, "patrol");
+});
+
+test("Lily와 Vale는 같은 층 이상으로 가까울 때만 관계 사건을 만든다", () => {
+  const close = withRelationshipPair("lily", "vale", 301, 310);
+  const far = withRelationshipPair("lily", "vale", 301, 110);
+  assert.equal(selectNightEvent(close).id, "lily_vale_breakthrough");
+  assert.equal(selectNightEvent(far).id, "quiet_watch");
+});
+
+test("Owen과 Hayes의 강한 적대 관계는 선택 결과로 양쪽 관계와 상태를 바꾼다", () => {
+  const state = withRelationshipPair("owen", "hayes");
+  assert.equal(selectNightEvent(state).id, "owen_hayes_standoff");
+  const result = applyNightChoice(state, "owen_hayes_standoff", "separate");
+  const owen = result.state.guests.find((guest) => guest.id === "owen")!;
+  const hayes = result.state.guests.find((guest) => guest.id === "hayes")!;
+  assert.equal(owen.relationships.find((relation) => relation.targetId === "hayes")?.value, -65);
+  assert.equal(hayes.relationships.find((relation) => relation.targetId === "owen")?.value, -65);
+  assert.equal(owen.stress, 40);
+  assert.equal(hayes.trust, 20);
+  assert.equal(result.entry.relationshipChanges?.length, 2);
+  assert.equal(result.state.flags.owen_hayes_standoff_resolved, true);
+  assert.notEqual(selectNightEvent(result.state).id, "owen_hayes_standoff");
+});
+
+test("의료진 공동 진료는 배치 관계와 의약품을 실제 NPC 회복으로 연결한다", () => {
+  const state = withRelationshipPair("eleanor", "ruth");
+  const result = applyNightChoice(state, "medical_shift", "joint_triage");
+  const eleanor = result.state.guests.find((guest) => guest.id === "eleanor")!;
+  const ruth = result.state.guests.find((guest) => guest.id === "ruth")!;
+  assert.equal(result.state.resources.medicine, state.resources.medicine - 1);
+  assert.equal(eleanor.health, 88);
+  assert.equal(ruth.health, 88);
+  assert.equal(eleanor.relationships.find((relation) => relation.targetId === "ruth")?.value, 50);
+  assert.equal(ruth.relationships.find((relation) => relation.targetId === "eleanor")?.value, 50);
+});
+
+test("야간 사건은 오래된 사건 ID와 감당할 수 없는 선택을 대체 적용하지 않는다", () => {
+  const state = createInitialGameState();
+  state.resources.fuel = 1;
+  assert.throws(() => applyNightChoice(state, "quiet_watch", "rest"), /일치하지 않습니다/);
+  assert.throws(() => applyNightChoice(state, "generator_failure", "reserve"), /자원이 부족합니다/);
+});
+
+test("양방향 관계 데이터가 불완전하면 아무 효과도 적용하지 않는다", () => {
+  const state = withRelationshipPair("owen", "hayes");
+  state.guests = state.guests.map((guest) => guest.id === "hayes" ? { ...guest, relationships: [] } : guest);
+  const before = structuredClone(state);
+  assert.throws(() => applyNightChoice(state, "owen_hayes_standoff", "separate"), /관계 변경 대상/);
+  assert.deepEqual(state, before);
+});
+
+test("관계 장부에는 한계값을 반영한 실제 변화량만 기록한다", () => {
+  const state = withRelationshipPair("owen", "hayes");
+  state.guests = state.guests.map((guest) => ["owen", "hayes"].includes(guest.id) ? { ...guest, relationships: guest.relationships.map((relation) => ["owen", "hayes"].includes(relation.targetId) ? { ...relation, value: -95 } : relation) } : guest);
+  const result = applyNightChoice(state, "owen_hayes_standoff", "arm_owen");
+  assert.equal(result.state.guests.find((guest) => guest.id === "owen")?.relationships.find((relation) => relation.targetId === "hayes")?.value, -100);
+  assert.deepEqual(result.entry.relationshipChanges?.map((change) => change.delta), [-5, -5]);
 });
