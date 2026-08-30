@@ -22,6 +22,7 @@ import { buildFacility, canBuildFacility, performHotelAction } from '@/game/hote
 import { canChooseNightChoice, selectNightEvent } from '@/game/night-event-manager';
 import { getHotelLogEntries } from '@/game/hotel-log-manager';
 import { applyVisitorCheckInBenefits, getEligibleVisitor, getVisitorReaction, getVisitorReactionById, markVisitorRefused } from '@/game/visitor-manager';
+import { getGuestVisualState } from '@/game/guest-visual-manager';
 import type { FacilityId, GameState, Guest, HotelActionId, Room } from '@/game/types';
 
 type UiSave = GameState & { prologue: number };
@@ -167,10 +168,11 @@ export default function Home() {
       <section className="desk-scene" aria-label="밤의 JUJU HOTEL 프런트">
         <img src="/juminjung/assets/front-desk-night.png" alt={`${visitor.name} 방문자가 낡은 프런트 카운터 앞에 서 있다.`} />
         <div className="scene-vignette" />
+        <CharacterSprite guest={visitor} context="desk" />
         <aside className="case-file left-panel">
           <span className="panel-label">방문자 · {visitor.id.toUpperCase()}</span><h2>{visitor.name}</h2><p>{visitor.age}세 · {visitor.role}</p>
           <dl>
-            <div><dt>요청</dt><dd>{visitor.stayDuration}박</dd></div><div><dt>상태</dt><dd>{visitor.conditionLabel}</dd></div>
+            <div><dt>요청</dt><dd>{visitor.stayDuration}박</dd></div><div><dt>상태</dt><dd>{visitor.conditionLabel} · {getGuestVisualState(visitor).label}</dd></div>
             <div><dt>위험도</dt><dd>{visitor.riskLevel}</dd></div>
           </dl>
           <div className="clue-count">단서 {save.asked.length + save.inspected.length} / {visitor.questions.length + visitor.offeredItems.length}<small>숨겨진 특성은 조사 전 표시되지 않습니다.</small></div>
@@ -209,6 +211,15 @@ export default function Home() {
 
 function Status({ icon: Icon, label, value }: { icon: typeof Fuel; label: string; value: number }) {
   return <div className="resource-line"><Icon/><span>{label}</span><i><b style={{width:`${value}%`}} /></i><em>{value}</em></div>;
+}
+
+function CharacterSprite({ guest, context }: { guest: Guest; context: 'desk' | 'story' }) {
+  const visual = getGuestVisualState(guest);
+  if (!visual.asset) return null;
+  return <figure className={`character-sprite ${context} expression-${visual.expression} ${visual.modifiers.map((item)=>`state-${item.toLowerCase()}`).join(' ')}`} data-expression={visual.expression} aria-label={`${guest.name} · ${visual.label}`}>
+    <img src={visual.asset} alt={`${guest.name}의 ${visual.expression} 표정 반신 일러스트`} />
+    <figcaption>{visual.label}</figcaption>
+  </figure>;
 }
 
 function TitleScreen({ onStart, muted, setMuted }: { onStart:()=>void; muted:boolean; setMuted:(v:boolean)=>void }) {
@@ -255,7 +266,7 @@ function StoryChoiceScene({ state, onChoose }: { state:UiSave; onChoose:(eventId
   const event = getPendingStoryChoice(state);
   const guest = state.guests.find((item)=>item.id===event?.guestId);
   if (!event || !guest) return <main className="event-screen"><section><h1>스토리 기록을 확인할 수 없습니다.</h1></section></main>;
-  return <main className="event-screen story-event"><div className="event-light"/><p className="scene-index">DAY {state.day} · {guest.name} · {event.stage==='CONFLICT'?'갈등':'결말'}</p><section><span>NPC STORY EVENT</span><h1>{event.title}</h1><p>{event.description}</p><blockquote>{event.quote}</blockquote><div className="night-choices">{event.choices.map((choice)=><Button key={choice.id} disabled={!canChooseStoryChoice(state,choice)} onClick={()=>onChoose(event.id,choice.id)}><span>{choice.label}</span><small>{choice.description}</small><ChevronRight/></Button>)}</div></section></main>;
+  return <main className="event-screen story-event"><div className="event-light"/><CharacterSprite guest={guest} context="story"/><p className="scene-index">DAY {state.day} · {guest.name} · {event.stage==='CONFLICT'?'갈등':'결말'}</p><section><span>NPC STORY EVENT</span><h1>{event.title}</h1><p>{event.description}</p><blockquote>{event.quote}</blockquote><div className="night-choices">{event.choices.map((choice)=><Button key={choice.id} disabled={!canChooseStoryChoice(state,choice)} onClick={()=>onChoose(event.id,choice.id)}><span>{choice.label}</span><small>{choice.description}</small><ChevronRight/></Button>)}</div></section></main>;
 }
 
 function MorningReport({ state, onNext, onReset, onStartEnding }: { state:UiSave; onNext:()=>void; onReset:()=>void; onStartEnding:(endingId:GameState['availableEndings'][number])=>void }) {
