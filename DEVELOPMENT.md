@@ -34,13 +34,13 @@ Understood as: grow the published browser game into an open-duration hotel survi
 - The trade network creates a renewable parts/fuel route; a deterministic 30-day regression covers four continuously occupied rooms at maximum infrastructure
 - HOTEL JOURNAL exposes the complete reverse-chronological record with check-in, checkout, resource, and event filters plus relationship details
 - Every ending route now has a distinct three-scene final event and epilogue; progress saves mid-scene and completion returns to open-ended operation
-- Eleanor, Walter, Mia, Daniel, Samuel, Ruth, Jack, Owen, Hayes, Lily, Victor, Rosa, and Vale now appear as large authored half-body 2D sprites at the front desk and in their story scenes
+- Eleanor, Walter, Mia, Daniel, Samuel, Ruth, Jack, Owen, Hayes, Lily, Victor, Rosa, Vale, Claire, and Mr. White now appear as large authored half-body 2D sprites at the front desk and in their story scenes
 - Relationship night events can stage two available character portraits around the central choice panel; Owen and Hayes face off during their military standoff, while Lily and Vale compare outbreak evidence during their investigation breakthrough
 - Guest visual state is derived from Health, Stress, infection, and arrival status, exposing wet, exhausted, bandaged, bloodied, and infection-suspected presentation layers
 
 ## Next system priorities
 
-- Produce matching half-body sprite sets for the remaining seven NPCs and replace the current CSS-derived state treatment with authored expression and condition variants
+- Produce matching half-body sprite sets for the remaining five NPCs and replace the current CSS-derived state treatment with authored expression and condition variants
 
 ## Main NPC catalog
 
