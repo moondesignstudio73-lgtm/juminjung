@@ -3,10 +3,6 @@ import type { Guest } from "./types.ts";
 export type GuestExpression = "neutral" | "happy" | "sad" | "angry" | "afraid" | "suspicious" | "injured";
 export type GuestVisualModifier = "WET" | "EXHAUSTED" | "BANDAGED" | "BLOODIED" | "INFECTED";
 
-const PORTRAIT_ASSETS: Partial<Record<string, string>> = {
-  eleanor: "/juminjung/assets/portraits/eleanor/neutral-v1.png",
-};
-
 export type GuestVisualState = {
   asset: string | null;
   expression: GuestExpression;
@@ -42,7 +38,7 @@ export function getGuestVisualState(guest: Guest): GuestVisualState {
   };
 
   return {
-    asset: PORTRAIT_ASSETS[guest.id] ?? null,
+    asset: guest.portrait || null,
     expression,
     modifiers,
     label: modifiers.map((modifier) => labels[modifier]).join(" · ") || "외관 이상 없음",

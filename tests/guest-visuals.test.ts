@@ -3,15 +3,21 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createGuests } from "../game/guest-data.ts";
 import { getGuestVisualState } from "../game/guest-visual-manager.ts";
+import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
 
 const guest = (id: string) => createGuests().find((item) => item.id === id)!;
 
-test("Eleanor는 실제 게임용 반신 일러스트 자산을 사용한다", () => {
-  assert.equal(getGuestVisualState(guest("eleanor")).asset, "/juminjung/assets/portraits/eleanor/neutral-v1.png");
-  const png = readFileSync("public/assets/portraits/eleanor/neutral-v1.png");
-  assert.deepEqual([...png.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
-  assert.equal(png.readUInt32BE(16), 1024);
-  assert.equal(png.readUInt32BE(20), 1536);
+test("등록된 모든 반신 일러스트는 실제 1024×1536 PNG 자산을 사용한다", () => {
+  const illustrated = createGuests().filter((item) => item.portrait);
+  assert.deepEqual(illustrated.map((item) => item.id), ["eleanor", "mia", "ruth", "rosa"]);
+  for (const item of illustrated) {
+    assert.equal(getGuestVisualState(item).asset, item.portrait);
+    const relativePath = item.portrait.replace("/juminjung/", "public/");
+    const png = readFileSync(relativePath);
+    assert.deepEqual([...png.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+    assert.equal(png.readUInt32BE(16), 1024);
+    assert.equal(png.readUInt32BE(20), 1536);
+  }
 });
 
 test("도착 대기 중인 방문자는 젖은 옷 상태로 표시된다", () => {
@@ -43,7 +49,16 @@ test("높은 Stress와 감염 의심은 감정 및 오염 상태를 우선 반�
 });
 
 test("아직 전용 자산이 없는 NPC도 상태 계산은 동일하게 작동한다", () => {
-  const ruth = getGuestVisualState({ ...guest("ruth"), stress: 75 });
-  assert.equal(ruth.asset, null);
-  assert.ok(ruth.modifiers.includes("EXHAUSTED"));
+  const walter = getGuestVisualState({ ...guest("walter"), stress: 75 });
+  assert.equal(walter.asset, null);
+  assert.ok(walter.modifiers.includes("EXHAUSTED"));
+});
+
+test("과거 저장의 오래된 초상화 경로는 최신 카탈로그 자산으로 복원된다", () => {
+  const state = createInitialGameState();
+  state.guests = state.guests.map((item) => item.id === "mia" ? { ...item, portrait: "/assets/portraits/mia/neutral.png", expressions: ["neutral"] } : item);
+  const restored = restoreGameState(serializeGameState(state));
+  const mia = restored.guests.find((item) => item.id === "mia")!;
+  assert.equal(mia.portrait, "/juminjung/assets/portraits/mia/neutral-v1.png");
+  assert.equal(mia.expressions.length, 7);
 });
