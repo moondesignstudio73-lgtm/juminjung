@@ -11,8 +11,8 @@ test("등록된 모든 반신 일러스트는 실제 1024×1536 PNG 자산을 �
   const illustrated = createGuests().filter((item) => item.portrait);
   assert.deepEqual(illustrated.map((item) => item.id), ["eleanor", "walter", "mia", "daniel", "samuel", "ruth", "jack", "grace", "owen", "hayes", "lily", "noah", "victor", "rosa", "eli", "vale", "hazel", "thomas", "claire", "white"]);
   for (const item of illustrated) {
-    assert.equal(getGuestVisualState(item).asset, item.portrait);
     const assets = [item.portrait, ...Object.values(item.portraitVariants)].filter((asset): asset is string => Boolean(asset));
+    assert.ok(assets.includes(getGuestVisualState(item).asset ?? ""));
     for (const asset of assets) {
       const relativePath = asset.replace("/juminjung/", "public/");
       const png = readFileSync(relativePath);
@@ -58,6 +58,21 @@ test("높은 Stress와 감염 의심은 감정 및 오염 상태를 우선 반�
   assert.equal(infected.expression, "injured");
   assert.equal(infected.asset, "/juminjung/assets/portraits/eleanor/injured-v1.png");
   assert.ok(infected.modifiers.includes("INFECTED"));
+});
+
+test("Ruth의 공포와 부상 상태는 각각 전용 초상으로 전환된다", () => {
+  const afraid = getGuestVisualState({ ...guest("ruth"), status: "STAYING", stress: 85 });
+  assert.equal(afraid.expression, "afraid");
+  assert.equal(afraid.asset, "/juminjung/assets/portraits/ruth/afraid-v1.png");
+  const injured = getGuestVisualState({ ...guest("ruth"), status: "STAYING", infectionState: "INJURED" });
+  assert.equal(injured.expression, "injured");
+  assert.equal(injured.asset, "/juminjung/assets/portraits/ruth/injured-v1.png");
+});
+
+test("Mr. White는 첫 등장부터 위험도에 맞는 의심 초상을 사용한다", () => {
+  const suspicious = getGuestVisualState(guest("white"));
+  assert.equal(suspicious.expression, "suspicious");
+  assert.equal(suspicious.asset, "/juminjung/assets/portraits/white/suspicious-v1.png");
 });
 
 test("전용 표정 변형이 없는 NPC는 중립 초상으로 안전하게 대체된다", () => {
