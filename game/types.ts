@@ -117,6 +117,7 @@ export type EndingCondition = {
 };
 export type HotelStats = { hotelCondition: number; security: number; foodSustainability: number; waterSustainability: number; crime: number; survivorPopulation: number; averageTrust: number; resources: number };
 export type Reputations = { community: number; military: number; refugee: number; merchant: number; humanitarian: number };
+export type VisitorReactionDefinition = { id: string; guestId: string; label: string; faction: keyof Reputations; dialogue: string; requiredFlags?: EventFlags; forbiddenFlags?: string[]; minimumReputation?: Partial<Reputations>; maximumReputation?: Partial<Reputations>; trustDelta: number; riskDelta?: number; offerBonus?: Partial<Resources> };
 export type FacilityId = "water_purifier" | "food_production" | "armory" | "trade_network";
 export type HotelActionId = "repair_hotel" | "community_outreach" | "security_patrol" | "trade_run";
 export type FacilityDefinition = { id: FacilityId; name: string; description: string; cost: Partial<Resources>; statChanges: Partial<HotelStats>; reputationChanges: Partial<Reputations> };
@@ -174,4 +175,5 @@ export type GameState = {
   selectedNightChoiceId: string | null;
   lastNightEventId: string | null;
   pendingStoryEventId: string | null;
+  pendingVisitorReactionId: string | null;
 };

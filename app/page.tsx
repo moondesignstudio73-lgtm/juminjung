@@ -20,7 +20,7 @@ import { ENDING_CONDITIONS } from '@/game/ending-data';
 import { FACILITIES } from '@/game/facility-data';
 import { buildFacility, canBuildFacility, performHotelAction } from '@/game/hotel-action-manager';
 import { canChooseNightChoice, selectNightEvent } from '@/game/night-event-manager';
-import { getEligibleVisitor, markVisitorRefused } from '@/game/visitor-manager';
+import { applyVisitorCheckInBenefits, getEligibleVisitor, getVisitorReaction, getVisitorReactionById, markVisitorRefused } from '@/game/visitor-manager';
 import type { FacilityId, GameState, Guest, HotelActionId, Room } from '@/game/types';
 
 type UiSave = GameState & { prologue: number };
@@ -57,8 +57,9 @@ export default function Home() {
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [showQuestions, setShowQuestions] = useState(false);
   const [muted, setMuted] = useState(false);
-  const eligibleVisitor = getEligibleVisitor(save.guests, save.day);
+  const eligibleVisitor = getEligibleVisitor(save.guests, save.day, save.flags);
   const visitor = eligibleVisitor ?? save.guests.find((guest) => guest.status === 'STAYING') ?? save.guests[0];
+  const visitorReaction = eligibleVisitor ? getVisitorReaction(save, eligibleVisitor) : null;
   const stayingGuest = [...save.guests].filter((guest) => guest.status === 'STAYING').sort((a,b) => (b.checkedInDay ?? 0) - (a.checkedInDay ?? 0))[0];
   const managedGuest = stayingGuest ?? visitor;
 
@@ -73,8 +74,8 @@ export default function Home() {
   }, [save, hydrated]);
 
   useEffect(() => {
-    if (save.phase === 'desk' && eligibleVisitor) setDialogue(`“${eligibleVisitor.introDialogue}”`);
-  }, [save.phase, save.day, eligibleVisitor?.id]);
+    if (save.phase === 'desk' && eligibleVisitor) setDialogue(visitorReaction?.dialogue ?? `“${eligibleVisitor.introDialogue}”`);
+  }, [save.phase, save.day, eligibleVisitor?.id, visitorReaction?.id]);
 
   const update = (patch: Partial<UiSave>) => setSave((current) => ({ ...current, ...patch }));
   const reset = () => { clearBrowserGame(); setSave(makeInitial()); setDialogue(defaultDialogue); setSelectedItem(null); };
@@ -84,11 +85,12 @@ export default function Home() {
   const inspect = (id: string) => {
     update({ inspected: [...new Set([...save.inspected, id])] }); setSelectedItem(id);
   };
-  const refuse = () => setSave((current) => routeToNight({ ...current, guests: markVisitorRefused(current.guests, visitor.id), eventHistory: [...current.eventHistory, { day: current.day, type: 'EVENT', message: `${visitor.name} · 입실 거절` }], decision: 'refuse' }));
-  const openAssignment = (mode: 'checkin' | 'move') => update({ phase: 'assignment', assignmentMode: mode, selectedRoomNumber: null });
+  const refuse = () => setSave((current) => routeToNight({ ...current, guests: markVisitorRefused(current.guests, visitor.id), eventHistory: [...current.eventHistory, { day: current.day, type: 'EVENT', message: `${visitor.name} · 입실 거절` }], decision: 'refuse', pendingVisitorReactionId: null }));
+  const openAssignment = (mode: 'checkin' | 'move') => update({ phase: 'assignment', assignmentMode: mode, selectedRoomNumber: null, pendingVisitorReactionId: mode === 'checkin' ? visitorReaction?.id ?? null : null });
   const confirmRoom = () => {
     if (save.selectedRoomNumber === null) return;
     const assignmentGuest = save.assignmentMode === 'move' ? managedGuest : visitor;
+    const reaction = save.assignmentMode === 'checkin' ? getVisitorReactionById(assignmentGuest, save.pendingVisitorReactionId) : null;
     const positionedGuests = save.guests.map((guest) => guest.id === assignmentGuest.id ? {
       ...guest,
       currentRoomNumber: save.selectedRoomNumber,
@@ -96,19 +98,23 @@ export default function Home() {
       checkedInDay: guest.checkedInDay ?? save.day,
       remainingNights: save.assignmentMode === 'checkin' ? guest.stayDuration : guest.remainingNights,
     } : guest);
-    const arrival = save.assignmentMode === 'checkin' ? completeEventStage(positionedGuests, assignmentGuest.id, 'ARRIVAL') : { guests: positionedGuests, entry: null };
+    const benefits = save.assignmentMode === 'checkin'
+      ? applyVisitorCheckInBenefits(save.resources, positionedGuests, assignmentGuest.id, save.negotiated, reaction)
+      : { resources: save.resources, guests: positionedGuests, applied: false };
+    const arrival = save.assignmentMode === 'checkin' ? completeEventStage(benefits.guests, assignmentGuest.id, 'ARRIVAL') : { guests: benefits.guests, entry: null };
     const guests = arrival.guests;
     const positioned = save.assignmentMode === 'move'
       ? moveGuest(save.rooms, assignmentGuest.id, save.selectedRoomNumber)
       : assignGuest(save.rooms, save.selectedRoomNumber, assignmentGuest.id);
-    const reward = save.assignmentMode === 'checkin' ? Object.fromEntries(Object.keys(save.resources).map((key) => [key, save.resources[key as keyof typeof save.resources] + (visitor.offer[key as keyof typeof visitor.offer] ?? 0) + (save.negotiated ? visitor.negotiatedOffer[key as keyof typeof visitor.negotiatedOffer] ?? 0 : 0)])) as typeof save.resources : save.resources;
+    const roomFlags = assignmentGuest.id === ELEANOR_ID ? setGuestRoomFlags(save.flags, save.selectedRoomNumber) : save.flags;
+    const reactionApplied = benefits.applied && reaction;
     update({
       guests,
       rooms: recalculateRoomEffects(positioned, guests),
-      flags: assignmentGuest.id === ELEANOR_ID ? setGuestRoomFlags(save.flags, save.selectedRoomNumber) : save.flags,
-      resources: reward,
-      eventHistory: save.assignmentMode === 'checkin' ? [...save.eventHistory, { day: save.day, type: 'CHECK_IN' as const, message: `${visitor.name} · ${save.selectedRoomNumber}호 체크인` }, ...(arrival.entry ? [{ ...arrival.entry, day: save.day }] : [])] : save.eventHistory,
-      decision: 'checkin', phase: 'management', assignmentMode: null,
+      flags: reactionApplied ? { ...roomFlags, [`visitor_reaction_${assignmentGuest.id}_${reactionApplied.id}`]: true } : roomFlags,
+      resources: benefits.resources,
+      eventHistory: save.assignmentMode === 'checkin' ? [...save.eventHistory, { day: save.day, type: 'CHECK_IN' as const, message: `${visitor.name} · ${save.selectedRoomNumber}호 체크인` }, ...(reactionApplied ? [{ day: save.day, type: 'EVENT' as const, message: `세력 반응 · ${visitor.name} · ${reactionApplied.label}` }] : []), ...(arrival.entry ? [{ ...arrival.entry, day: save.day }] : [])] : save.eventHistory,
+      decision: 'checkin', phase: 'management', assignmentMode: null, selectedRoomNumber: null, pendingVisitorReactionId: null,
     });
   };
   const checkout = () => {
@@ -134,11 +140,11 @@ export default function Home() {
       </main>
     );
   }
-  if (save.phase === 'assignment') return <RoomAssignment day={save.day} rooms={save.rooms} guest={save.assignmentMode === 'move' ? managedGuest : visitor} selected={save.selectedRoomNumber} mode={save.assignmentMode!} onSelect={(roomNumber) => update({ selectedRoomNumber: roomNumber })} onConfirm={confirmRoom} onCancel={() => update({ phase: save.assignmentMode === 'move' ? 'management' : 'desk', assignmentMode: null, selectedRoomNumber: null })} />;
+  if (save.phase === 'assignment') return <RoomAssignment day={save.day} rooms={save.rooms} guest={save.assignmentMode === 'move' ? managedGuest : visitor} selected={save.selectedRoomNumber} mode={save.assignmentMode!} onSelect={(roomNumber) => update({ selectedRoomNumber: roomNumber })} onConfirm={confirmRoom} onCancel={() => update({ phase: save.assignmentMode === 'move' ? 'management' : 'desk', assignmentMode: null, selectedRoomNumber: null, pendingVisitorReactionId: null })} />;
   if (save.phase === 'management') return <HotelManagement state={save} guest={managedGuest} hasStayingGuest={Boolean(stayingGuest)} onBuild={(id) => setSave((current) => ({ ...buildFacility(current, id).state, prologue: current.prologue }))} onAction={(id) => setSave((current) => ({ ...performHotelAction(current, id).state, prologue: current.prologue }))} onMove={() => openAssignment('move')} onCheckout={checkout} onContinue={() => setSave((current) => routeToNight(current))} />;
   if (save.phase === 'story') return <StoryChoiceScene state={save} onChoose={(eventId,choiceId) => setSave((current) => routeToNight({ ...applyStoryChoice(current,eventId,choiceId).state, prologue:current.prologue }))} />;
   if (save.phase === 'night') return <NightEvent state={save} onChoose={(eventId,choiceId) => setSave((current) => ({ ...resolveDay({ ...current, selectedNightEventId:eventId, selectedNightChoiceId:choiceId }), prologue: current.prologue }))} />;
-  if (save.phase === 'report') return <MorningReport state={save} onStartEnding={(endingId) => update({ activeEndingId: endingId, phase: 'ending' })} onNext={() => { const nextVisitor = getEligibleVisitor(save.guests, save.day); const staying = save.guests.some((guest) => guest.status === 'STAYING'); update({ phase: nextVisitor ? 'desk' : staying ? 'management' : 'desk', decision: staying ? 'checkin' : null, asked: [], inspected: [], negotiated: false, held: false }); if (nextVisitor) setDialogue(nextVisitor.introDialogue); }} onReset={reset} />;
+  if (save.phase === 'report') return <MorningReport state={save} onStartEnding={(endingId) => update({ activeEndingId: endingId, phase: 'ending' })} onNext={() => { const nextVisitor = getEligibleVisitor(save.guests, save.day, save.flags); const staying = save.guests.some((guest) => guest.status === 'STAYING'); update({ phase: nextVisitor ? 'desk' : staying ? 'management' : 'desk', decision: staying ? 'checkin' : null, asked: [], inspected: [], negotiated: false, held: false }); if (nextVisitor) setDialogue(nextVisitor.introDialogue); }} onReset={reset} />;
   if (save.phase === 'ending') return <CampaignEnding state={save} onReset={reset} onReturn={() => update({ activeEndingId: null, phase: 'report' })} onComplete={() => save.activeEndingId && update({ completedEndingFlags: [...new Set([...save.completedEndingFlags, save.activeEndingId])], availableEndings: save.availableEndings.filter((id) => id !== save.activeEndingId), endingProgress: { ...save.endingProgress, [save.activeEndingId]: 'COMPLETED' }, activeEndingId: null, phase: 'report' })} />;
 
   if (!eligibleVisitor) return <QuietDesk day={save.day} resources={save.resources} staying={save.guests.filter((guest)=>guest.status==='STAYING').length} onManage={() => update({ phase: 'management' })} onEnd={() => setSave((current) => routeToNight({ ...current, decision:'refuse' }))} />;
@@ -167,6 +173,7 @@ export default function Home() {
             <div><dt>위험도</dt><dd>{visitor.riskLevel}</dd></div>
           </dl>
           <div className="clue-count">단서 {save.asked.length + save.inspected.length} / {visitor.questions.length + visitor.offeredItems.length}<small>숨겨진 특성은 조사 전 표시되지 않습니다.</small></div>
+          {visitorReaction&&<div className="faction-reaction"><span>{visitorReaction.faction.toUpperCase()} REACTION</span><strong>{visitorReaction.label}</strong><small>Trust {visitorReaction.trustDelta>0?'+':''}{visitorReaction.trustDelta}{visitorReaction.offerBonus?' · 추가 제안 있음':''}</small></div>}
         </aside>
         <aside className="hotel-status right-panel">
           <span className="panel-label">야간 장부 · 자원 점수</span><strong>{save.rooms.filter(isRoomSelectable).length}</strong><small>빈 객실 · 총 30실</small>

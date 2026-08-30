@@ -28,10 +28,11 @@ Understood as: grow the published browser game into an open-duration hotel survi
 - The morning DESTINY journal lists every visible route as IN PROGRESS, AVAILABLE, or COMPLETED while preserving hidden routes as UNKNOWN
 - Room-distance-weighted relationships now trigger one-time night choices for Eleanor/Ruth, Lily/Vale, and Owen/Hayes, changing both NPC state and relationship values
 - Structured relationship deltas from story and night choices persist in the hotel log and appear in the morning RELATIONSHIP JOURNAL
+- Reputation and prior-event flags now produce authored front-desk reactions, modifying visitor Trust, Risk, dialogue, and check-in offers
+- Refugee shelter/denial, generator blackout, medical cooperation, investigation, and military resistance create later visitor follow-up dialogue
 
 ## Next system priorities
 
-- Add reputation-driven visitor reactions and authored follow-up scenes for night-event consequences
 - Add facility upgrades and balance the resource economy across long campaigns
 - Expand HOTEL LOG into an accessible journal and author each unlocked final event and epilogue
 

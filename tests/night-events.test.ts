@@ -55,7 +55,20 @@ test("피난민을 받아들이면 자원을 소비하고 평판·위협·플래
   assert.equal(result.state.resources.food, state.resources.food - 4);
   assert.equal(result.state.reputations.refugee, 8);
   assert.equal(result.state.flags.refugees_sheltered, true);
+  assert.equal(result.state.flags.refugees_denied, false);
   assert.equal(result.state.flags.monster_threat, 4);
+});
+
+test("피난민 거절과 발전기 정전은 후속 방문 장면 플래그를 남긴다", () => {
+  const refugeeState = createInitialGameState();
+  refugeeState.day = 8;
+  refugeeState.worldState = "UNREST";
+  const denied = applyNightChoice(refugeeState, "refugee_wave", "deny").state;
+  assert.equal(denied.flags.refugees_denied, true);
+  assert.equal(denied.flags.refugees_sheltered, false);
+  const generatorState = createInitialGameState();
+  generatorState.resources.fuel = 10;
+  assert.equal(applyNightChoice(generatorState, "generator_failure", "blackout").state.flags.generator_blackout, true);
 });
 
 test("야간 선택은 정산 로그와 마지막 사건으로 저장되고 임시 선택은 초기화된다", () => {
@@ -112,6 +125,7 @@ test("의료진 공동 진료는 배치 관계와 의약품을 실제 NPC 회복
   assert.equal(ruth.health, 88);
   assert.equal(eleanor.relationships.find((relation) => relation.targetId === "ruth")?.value, 50);
   assert.equal(ruth.relationships.find((relation) => relation.targetId === "eleanor")?.value, 50);
+  assert.equal(result.state.flags.medical_joint_triage, true);
 });
 
 test("야간 사건은 오래된 사건 ID와 감당할 수 없는 선택을 대체 적용하지 않는다", () => {
