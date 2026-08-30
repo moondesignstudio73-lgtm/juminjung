@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { recalculateRoomEffects } from "../game/aura-effect-manager.ts";
 import { resolveDay } from "../game/day-manager.ts";
+import { getHotelLogEntries } from "../game/hotel-log-manager.ts";
 import { ELEANOR_ID } from "../game/guest-data.ts";
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
 import { assignGuest } from "../game/room-manager.ts";
@@ -66,4 +67,15 @@ test("DAY 30 이후에도 정산과 운영을 계속할 수 있다", () => {
   assert.equal(result.phase, "report");
   result.phase = "night";
   assert.equal(resolveDay(result).day, 32);
+});
+
+test("HOTEL JOURNAL은 전체 기록을 최신순으로 제공하고 유형별로 필터링한다", () => {
+  const state = createInitialGameState();
+  state.eventHistory = [
+    { day: 1, type: "CHECK_IN", message: "Eleanor 체크인" },
+    { day: 1, type: "RESOURCE", message: "식량 소비" },
+    { day: 2, type: "EVENT", message: "발전기 정전" },
+  ];
+  assert.deepEqual(getHotelLogEntries(state.eventHistory).map(({ entry }) => entry.message), ["발전기 정전", "식량 소비", "Eleanor 체크인"]);
+  assert.deepEqual(getHotelLogEntries(state.eventHistory, "RESOURCE").map(({ entry }) => entry.message), ["식량 소비"]);
 });

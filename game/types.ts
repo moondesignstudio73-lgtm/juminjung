@@ -100,6 +100,8 @@ export type EventFlags = Record<string, boolean | number | string>;
 export type WorldState = "STABLE" | "UNREST" | "COLLAPSE" | "CRITICAL" | "END_STAGE";
 export type EndingStatus = "UNKNOWN" | "IN_PROGRESS" | "AVAILABLE" | "COMPLETED";
 export type EndingId = "SAFE_HAVEN" | "THE_TRUTH" | "FORTRESS" | "HOME" | "KING_OF_THE_RUINS" | "MILITARY_OCCUPATION" | "THE_DOOR";
+export type EndingScene = { id: string; title: string; body: string; quote: string };
+export type EndingNarrative = { endingId: EndingId; kicker: string; scenes: EndingScene[] };
 export type EndingCondition = {
   endingId: EndingId;
   name: string;
@@ -173,6 +175,7 @@ export type GameState = {
   fatherStoryProgress: number;
   endingRelatedFlags: EventFlags;
   activeEndingId: EndingId | null;
+  endingSceneIndex: number;
   actionPoints: number;
   maxActionPoints: number;
   selectedNightEventId: string | null;

@@ -4,6 +4,7 @@ import { createGuests } from "./guest-data.ts";
 import { createResources } from "./resource-manager.ts";
 import { createRooms } from "./room-manager.ts";
 import { FACILITIES } from "./facility-data.ts";
+import { ENDING_NARRATIVES } from "./ending-narrative-data.ts";
 import type { FacilityId, GameState } from "./types.ts";
 
 export const SAVE_KEY = "juju-hotel-save-v2";
@@ -26,7 +27,7 @@ function mergeGuest(catalogGuest: ReturnType<typeof createGuests>[number], saved
 }
 
 export function createInitialGameState(): GameState {
-  return { version: 8, phase: "title", day: 0, rooms: createRooms(), guests: createGuests(), resources: createResources(), flags: createEventFlags(), asked: [], inspected: [], negotiated: false, held: false, decision: null, assignmentMode: null, selectedRoomNumber: null, eventHistory: [], lastDaySummary: null, worldState: "STABLE", hotelStats: { hotelCondition: 60, security: 35, foodSustainability: 0, waterSustainability: 0, crime: 0, survivorPopulation: 0, averageTrust: 0, resources: 40 }, reputations: { community: 0, military: 0, refugee: 0, merchant: 0, humanitarian: 0 }, facilities: {}, availableEndings: [], completedEndingFlags: [], endingProgress: {}, fatherStoryProgress: 0, endingRelatedFlags: {}, activeEndingId: null, actionPoints: 2, maxActionPoints: 2, selectedNightEventId: null, selectedNightChoiceId: null, lastNightEventId: null, pendingStoryEventId: null, pendingVisitorReactionId: null };
+  return { version: 8, phase: "title", day: 0, rooms: createRooms(), guests: createGuests(), resources: createResources(), flags: createEventFlags(), asked: [], inspected: [], negotiated: false, held: false, decision: null, assignmentMode: null, selectedRoomNumber: null, eventHistory: [], lastDaySummary: null, worldState: "STABLE", hotelStats: { hotelCondition: 60, security: 35, foodSustainability: 0, waterSustainability: 0, crime: 0, survivorPopulation: 0, averageTrust: 0, resources: 40 }, reputations: { community: 0, military: 0, refugee: 0, merchant: 0, humanitarian: 0 }, facilities: {}, availableEndings: [], completedEndingFlags: [], endingProgress: {}, fatherStoryProgress: 0, endingRelatedFlags: {}, activeEndingId: null, endingSceneIndex: 0, actionPoints: 2, maxActionPoints: 2, selectedNightEventId: null, selectedNightChoiceId: null, lastNightEventId: null, pendingStoryEventId: null, pendingVisitorReactionId: null };
 }
 
 export function restoreGameState(raw: string | null): GameState {
@@ -47,7 +48,12 @@ export function restoreGameState(raw: string | null): GameState {
       const level = Math.max(0, Math.min(3, Math.trunc(numeric)));
       return level > 0 ? [[id, level]] : [];
     })) as GameState["facilities"];
-    const state = { ...base, ...parsed, version: 8, phase: parsed.phase === "ending" && !parsed.activeEndingId ? "report" : parsed.phase ?? base.phase, resources: { ...base.resources, ...parsed.resources }, flags: { ...base.flags, ...parsed.flags }, hotelStats: { ...base.hotelStats, ...parsed.hotelStats }, reputations: { ...base.reputations, ...parsed.reputations }, facilities, endingRelatedFlags: { ...base.endingRelatedFlags, ...parsed.endingRelatedFlags }, rooms: parsed.rooms!, guests, eventHistory: parsed.eventHistory ?? [], lastDaySummary: parsed.lastDaySummary ?? null, availableEndings: parsed.availableEndings ?? [], completedEndingFlags: parsed.completedEndingFlags ?? [], endingProgress: parsed.endingProgress ?? {}, activeEndingId: parsed.activeEndingId ?? null, actionPoints: parsed.actionPoints ?? base.maxActionPoints, maxActionPoints: parsed.maxActionPoints ?? base.maxActionPoints, selectedNightEventId: parsed.selectedNightEventId ?? null, selectedNightChoiceId: parsed.selectedNightChoiceId ?? null, lastNightEventId: parsed.lastNightEventId ?? null, pendingStoryEventId: parsed.pendingStoryEventId ?? null, pendingVisitorReactionId: parsed.pendingVisitorReactionId ?? null } as GameState;
+    const completedEndingFlags = parsed.completedEndingFlags ?? [];
+    const activeNarrative = parsed.activeEndingId ? ENDING_NARRATIVES.find((ending) => ending.endingId === parsed.activeEndingId) : null;
+    const activeEndingId = activeNarrative && parsed.activeEndingId && !completedEndingFlags.includes(parsed.activeEndingId) ? parsed.activeEndingId : null;
+    const endingSceneIndex = activeEndingId && activeNarrative ? Math.max(0, Math.min(activeNarrative.scenes.length - 1, Math.trunc(Number(parsed.endingSceneIndex) || 0))) : 0;
+    const phase = parsed.phase === "ending" && !activeEndingId ? "report" : parsed.phase ?? base.phase;
+    const state = { ...base, ...parsed, version: 8, phase, resources: { ...base.resources, ...parsed.resources }, flags: { ...base.flags, ...parsed.flags }, hotelStats: { ...base.hotelStats, ...parsed.hotelStats }, reputations: { ...base.reputations, ...parsed.reputations }, facilities, endingRelatedFlags: { ...base.endingRelatedFlags, ...parsed.endingRelatedFlags }, rooms: parsed.rooms!, guests, eventHistory: parsed.eventHistory ?? [], lastDaySummary: parsed.lastDaySummary ?? null, availableEndings: parsed.availableEndings ?? [], completedEndingFlags, endingProgress: parsed.endingProgress ?? {}, activeEndingId, endingSceneIndex, actionPoints: parsed.actionPoints ?? base.maxActionPoints, maxActionPoints: parsed.maxActionPoints ?? base.maxActionPoints, selectedNightEventId: parsed.selectedNightEventId ?? null, selectedNightChoiceId: parsed.selectedNightChoiceId ?? null, lastNightEventId: parsed.lastNightEventId ?? null, pendingStoryEventId: parsed.pendingStoryEventId ?? null, pendingVisitorReactionId: parsed.pendingVisitorReactionId ?? null } as GameState;
     return { ...state, rooms: recalculateRoomEffects(state.rooms, state.guests) };
   } catch { return createInitialGameState(); }
 }

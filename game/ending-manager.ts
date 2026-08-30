@@ -1,4 +1,5 @@
 import { ENDING_CONDITIONS } from "./ending-data.ts";
+import { ENDING_NARRATIVES } from "./ending-narrative-data.ts";
 import type { EndingCondition, EndingId, EndingStatus, GameState } from "./types.ts";
 
 function entriesMeet(actual: Record<string, boolean | number>, required: Record<string, boolean | number> = {}, mode: "min" | "max" | "equal" = "equal") {
@@ -35,3 +36,34 @@ export function evaluateEndings(state: GameState): { available: EndingId[]; prog
 }
 
 export function getEndingCondition(id: EndingId) { return ENDING_CONDITIONS.find((ending) => ending.endingId === id); }
+export function getEndingNarrative(id: EndingId) { return ENDING_NARRATIVES.find((ending) => ending.endingId === id); }
+
+export function startEnding(state: GameState, endingId: EndingId): GameState {
+  if (!state.availableEndings.includes(endingId) || state.completedEndingFlags.includes(endingId)) throw new Error(`시작할 수 없는 엔딩입니다: ${endingId}`);
+  if (!getEndingNarrative(endingId)) throw new Error(`엔딩 장면을 찾을 수 없습니다: ${endingId}`);
+  return { ...state, activeEndingId: endingId, endingSceneIndex: 0, phase: "ending" };
+}
+
+export function leaveEnding(state: GameState): GameState {
+  return { ...state, activeEndingId: null, endingSceneIndex: 0, phase: "report" };
+}
+
+export function advanceEnding(state: GameState): GameState {
+  if (!state.activeEndingId) throw new Error("진행 중인 엔딩이 없습니다.");
+  const narrative = getEndingNarrative(state.activeEndingId);
+  if (!narrative) throw new Error(`엔딩 장면을 찾을 수 없습니다: ${state.activeEndingId}`);
+  const index = Math.max(0, Math.min(state.endingSceneIndex, narrative.scenes.length - 1));
+  if (index < narrative.scenes.length - 1) return { ...state, endingSceneIndex: index + 1 };
+  const endingId = state.activeEndingId;
+  const condition = getEndingCondition(endingId);
+  return {
+    ...state,
+    completedEndingFlags: [...new Set([...state.completedEndingFlags, endingId])],
+    availableEndings: state.availableEndings.filter((id) => id !== endingId),
+    endingProgress: { ...state.endingProgress, [endingId]: "COMPLETED" },
+    activeEndingId: null,
+    endingSceneIndex: 0,
+    phase: "report",
+    eventHistory: [...state.eventHistory, { day: state.day, type: "EVENT", message: `엔딩 완료 · ${condition?.name ?? endingId}` }],
+  };
+}

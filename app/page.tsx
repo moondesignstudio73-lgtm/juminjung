@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
-  BedDouble, ChevronRight, CircleHelp, Droplets, Fuel, HeartPulse,
+  BedDouble, BookOpen, ChevronRight, CircleHelp, Droplets, Fuel, HeartPulse,
   Inspect, PackageSearch, Radio, RotateCcw, Shield, Soup, Volume2, VolumeX,
 } from 'lucide-react';
 import { getActiveAuraSynergies, getAffectedRoomNumbers, recalculateRoomEffects } from '@/game/aura-effect-manager';
@@ -15,11 +15,12 @@ import { assignGuest, checkoutGuest, isRoomSelectable, moveGuest } from '@/game/
 import { getActiveRelationships } from '@/game/relationship-manager';
 import { completeEventStage } from '@/game/story-event-manager';
 import { applyStoryChoice, canChooseStoryChoice, getPendingStoryChoice } from '@/game/story-choice-manager';
-import { getEndingCondition } from '@/game/ending-manager';
+import { advanceEnding, getEndingCondition, getEndingNarrative, leaveEnding, startEnding } from '@/game/ending-manager';
 import { ENDING_CONDITIONS } from '@/game/ending-data';
 import { FACILITIES } from '@/game/facility-data';
 import { buildFacility, canBuildFacility, performHotelAction } from '@/game/hotel-action-manager';
 import { canChooseNightChoice, selectNightEvent } from '@/game/night-event-manager';
+import { getHotelLogEntries } from '@/game/hotel-log-manager';
 import { applyVisitorCheckInBenefits, getEligibleVisitor, getVisitorReaction, getVisitorReactionById, markVisitorRefused } from '@/game/visitor-manager';
 import type { FacilityId, GameState, Guest, HotelActionId, Room } from '@/game/types';
 
@@ -144,8 +145,8 @@ export default function Home() {
   if (save.phase === 'management') return <HotelManagement state={save} guest={managedGuest} hasStayingGuest={Boolean(stayingGuest)} onBuild={(id) => setSave((current) => ({ ...buildFacility(current, id).state, prologue: current.prologue }))} onAction={(id) => setSave((current) => ({ ...performHotelAction(current, id).state, prologue: current.prologue }))} onMove={() => openAssignment('move')} onCheckout={checkout} onContinue={() => setSave((current) => routeToNight(current))} />;
   if (save.phase === 'story') return <StoryChoiceScene state={save} onChoose={(eventId,choiceId) => setSave((current) => routeToNight({ ...applyStoryChoice(current,eventId,choiceId).state, prologue:current.prologue }))} />;
   if (save.phase === 'night') return <NightEvent state={save} onChoose={(eventId,choiceId) => setSave((current) => ({ ...resolveDay({ ...current, selectedNightEventId:eventId, selectedNightChoiceId:choiceId }), prologue: current.prologue }))} />;
-  if (save.phase === 'report') return <MorningReport state={save} onStartEnding={(endingId) => update({ activeEndingId: endingId, phase: 'ending' })} onNext={() => { const nextVisitor = getEligibleVisitor(save.guests, save.day, save.flags); const staying = save.guests.some((guest) => guest.status === 'STAYING'); update({ phase: nextVisitor ? 'desk' : staying ? 'management' : 'desk', decision: staying ? 'checkin' : null, asked: [], inspected: [], negotiated: false, held: false }); if (nextVisitor) setDialogue(nextVisitor.introDialogue); }} onReset={reset} />;
-  if (save.phase === 'ending') return <CampaignEnding state={save} onReset={reset} onReturn={() => update({ activeEndingId: null, phase: 'report' })} onComplete={() => save.activeEndingId && update({ completedEndingFlags: [...new Set([...save.completedEndingFlags, save.activeEndingId])], availableEndings: save.availableEndings.filter((id) => id !== save.activeEndingId), endingProgress: { ...save.endingProgress, [save.activeEndingId]: 'COMPLETED' }, activeEndingId: null, phase: 'report' })} />;
+  if (save.phase === 'report') return <MorningReport state={save} onStartEnding={(endingId) => setSave((current)=>({ ...startEnding(current,endingId), prologue:current.prologue }))} onNext={() => { const nextVisitor = getEligibleVisitor(save.guests, save.day, save.flags); const staying = save.guests.some((guest) => guest.status === 'STAYING'); update({ phase: nextVisitor ? 'desk' : staying ? 'management' : 'desk', decision: staying ? 'checkin' : null, asked: [], inspected: [], negotiated: false, held: false }); if (nextVisitor) setDialogue(nextVisitor.introDialogue); }} onReset={reset} />;
+  if (save.phase === 'ending') return <CampaignEnding state={save} onReturn={() => setSave((current)=>({ ...leaveEnding(current), prologue:current.prologue }))} onAdvance={() => setSave((current)=>current.activeEndingId?({ ...advanceEnding(current), prologue:current.prologue }):current)} />;
 
   if (!eligibleVisitor) return <QuietDesk day={save.day} resources={save.resources} staying={save.guests.filter((guest)=>guest.status==='STAYING').length} onManage={() => update({ phase: 'management' })} onEnd={() => setSave((current) => routeToNight({ ...current, decision:'refuse' }))} />;
   const availableItems = visitor.offeredItems.filter((item) => !item.negotiatedOnly || save.negotiated);
@@ -258,20 +259,26 @@ function StoryChoiceScene({ state, onChoose }: { state:UiSave; onChoose:(eventId
 }
 
 function MorningReport({ state, onNext, onReset, onStartEnding }: { state:UiSave; onNext:()=>void; onReset:()=>void; onStartEnding:(endingId:GameState['availableEndings'][number])=>void }) {
+  const [journalOpen,setJournalOpen] = useState(false);
+  const [logFilter,setLogFilter] = useState<'ALL'|'CHECK_IN'|'CHECK_OUT'|'RESOURCE'|'EVENT'>('ALL');
   const summary = state.lastDaySummary;
   const staying = state.guests.filter((guest) => guest.status==='STAYING');
   const departed = summary?.checkedOutGuestIds.map((id)=>state.guests.find((guest)=>guest.id===id)?.name??id)??[];
   const visibleEndings = state.availableEndings.map(getEndingCondition).filter(Boolean);
-  const destinyRoutes = ENDING_CONDITIONS.filter((ending)=>!ending.hidden).sort((a,b)=>b.priority-a.priority);
+  const destinyRoutes = ENDING_CONDITIONS.filter((ending)=>!ending.hidden||state.endingProgress[ending.endingId]!=='UNKNOWN').sort((a,b)=>b.priority-a.priority);
+  const hasUnknownRoute = ENDING_CONDITIONS.some((ending)=>ending.hidden&&(state.endingProgress[ending.endingId]??'UNKNOWN')==='UNKNOWN');
   const relationshipLog = state.eventHistory.filter((entry)=>entry.relationshipChanges?.length).slice(-3).reverse();
   const guestName = (id:string)=>state.guests.find((guest)=>guest.id===id)?.name??id;
+  const journalEntries = getHotelLogEntries(state.eventHistory,logFilter);
   return <main className="report-screen">
     <header><p className="eyebrow">JUJU HOTEL · 아침 장부</p><h1>DAY {state.day}</h1><span>WORLD STATE · {state.worldState}</span></header>
     <section className="report-paper"><div className="stamp">{departed.length?'숙박 종료':'야간 정산'}</div><p className="panel-label">현재 목표</p><h2>호텔을 지키고, 아버지에게 무슨 일이 있었는지 밝혀내십시오.</h2><p>DAY는 호텔이 버틴 시간의 기록입니다. 정해진 마지막 날은 없습니다.</p>
       <div className="ledger-grid"><Result icon={BedDouble} label="투숙객" before={String(summary?.occupiedGuests??0)} after={String(staying.length)}/><Result icon={Soup} label="식량" before={`-${summary?.consumed.food??0}`} after={String(state.resources.food)}/><Result icon={Droplets} label="물" before={`-${summary?.consumed.water??0}`} after={String(state.resources.water)}/><Result icon={Fuel} label="연료" before={`-${summary?.consumed.fuel??0}`} after={String(state.resources.fuel)}/></div>
       <div className="consequence"><span>HOTEL LOG</span><strong>{state.eventHistory.at(-1)?.message??'특이사항 없음'}</strong><p>세계의 압력과 호텔의 선택이 다음 방문자, 자원, 세력 활동을 바꿉니다.</p>{summary&&(Object.keys(summary.facilityProduction??{}).length>0||Object.keys(summary.facilityUpkeep??{}).length>0)&&<small>시설 생산 {Object.entries(summary.facilityProduction??{}).map(([key,value])=>`${key} +${value}`).join(' · ')||'없음'} / 유지비 {Object.entries(summary.facilityUpkeep??{}).map(([key,value])=>`${key} -${value}`).join(' · ')||'없음'}</small>}{summary?.inactiveFacilities?.length?<small className="facility-warning">가동 중단 · {summary.inactiveFacilities.map((id)=>FACILITIES.find((facility)=>facility.id===id)?.name??id).join(' · ')}</small>:null}</div>
+      <Button className="journal-toggle" variant="secondary" onClick={()=>setJournalOpen(!journalOpen)}><BookOpen/> HOTEL JOURNAL {journalOpen?'닫기':`전체 ${state.eventHistory.length}건`}</Button>
+      {journalOpen&&<div className="hotel-journal"><div className="journal-filters">{(['ALL','CHECK_IN','CHECK_OUT','RESOURCE','EVENT'] as const).map((filter)=><button key={filter} aria-pressed={logFilter===filter} className={logFilter===filter?'active':''} onClick={()=>setLogFilter(filter)}>{filter}</button>)}<small>{journalEntries.length} / {state.eventHistory.length}건</small></div><div className="journal-list">{journalEntries.length?journalEntries.map(({entry,index})=><article key={`${index}-${entry.day}-${entry.message}`}><time>DAY {entry.day}</time><span>{entry.type}</span><strong>{entry.message}</strong>{entry.relationshipChanges?.map((change)=><p key={`${change.sourceId}-${change.targetId}`}>{guestName(change.sourceId)} → {guestName(change.targetId)} · {change.delta>0?'+':''}{change.delta}{change.type?` · ${change.type}`:''}</p>)}</article>):<p>이 유형의 기록이 없습니다.</p>}</div></div>}
       <div className="relationship-journal"><span>RELATIONSHIP JOURNAL</span>{relationshipLog.length?relationshipLog.map((entry)=><div key={`${entry.day}-${entry.message}`}><strong>DAY {entry.day} · {entry.message}</strong>{entry.relationshipChanges!.map((change)=><p key={`${change.sourceId}-${change.targetId}`}>{guestName(change.sourceId)} → {guestName(change.targetId)} <b>{change.delta>0?'+':''}{change.delta}</b>{change.type?` · ${change.type}`:''}</p>)}</div>):<p>아직 기록된 관계 변화가 없습니다. 객실 거리는 관계 사건의 강도를 바꿉니다.</p>}</div>
-      <div className="destiny-panel"><span>ENDGAME / DESTINY</span>{destinyRoutes.map((ending)=>{const status=state.endingProgress[ending.endingId]??'IN_PROGRESS';const available=visibleEndings.some((item)=>item?.endingId===ending.endingId);return <div key={ending.endingId}><strong>{status==='AVAILABLE'?'NEW PATH AVAILABLE':status} · {ending.name}</strong><p>{ending.description}</p>{available&&<Button onClick={()=>onStartEnding(ending.endingId)}>FINAL EVENT 시작</Button>}</div>})}<div><strong>UNKNOWN · 숨겨진 경로</strong><p>일부 결말은 장부에 조건이나 이름이 표시되지 않습니다.</p></div></div>
+      <div className="destiny-panel"><span>ENDGAME / DESTINY</span>{destinyRoutes.map((ending)=>{const status=state.endingProgress[ending.endingId]??'IN_PROGRESS';const available=visibleEndings.some((item)=>item?.endingId===ending.endingId);return <div key={ending.endingId}><strong>{status==='AVAILABLE'?'NEW PATH AVAILABLE':status} · {ending.name}</strong><p>{ending.description}</p>{available&&<Button onClick={()=>onStartEnding(ending.endingId)}>FINAL EVENT 시작</Button>}</div>})}{hasUnknownRoute&&<div><strong>UNKNOWN · 숨겨진 경로</strong><p>일부 결말은 장부에 조건이나 이름이 표시되지 않습니다.</p></div>}</div>
       <footer><div><span>DAY {summary?.completedDay??state.day-1} 완료</span><p>원한다면 해금된 최종 사건을 미루고 운영을 계속할 수 있습니다.</p></div><div className="report-actions"><Button variant="secondary" onClick={onReset}><RotateCcw/> 새 게임</Button><Button onClick={onNext}>DAY {state.day} 운영 계속 <ChevronRight/></Button></div></footer>
     </section>
   </main>;
@@ -283,7 +290,11 @@ function QuietDesk({day,resources,staying,onManage,onEnd}:{day:number;resources:
   return <main className="event-screen"><div className="event-light"/><Radio className="event-icon"/><p className="scene-index">DAY {day} · 오후 8:47</p><section><span>JUJU HOTEL · 방문 기록</span><h1>오늘은 문을 두드리는 사람이 없다.</h1><p>투숙객 {staying}명이 호텔 안에 있습니다. 시설을 건설하거나 호텔을 정비한 뒤 밤을 정산할 수 있습니다.</p><blockquote>식량 {resources.food} · 물 {resources.water} · 연료 {resources.fuel}</blockquote><div className="assignment-actions"><Button variant="secondary" onClick={onManage}>호텔 운영</Button><Button onClick={onEnd}>밤을 넘긴다 <ChevronRight/></Button></div></section></main>;
 }
 
-function CampaignEnding({ state, onReset, onReturn, onComplete }: { state:UiSave; onReset:()=>void; onReturn:()=>void; onComplete:()=>void }) {
+function CampaignEnding({ state, onReturn, onAdvance }: { state:UiSave; onReturn:()=>void; onAdvance:()=>void }) {
   const ending = state.activeEndingId ? getEndingCondition(state.activeEndingId) : null;
-  return <main className="event-screen"><div className="event-light"/><p className="scene-index">DAY {state.day} · FINAL EVENT</p><section><span>{ending?.name ?? 'DESTINY'}</span><h1>{ending?.description ?? '아직 선택한 최종 경로가 없습니다.'}</h1><p>이 사건을 시작한 시점의 저장 데이터는 유지됩니다. 이후 선택과 에필로그는 각 엔딩의 전용 장면으로 확장됩니다.</p><blockquote>“May I have a room?”</blockquote><div className="assignment-actions"><Button variant="secondary" onClick={onReturn}>최종 사건 전으로 돌아가기</Button><Button onClick={onComplete}>엔딩 기록 완료</Button><Button onClick={onReset}><RotateCcw/> 새 게임</Button></div></section></main>;
+  const narrative = state.activeEndingId ? getEndingNarrative(state.activeEndingId) : null;
+  const index = Math.max(0,Math.min(state.endingSceneIndex,(narrative?.scenes.length??1)-1));
+  const scene = narrative?.scenes[index];
+  const last = Boolean(narrative&&index===narrative.scenes.length-1);
+  return <main className="cinematic-screen ending-cutscene"><img src="/juminjung/assets/front-desk-night.png" alt={`${ending?.name??'JUJU HOTEL'} 최종 사건의 호텔 로비.`}/><div className="cinematic-wash"/><p className="scene-index">DAY {state.day} · {narrative?.kicker??'FINAL EVENT'} · {index+1}/{narrative?.scenes.length??1}</p><section className="cutscene-copy"><span>{ending?.name??'DESTINY'}</span><h1>{scene?.title??'기록을 찾을 수 없습니다.'}</h1><p>{scene?.body??ending?.description}</p><blockquote>{scene?.quote??'“May I have a room?”'}</blockquote><div className="ending-progress" aria-label="엔딩 장면 진행도">{narrative?.scenes.map((beat,beatIndex)=><i key={beat.id} className={beatIndex<=index?'active':''}/>)}</div><div className="assignment-actions"><Button variant="secondary" onClick={onReturn}>아침 장부로 돌아가기 · 진행 초기화</Button><Button onClick={onAdvance}>{last?'에필로그 기록 완료':'다음 장면'} <ChevronRight/></Button></div></section></main>;
 }

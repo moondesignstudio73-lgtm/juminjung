@@ -32,10 +32,12 @@ Understood as: grow the published browser game into an open-duration hotel survi
 - Refugee shelter/denial, generator blackout, medical cooperation, investigation, and military resistance create later visitor follow-up dialogue
 - Four facilities now support three upgrade levels with escalating costs, visible next-stage previews, daily production, upkeep, and shortage shutdown logs
 - The trade network creates a renewable parts/fuel route; a deterministic 30-day regression covers four continuously occupied rooms at maximum infrastructure
+- HOTEL JOURNAL exposes the complete reverse-chronological record with check-in, checkout, resource, and event filters plus relationship details
+- Every ending route now has a distinct three-scene final event and epilogue; progress saves mid-scene and completion returns to open-ended operation
 
 ## Next system priorities
 
-- Expand HOTEL LOG into an accessible journal and author each unlocked final event and epilogue
+- Author interactive conflict and resolution choices for the remaining thirteen catalog NPCs and connect their outcomes to factions, threats, and ending routes
 
 ## Main NPC catalog
 

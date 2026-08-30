@@ -1,13 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { ENDING_CONDITIONS } from "../game/ending-data.ts";
-import { evaluateEndings } from "../game/ending-manager.ts";
+import { ENDING_NARRATIVES } from "../game/ending-narrative-data.ts";
+import { advanceEnding, evaluateEndings, leaveEnding, startEnding } from "../game/ending-manager.ts";
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
 import { determineWorldState } from "../game/world-state-manager.ts";
 
 test("7개 엔딩 경로가 고유 ID를 가진 데이터로 등록된다", () => {
   assert.equal(ENDING_CONDITIONS.length, 7);
   assert.equal(new Set(ENDING_CONDITIONS.map((ending) => ending.endingId)).size, 7);
+});
+
+test("7개 엔딩은 각각 고유한 3막 최종 사건과 에필로그를 가진다", () => {
+  assert.equal(ENDING_NARRATIVES.length, 7);
+  assert.deepEqual(new Set(ENDING_NARRATIVES.map((ending) => ending.endingId)), new Set(ENDING_CONDITIONS.map((ending) => ending.endingId)));
+  for (const narrative of ENDING_NARRATIVES) {
+    assert.equal(narrative.scenes.length, 3);
+    assert.equal(new Set(narrative.scenes.map((scene) => scene.id)).size, 3);
+    assert.ok(narrative.scenes.every((scene) => scene.title && scene.body && scene.quote));
+  }
 });
 
 test("조건이 충족된 여러 엔딩은 자동 종료 없이 동시에 AVAILABLE이 된다", () => {
@@ -59,4 +70,77 @@ test("구버전 DAY 30 ending 저장은 v8 report로 복원되어 즉시 종료�
   assert.equal(restored.version, 8);
   assert.equal(restored.phase, "report");
   assert.equal(restored.day, 30);
+});
+
+test("AVAILABLE 경로만 최종 사건을 시작할 수 있다", () => {
+  const state = createInitialGameState();
+  assert.throws(() => startEnding(state, "HOME"), /시작할 수 없는 엔딩/);
+  state.availableEndings = ["HOME"];
+  const started = startEnding(state, "HOME");
+  assert.equal(started.phase, "ending");
+  assert.equal(started.activeEndingId, "HOME");
+  assert.equal(started.endingSceneIndex, 0);
+});
+
+test("최종 사건은 세 장면을 모두 진행한 뒤에만 완료되고 호텔 로그에 남는다", () => {
+  const state = createInitialGameState();
+  state.day = 24;
+  state.availableEndings = ["SAFE_HAVEN"];
+  const first = startEnding(state, "SAFE_HAVEN");
+  const second = advanceEnding(first);
+  assert.equal(second.endingSceneIndex, 1);
+  assert.equal(second.completedEndingFlags.includes("SAFE_HAVEN"), false);
+  const third = advanceEnding(second);
+  assert.equal(third.endingSceneIndex, 2);
+  const completed = advanceEnding(third);
+  assert.equal(completed.phase, "report");
+  assert.equal(completed.activeEndingId, null);
+  assert.ok(completed.completedEndingFlags.includes("SAFE_HAVEN"));
+  assert.equal(completed.endingProgress.SAFE_HAVEN, "COMPLETED");
+  assert.ok(completed.eventHistory.at(-1)?.message.includes("SAFE HAVEN"));
+});
+
+test("최종 사건을 중단하면 진행을 완료 처리하지 않고 운영 장부로 돌아간다", () => {
+  const state = createInitialGameState();
+  state.availableEndings = ["THE_TRUTH"];
+  const reading = advanceEnding(startEnding(state, "THE_TRUTH"));
+  const returned = leaveEnding(reading);
+  assert.equal(returned.phase, "report");
+  assert.equal(returned.activeEndingId, null);
+  assert.equal(returned.endingSceneIndex, 0);
+  assert.equal(returned.completedEndingFlags.length, 0);
+});
+
+test("저장 복원은 읽는 중인 엔딩 장면 위치를 유지한다", () => {
+  const state = createInitialGameState();
+  state.availableEndings = ["THE_DOOR"];
+  const reading = advanceEnding(startEnding(state, "THE_DOOR"));
+  const restored = restoreGameState(serializeGameState(reading));
+  assert.equal(restored.phase, "ending");
+  assert.equal(restored.activeEndingId, "THE_DOOR");
+  assert.equal(restored.endingSceneIndex, 1);
+});
+
+test("저장 복원은 범위를 벗어난 엔딩 장면을 마지막 장면으로 정규화한다", () => {
+  const state = createInitialGameState();
+  state.availableEndings = ["HOME"];
+  const raw = JSON.parse(serializeGameState(startEnding(state, "HOME")));
+  raw.endingSceneIndex = 999;
+  const restored = restoreGameState(JSON.stringify(raw));
+  assert.equal(restored.phase, "ending");
+  assert.equal(restored.endingSceneIndex, 2);
+});
+
+test("완료됐거나 알 수 없는 엔딩을 가리키는 손상 저장은 아침 장부로 복구된다", () => {
+  const completed = JSON.parse(serializeGameState(createInitialGameState()));
+  completed.phase = "ending";
+  completed.activeEndingId = "HOME";
+  completed.completedEndingFlags = ["HOME"];
+  const restoredCompleted = restoreGameState(JSON.stringify(completed));
+  assert.equal(restoredCompleted.phase, "report");
+  assert.equal(restoredCompleted.activeEndingId, null);
+  const unknown = { ...completed, activeEndingId: "NOT_AN_ENDING", completedEndingFlags: [] };
+  const restoredUnknown = restoreGameState(JSON.stringify(unknown));
+  assert.equal(restoredUnknown.phase, "report");
+  assert.equal(restoredUnknown.activeEndingId, null);
 });
