@@ -9,16 +9,17 @@ export const SAVE_KEY = "juju-hotel-save-v2";
 export const LEGACY_SAVE_KEY = "juju-hotel-save-v1";
 
 export function createInitialGameState(): GameState {
-  return { version: 2, phase: "title", day: 0, rooms: createRooms(), guests: createGuests(), resources: createResources(), flags: createEventFlags(), asked: [], inspected: [], negotiated: false, held: false, decision: null, assignmentMode: null, selectedRoomNumber: null };
+  return { version: 3, phase: "title", day: 0, rooms: createRooms(), guests: createGuests(), resources: createResources(), flags: createEventFlags(), asked: [], inspected: [], negotiated: false, held: false, decision: null, assignmentMode: null, selectedRoomNumber: null, eventHistory: [], lastDaySummary: null };
 }
 
 export function restoreGameState(raw: string | null): GameState {
   if (!raw) return createInitialGameState();
   try {
-    const parsed = JSON.parse(raw) as Partial<GameState>;
-    if (parsed.version !== 2 || !Array.isArray(parsed.rooms) || !Array.isArray(parsed.guests)) return createInitialGameState();
+    const decoded = JSON.parse(raw) as { version?: number; rooms?: unknown; guests?: unknown };
+    if ((decoded.version !== 2 && decoded.version !== 3) || !Array.isArray(decoded.rooms) || !Array.isArray(decoded.guests)) return createInitialGameState();
+    const parsed = decoded as unknown as Partial<GameState>;
     const base = createInitialGameState();
-    const state = { ...base, ...parsed, version: 2, resources: { ...base.resources, ...parsed.resources }, flags: { ...base.flags, ...parsed.flags }, rooms: parsed.rooms, guests: parsed.guests } as GameState;
+    const state = { ...base, ...parsed, version: 3, resources: { ...base.resources, ...parsed.resources }, flags: { ...base.flags, ...parsed.flags }, rooms: parsed.rooms!, guests: parsed.guests!.map((guest) => ({ ...createGuests().find((item) => item.id === guest.id), ...guest })), eventHistory: parsed.eventHistory ?? [], lastDaySummary: parsed.lastDaySummary ?? null } as GameState;
     return { ...state, rooms: recalculateRoomEffects(state.rooms, state.guests) };
   } catch { return createInitialGameState(); }
 }

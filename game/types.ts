@@ -37,14 +37,30 @@ export type Guest = {
   name: string;
   role: string;
   currentRoomNumber: number | null;
+  stayDuration: number;
+  remainingNights: number;
+  checkedInDay: number | null;
+  status: "WAITING" | "STAYING" | "CHECKED_OUT" | "REFUSED";
   aura: AuraDefinition | null;
 };
 
 export type Resources = {
   food: number;
+  water: number;
   medicine: number;
   fuel: number;
+  parts: number;
   security: number;
+};
+
+export type HotelLogEntry = { day: number; type: "CHECK_IN" | "CHECK_OUT" | "RESOURCE" | "EVENT"; message: string };
+
+export type DaySummary = {
+  completedDay: number;
+  nextDay: number;
+  occupiedGuests: number;
+  consumed: { food: number; water: number; fuel: number };
+  checkedOutGuestIds: string[];
 };
 
 export type EventFlags = Record<string, boolean | number | string>;
@@ -56,10 +72,11 @@ export type GamePhase =
   | "assignment"
   | "management"
   | "night"
-  | "report";
+  | "report"
+  | "ending";
 
 export type GameState = {
-  version: 2;
+  version: 3;
   phase: GamePhase;
   day: number;
   rooms: Room[];
@@ -73,4 +90,6 @@ export type GameState = {
   decision: "checkin" | "refuse" | null;
   assignmentMode: "checkin" | "move" | null;
   selectedRoomNumber: number | null;
+  eventHistory: HotelLogEntry[];
+  lastDaySummary: DaySummary | null;
 };

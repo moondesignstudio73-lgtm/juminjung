@@ -1,17 +1,21 @@
 # May I Have a Room? — Development Notes
 
-Understood as: build and publish a polished browser-playable vertical slice covering the complete DAY 0 → DAY 2 consequence loop, rather than attempting the full 30-day campaign in one pass.
+Understood as: grow the published browser game into a stable DAY 1 → DAY 30 hotel survival loop without replacing working systems or reducing the story, room strategy, resource management, and risk decisions to a UI-only demo.
 
-## Vertical slice contract
+## Current playable contract
 
 - DAY 0 illustrated prologue and title reveal
 - DAY 1 front-desk guest screening with questions, item inspection, negotiation, hold, check-in, and refusal
-- Room/resource impact and one nighttime consequence event
-- DAY 2 morning report that reflects the player’s decision
-- Restartable, responsive, keyboard-accessible experience with local progress persistence
+- Explicit choice among 30 rooms, with movement and manual or stay-expiry checkout
+- Data-driven grid Aura calculation; Eleanor's Medical Care Zone affects only `NORMAL_DISEASE`
+- Nightly food, water, and generator-fuel settlement based on actual occupancy
+- Remaining-stay countdown, automatic checkout, Aura removal, and HOTEL LOG entries
+- Versioned local save restoration that recomputes derived room effects from guest source state
+- A guarded DAY boundary that reaches a terminal DAY 30 screen instead of resolving forever
 
-The full 30-day campaign, 20 complete NPC arcs, dollhouse management screen, and all facilities remain later milestones after this slice proves the central choice loop.
+## Next system priorities
 
-## Room strategy expansion contract
-
-Understood as: preserve the playable DAY 0 → DAY 2 vertical slice while replacing the fixed 203 assignment with a 30-room hotel model, a reusable grid-distance Aura system, an explicit room assignment/management flow, and versioned save restoration. Eleanor's Medical Care Zone is the first data-driven Aura; it prevents only `NORMAL_DISEASE` in her room and adjacent grid rooms. Room movement and checkout must recompute derived effects from guest source data rather than persisting stale Aura results.
+- Replace the repeated Eleanor encounter with a data-driven visitor schedule and multiple NPC states
+- Add action points and meaningful daytime hotel actions
+- Add conditional night events, shortage consequences, monster threat, and reputation
+- Expand HOTEL LOG into an accessible journal and build the full DAY 30 ending evaluation

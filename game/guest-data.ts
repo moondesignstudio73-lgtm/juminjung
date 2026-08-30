@@ -8,6 +8,10 @@ export function createGuests(): Guest[] {
     name: "엘리너 리드",
     role: "의사",
     currentRoomNumber: null,
+    stayDuration: 2,
+    remainingNights: 2,
+    checkedInDay: null,
+    status: "WAITING",
     aura: {
       id: "medical-care-zone",
       name: "Medical Care Zone",
