@@ -125,7 +125,7 @@ export type NightEventChoice = { id: string; label: string; description: string;
 export type NightEventDefinition = { id: string; title: string; description: string; quote: string; priority: number; condition: NightEventCondition; choices: NightEventChoice[] };
 export type StoryChoiceEffect = { resources?: Partial<Resources>; hotelStats?: Partial<HotelStats>; reputations?: Partial<Reputations>; flags?: EventFlags; trust?: number; stress?: number; health?: number; threat?: number; fatherStoryProgress?: number; relationship?: { targetId: string; delta: number }; discoverTrait?: string };
 export type StoryChoice = { id: string; label: string; description: string; requiredResources?: Partial<Resources>; effect: StoryChoiceEffect };
-export type StoryChoiceEvent = { id: string; guestId: string; stage: "CONFLICT"; title: string; description: string; quote: string; choices: StoryChoice[] };
+export type StoryChoiceEvent = { id: string; guestId: string; stage: "CONFLICT" | "RESOLUTION"; title: string; description: string; quote: string; choices: StoryChoice[] };
 export type ActiveRelationship = { sourceId: string; targetId: string; type: string; value: number; distanceMultiplier: 1 | 1.5 | 2; weightedValue: number };
 export type ActiveSynergy = { id: string; name: string; guestIds: string[]; affectedRoomNumbers: number[]; description: string };
 

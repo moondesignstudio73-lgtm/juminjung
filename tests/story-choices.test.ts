@@ -11,6 +11,16 @@ function conflictState(guestId: string) {
   return state;
 }
 
+function resolutionState(guestId: string) {
+  const state = conflictState(guestId);
+  state.guests = state.guests.map((guest) => guest.id === guestId ? {
+    ...guest,
+    remainingNights: 1,
+    eventChain: guest.eventChain.map((event) => event.stage === "CONFLICT" ? { ...event, completed: true } : event),
+  } : guest);
+  return state;
+}
+
 test("Eleanor의 갈등 장면은 조건이 되면 pending으로 나타난다", () => {
   assert.equal(getPendingStoryChoice(conflictState("eleanor"))?.id, "eleanor-triage");
 });
@@ -79,4 +89,66 @@ test("선택형 갈등은 야간 자동 진행으로 건너뛰지 않는다", ()
   const eleanor = advanced.guests.find((guest) => guest.id === "eleanor")!;
   assert.equal(eleanor.eventChain.find((event) => event.stage === "CONFLICT")?.completed, false);
   assert.equal(eleanor.eventChain.find((event) => event.stage === "RESOLUTION")?.completed, false);
+});
+
+test("Eleanor의 상설 진료 선택은 약품과 의료 엔딩 조건을 연결한다", () => {
+  const state = resolutionState("eleanor");
+  const result = applyStoryChoice(state, "eleanor-standard", "clinic");
+  const eleanor = result.state.guests.find((guest) => guest.id === "eleanor")!;
+  assert.equal(result.state.resources.medicine, state.resources.medicine - 3);
+  assert.equal(result.state.flags.eleanor_clinic_established, true);
+  assert.equal(eleanor.storyFlags.choice_resolution, "clinic");
+  assert.equal(eleanor.eventChain.find((event) => event.stage === "RESOLUTION")?.completed, true);
+});
+
+test("Walter의 열쇠 사용은 아버지 비밀과 괴물 기원 단서를 연다", () => {
+  const result = applyStoryChoice(resolutionState("walter"), "walter-key", "use_key");
+  assert.equal(result.state.flags.father_secret_discovered, true);
+  assert.equal(result.state.flags.monster_origin_clue_1, true);
+  assert.equal(result.state.fatherStoryProgress, 30);
+});
+
+test("Mia의 재회는 가족 경로와 Daniel 관계를 완성한다", () => {
+  const result = applyStoryChoice(resolutionState("mia"), "mia-family", "reunite");
+  const mia = result.state.guests.find((guest) => guest.id === "mia")!;
+  assert.equal(result.state.flags.family_routes_complete, true);
+  assert.equal(mia.relationships.find((relation) => relation.targetId === "daniel")?.value, 25);
+});
+
+test("Owen의 방어대는 군사 저항 성공 조건을 기록한다", () => {
+  const result = applyStoryChoice(resolutionState("owen"), "owen-future", "resistance");
+  assert.equal(result.state.flags.military_resistance_succeeded, true);
+  assert.equal(result.state.flags.hotel_defense_force, true);
+});
+
+test("Mr. White를 받아들이면 THE DOOR 응답과 비인간 단서가 남는다", () => {
+  const result = applyStoryChoice(resolutionState("white"), "white-answer", "yes");
+  const white = result.state.guests.find((guest) => guest.id === "white")!;
+  assert.equal(result.state.flags.the_door_answer_yes, true);
+  assert.ok(white.discoveredTraits.includes("NonHumanPossible"));
+  assert.equal(result.state.flags.monster_threat, 20);
+});
+
+test("선택형 결말은 야간 자동 진행으로 건너뛰지 않는다", () => {
+  const state = resolutionState("walter");
+  const advanced = advanceHotelStories(state.guests, state.day, state.rooms);
+  const walter = advanced.guests.find((guest) => guest.id === "walter")!;
+  assert.equal(walter.eventChain.find((event) => event.stage === "RESOLUTION")?.completed, false);
+  assert.equal(getPendingStoryChoice({ ...state, guests: advanced.guests })?.id, "walter-key");
+});
+
+test("마지막 밤 갈등 선택 직후 같은 NPC의 결말 선택이 이어진다", () => {
+  const state = conflictState("walter");
+  state.guests.find((guest) => guest.id === "walter")!.remainingNights = 1;
+  const conflict = applyStoryChoice(state, "walter-father-lie", "wait").state;
+  assert.equal(getPendingStoryChoice(conflict)?.id, "walter-key");
+  const resolution = applyStoryChoice(conflict, "walter-key", "hide_key").state;
+  assert.equal(getPendingStoryChoice(resolution), null);
+});
+
+test("오래된 사건 ID나 감당할 수 없는 선택은 조용히 대체되지 않는다", () => {
+  const state = conflictState("eleanor");
+  assert.throws(() => applyStoryChoice(state, "walter-father-lie", "wait"), /일치하지 않습니다/);
+  state.resources.medicine = 0;
+  assert.throws(() => applyStoryChoice(state, "eleanor-triage", "treat_all"), /자원이 부족합니다/);
 });
