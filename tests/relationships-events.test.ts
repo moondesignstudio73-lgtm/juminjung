@@ -48,7 +48,7 @@ test("체크인 시 ARRIVAL 단계가 한 번만 완료되고 로그 항목이 �
   assert.equal(duplicate.entry, null);
 });
 
-test("숙박 마지막 밤까지 LIFE, CONFLICT, RESOLUTION 단계가 순서대로 완료된다", () => {
+test("숙박 마지막 밤의 선택형 CONFLICT와 RESOLUTION은 야간 자동 진행이 건너뛴다", () => {
   let guests = stayingGuests();
   guests = completeEventStage(guests, "ruth", "ARRIVAL").guests;
   const firstNight = advanceHotelStories(guests, 1);
@@ -57,9 +57,9 @@ test("숙박 마지막 밤까지 LIFE, CONFLICT, RESOLUTION 단계가 순서대�
   ruth.remainingNights = 1;
   const lastNight = advanceHotelStories(firstNight.guests, 2, createRooms());
   const resolvedRuth = lastNight.guests.find((guest) => guest.id === "ruth")!;
-  assert.equal(resolvedRuth.eventChain.find((event) => event.stage === "CONFLICT")?.completed, true);
-  assert.equal(resolvedRuth.eventChain.find((event) => event.stage === "RESOLUTION")?.completed, true);
-  assert.ok(lastNight.entries.some((entry) => entry.message.includes("강도 80")));
+  assert.equal(resolvedRuth.eventChain.find((event) => event.stage === "CONFLICT")?.completed, false);
+  assert.equal(resolvedRuth.eventChain.find((event) => event.stage === "RESOLUTION")?.completed, false);
+  assert.equal(lastNight.entries.some((entry) => entry.message.includes("붕대 아래의 긁힌 자국")), false);
 });
 
 test("MEDICAL WARD 객실의 투숙객은 야간 정산 때 Health를 10 회복한다", () => {

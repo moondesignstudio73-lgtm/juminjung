@@ -4,6 +4,8 @@ import { applyStoryChoice, canChooseStoryChoice, getPendingStoryChoice } from ".
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
 import { advanceHotelStories } from "../game/story-event-manager.ts";
 import { evaluateEndings } from "../game/ending-manager.ts";
+import { STORY_CHOICE_EVENTS } from "../game/story-choice-data.ts";
+import { createGuests } from "../game/guest-data.ts";
 
 function conflictState(guestId: string) {
   const state = createInitialGameState();
@@ -214,4 +216,101 @@ test("Vale의 샘플 안정화 여부가 연구 완성 가능 여부를 결정�
   const complete = event.choices.find((choice) => choice.id === "complete")!;
   assert.equal(canChooseStoryChoice(quarantined, complete), false);
   assert.throws(() => applyStoryChoice(quarantined, "vale-research", "complete"), /선행 사건/);
+});
+
+test("20명 모든 NPC에게 갈등과 결말 선택이 정확히 하나씩 존재한다", () => {
+  const guests = createGuests();
+  assert.equal(guests.length, 20);
+  assert.equal(STORY_CHOICE_EVENTS.length, 40);
+  assert.equal(new Set(STORY_CHOICE_EVENTS.map((event) => event.id)).size, 40);
+
+  for (const guest of guests) {
+    const authored = STORY_CHOICE_EVENTS.filter((event) => event.guestId === guest.id);
+    assert.deepEqual(authored.map((event) => event.stage).sort(), ["CONFLICT", "RESOLUTION"]);
+    for (const event of authored) {
+      assert.equal(event.choices.length, 2);
+      assert.equal(new Set(event.choices.map((choice) => choice.id)).size, 2);
+      assert.ok(guest.eventChain.some((chainEvent) => chainEvent.stage === event.stage));
+    }
+  }
+});
+
+test("새로 집필한 13명 NPC의 갈등과 결말은 실제 진행에서 모두 도달 가능하다", () => {
+  const expandedGuestIds = ["daniel", "samuel", "ruth", "jack", "grace", "hayes", "noah", "victor", "rosa", "eli", "hazel", "thomas", "claire"];
+  for (const guestId of expandedGuestIds) {
+    const conflict = getPendingStoryChoice(conflictState(guestId));
+    const resolution = getPendingStoryChoice(resolutionState(guestId));
+    assert.equal(conflict?.guestId, guestId);
+    assert.equal(conflict?.stage, "CONFLICT");
+    assert.equal(resolution?.guestId, guestId);
+    assert.equal(resolution?.stage, "RESOLUTION");
+  }
+});
+
+test("Ruth와 Rosa의 선택 결과가 HOME 엔딩의 전체 스토리 조건을 완성한다", () => {
+  let state = applyStoryChoice(resolutionState("ruth"), "ruth-home", "care_team").state;
+  state.guests = state.guests.map((guest) => guest.id === "rosa" ? {
+    ...guest,
+    status: "STAYING",
+    currentRoomNumber: 302,
+    remainingNights: 1,
+    eventChain: guest.eventChain.map((event) => event.stage === "CONFLICT" ? { ...event, completed: true } : event),
+  } : guest);
+  state = applyStoryChoice(state, "rosa-family", "household").state;
+  state.guests = state.guests.map((guest) => ["ruth", "rosa", "mia"].includes(guest.id) ? {
+    ...guest,
+    eventChain: guest.eventChain.map((event) => ({ ...event, completed: true })),
+  } : guest);
+  state.reputations.community = 70;
+  assert.equal(state.flags.ruth_care_team, true);
+  assert.equal(state.flags.rosa_household_network, true);
+  assert.ok(evaluateEndings(state).available.includes("HOME"));
+});
+
+test("Jack과 Victor의 독점 선택 결과가 폐허의 왕 엔딩 조건을 완성한다", () => {
+  let state = applyStoryChoice(resolutionState("jack"), "jack-market", "monopoly").state;
+  state.guests = state.guests.map((guest) => guest.id === "victor" ? {
+    ...guest,
+    status: "STAYING",
+    currentRoomNumber: 302,
+    remainingNights: 1,
+    eventChain: guest.eventChain.map((event) => event.stage === "CONFLICT" ? { ...event, completed: true } : event),
+  } : guest);
+  state = applyStoryChoice(state, "victor-crown", "rule_market").state;
+  state.reputations.merchant = 80;
+  state.hotelStats.resources = 85;
+  state.facilities.trade_network = 1;
+  assert.equal(state.flags.ruin_market_controlled, true);
+  assert.ok(evaluateEndings(state).available.includes("KING_OF_THE_RUINS"));
+});
+
+test("공정 거래 경로만으로는 폐허의 왕 엔딩이 열리지 않는다", () => {
+  let state = applyStoryChoice(resolutionState("jack"), "jack-market", "fair_market").state;
+  state.guests = state.guests.map((guest) => guest.id === "victor" ? {
+    ...guest,
+    status: "STAYING",
+    currentRoomNumber: 302,
+    remainingNights: 1,
+    eventChain: guest.eventChain.map((event) => event.stage === "CONFLICT" ? { ...event, completed: true } : event),
+  } : guest);
+  state = applyStoryChoice(state, "victor-crown", "public_trust").state;
+  state.reputations.merchant = 80;
+  state.hotelStats.resources = 85;
+  state.facilities.trade_network = 1;
+  assert.equal(state.flags.ruin_market_controlled, undefined);
+  assert.equal(evaluateEndings(state).available.includes("KING_OF_THE_RUINS"), false);
+});
+
+test("남은 NPC 선택도 관계·위협·시설·후속 플래그에 연결된다", () => {
+  const samuel = applyStoryChoice(resolutionState("samuel"), "samuel-duty", "watch").state;
+  assert.equal(samuel.flags.hotel_defense_force, true);
+  assert.equal(samuel.guests.find((guest) => guest.id === "samuel")!.relationships[0].value, -10);
+
+  const hazel = applyStoryChoice(conflictState("hazel"), "hazel-hunt", "track").state;
+  assert.equal(hazel.flags.monster_routes_mapped, true);
+  assert.equal(hazel.flags.monster_threat, 0);
+
+  const thomas = applyStoryChoice(resolutionState("thomas"), "thomas-grid", "signal").state;
+  assert.equal(thomas.flags.safe_routes_mapped, true);
+  assert.equal(thomas.reputations.community, 7);
 });

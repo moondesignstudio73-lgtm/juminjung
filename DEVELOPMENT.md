@@ -22,7 +22,7 @@ Understood as: grow the published browser game into an open-duration hotel survi
 - Save v8 restoration for facilities, reputations, daily actions, night choices, and pending NPC story scenes
 - Conditional night events driven by World State, shortages, Monster Threat, Security, and resources
 - Two-choice night outcomes that alter resources, hotel stats, faction reputation, flags, and guest condition
-- Seven authored NPC conflict and resolution chains for Eleanor, Walter, Mia, Owen, Lily, Dr. Vale, and Mr. White with persistent consequences
+- All twenty catalog NPCs have authored conflict and resolution choices with persistent consequences
 - Resolution choices persist medical, father-secret, family-route, military-resistance, and THE DOOR route flags for ending evaluation and future scenes
 - Lily's decoded documents and Dr. Vale's completed research now provide the two investigation flags required by THE TRUTH
 - The morning DESTINY journal lists every visible route as IN PROGRESS, AVAILABLE, or COMPLETED while preserving hidden routes as UNKNOWN
@@ -37,7 +37,7 @@ Understood as: grow the published browser game into an open-duration hotel survi
 
 ## Next system priorities
 
-- Author interactive conflict and resolution choices for the remaining thirteen catalog NPCs and connect their outcomes to factions, threats, and ending routes
+- Expand character expression artwork and event-specific visual states so the complete story catalog has matching presentation depth
 
 ## Main NPC catalog
 
