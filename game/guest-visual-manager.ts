@@ -10,6 +10,16 @@ export type GuestVisualState = {
   label: string;
 };
 
+const NIGHT_EVENT_GUESTS: Partial<Record<string, [string, string]>> = {
+  medical_shift: ["eleanor", "ruth"],
+  owen_hayes_standoff: ["owen", "hayes"],
+  lily_vale_breakthrough: ["lily", "vale"],
+};
+
+export function getNightEventPortraitGuestIds(eventId: string): [string, string] | null {
+  return NIGHT_EVENT_GUESTS[eventId] ?? null;
+}
+
 export function getGuestVisualState(guest: Guest): GuestVisualState {
   const modifiers: GuestVisualModifier[] = [];
   const infected = guest.infectionState === "INFECTED" || guest.infectionState === "INFECTED_SUSPECTED";

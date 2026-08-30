@@ -2,14 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createGuests } from "../game/guest-data.ts";
-import { getGuestVisualState } from "../game/guest-visual-manager.ts";
+import { getGuestVisualState, getNightEventPortraitGuestIds } from "../game/guest-visual-manager.ts";
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
 
 const guest = (id: string) => createGuests().find((item) => item.id === id)!;
 
 test("등록된 모든 반신 일러스트는 실제 1024×1536 PNG 자산을 사용한다", () => {
   const illustrated = createGuests().filter((item) => item.portrait);
-  assert.deepEqual(illustrated.map((item) => item.id), ["eleanor", "mia", "ruth", "rosa"]);
+  assert.deepEqual(illustrated.map((item) => item.id), ["eleanor", "walter", "mia", "ruth", "owen", "hayes", "rosa"]);
   for (const item of illustrated) {
     assert.equal(getGuestVisualState(item).asset, item.portrait);
     const relativePath = item.portrait.replace("/juminjung/", "public/");
@@ -18,6 +18,12 @@ test("등록된 모든 반신 일러스트는 실제 1024×1536 PNG 자산을 �
     assert.equal(png.readUInt32BE(16), 1024);
     assert.equal(png.readUInt32BE(20), 1536);
   }
+});
+
+test("관계 야간 사건은 두 NPC의 대치 초상화 ID를 제공한다", () => {
+  assert.deepEqual(getNightEventPortraitGuestIds("owen_hayes_standoff"), ["owen", "hayes"]);
+  assert.deepEqual(getNightEventPortraitGuestIds("medical_shift"), ["eleanor", "ruth"]);
+  assert.equal(getNightEventPortraitGuestIds("quiet_watch"), null);
 });
 
 test("도착 대기 중인 방문자는 젖은 옷 상태로 표시된다", () => {
@@ -49,9 +55,9 @@ test("높은 Stress와 감염 의심은 감정 및 오염 상태를 우선 반�
 });
 
 test("아직 전용 자산이 없는 NPC도 상태 계산은 동일하게 작동한다", () => {
-  const walter = getGuestVisualState({ ...guest("walter"), stress: 75 });
-  assert.equal(walter.asset, null);
-  assert.ok(walter.modifiers.includes("EXHAUSTED"));
+  const marcus = getGuestVisualState({ ...guest("marcus"), stress: 75 });
+  assert.equal(marcus.asset, null);
+  assert.ok(marcus.modifiers.includes("EXHAUSTED"));
 });
 
 test("과거 저장의 오래된 초상화 경로는 최신 카탈로그 자산으로 복원된다", () => {
