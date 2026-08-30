@@ -93,6 +93,29 @@ export type DaySummary = {
 };
 
 export type EventFlags = Record<string, boolean | number | string>;
+export type WorldState = "STABLE" | "UNREST" | "COLLAPSE" | "CRITICAL" | "END_STAGE";
+export type EndingStatus = "UNKNOWN" | "IN_PROGRESS" | "AVAILABLE" | "COMPLETED";
+export type EndingId = "SAFE_HAVEN" | "THE_TRUTH" | "FORTRESS" | "HOME" | "KING_OF_THE_RUINS" | "MILITARY_OCCUPATION" | "THE_DOOR";
+export type EndingCondition = {
+  endingId: EndingId;
+  name: string;
+  priority: number;
+  hidden?: boolean;
+  description: string;
+  requiredFlags?: EventFlags;
+  forbiddenFlags?: string[];
+  minimumStats?: Partial<HotelStats>;
+  maximumStats?: Partial<HotelStats>;
+  requiredNPCStates?: { id: string; alive?: boolean; minimumTrust?: number; completedStory?: boolean }[];
+  requiredRelationships?: { sourceId: string; targetId: string; minimumValue: number }[];
+  requiredFacilities?: string[];
+  requiredReputation?: Partial<Reputations>;
+  maximumReputation?: Partial<Reputations>;
+  requiredWorldState?: WorldState[];
+  requiredStoryProgress?: string[];
+};
+export type HotelStats = { hotelCondition: number; security: number; foodSustainability: number; waterSustainability: number; crime: number; survivorPopulation: number; averageTrust: number; resources: number };
+export type Reputations = { community: number; military: number; refugee: number; merchant: number; humanitarian: number };
 export type ActiveRelationship = { sourceId: string; targetId: string; type: string; value: number; distanceMultiplier: 1 | 1.5 | 2; weightedValue: number };
 export type ActiveSynergy = { id: string; name: string; guestIds: string[]; affectedRoomNumbers: number[]; description: string };
 
@@ -107,7 +130,7 @@ export type GamePhase =
   | "ending";
 
 export type GameState = {
-  version: 4;
+  version: 5;
   phase: GamePhase;
   day: number;
   rooms: Room[];
@@ -123,4 +146,14 @@ export type GameState = {
   selectedRoomNumber: number | null;
   eventHistory: HotelLogEntry[];
   lastDaySummary: DaySummary | null;
+  worldState: WorldState;
+  hotelStats: HotelStats;
+  reputations: Reputations;
+  facilities: Record<string, boolean>;
+  availableEndings: EndingId[];
+  completedEndingFlags: EndingId[];
+  endingProgress: Partial<Record<EndingId, EndingStatus>>;
+  fatherStoryProgress: number;
+  endingRelatedFlags: EventFlags;
+  activeEndingId: EndingId | null;
 };

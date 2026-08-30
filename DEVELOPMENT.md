@@ -1,6 +1,6 @@
 # May I Have a Room? — Development Notes
 
-Understood as: grow the published browser game into a stable DAY 1 → DAY 30 hotel survival loop without replacing working systems or reducing the story, room strategy, resource management, and risk decisions to a UI-only demo.
+Understood as: grow the published browser game into an open-duration hotel survival loop where story, management, faction, and world-state conditions unlock player-chosen final events.
 
 ## Current playable contract
 
@@ -14,7 +14,9 @@ Understood as: grow the published browser game into a stable DAY 1 → DAY 30 ho
 - Relationship event strength based on room distance: adjacent ×2, same floor ×1.5, otherwise ×1, recorded when conflict stages fire
 - Eleanor + Ruth `MEDICAL WARD` Aura synergy heals 10 Health nightly in overlapping treatment rooms
 - Versioned local save restoration that recomputes derived room effects from guest source state
-- A guarded DAY boundary that reaches a terminal DAY 30 screen instead of resolving forever
+- Unbounded DAY progression; DAY records survival time but never triggers an ending by itself
+- Seven data-driven ending routes that unlock optional final events without stopping normal management
+- A soft-pressure World State derived from time, scarcity, threat, and hotel stability
 
 ## Next system priorities
 
@@ -22,7 +24,7 @@ Understood as: grow the published browser game into a stable DAY 1 → DAY 30 ho
 - Apply relationship weights to conditional guest events and surface relationship changes in the journal
 - Add action points and meaningful daytime hotel actions
 - Add conditional night events, shortage consequences, monster threat, and reputation
-- Expand HOTEL LOG into an accessible journal and build the full DAY 30 ending evaluation
+- Expand HOTEL LOG into an accessible journal and author each unlocked final event and epilogue
 
 ## Main NPC catalog
 

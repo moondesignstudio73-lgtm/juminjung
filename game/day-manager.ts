@@ -1,9 +1,11 @@
 import { getInjuryRecovery, recalculateRoomEffects } from "./aura-effect-manager.ts";
 import { checkoutGuest } from "./room-manager.ts";
 import { advanceHotelStories } from "./story-event-manager.ts";
+import { evaluateEndings } from "./ending-manager.ts";
+import { determineWorldState } from "./world-state-manager.ts";
 import type { DaySummary, GameState, HotelLogEntry } from "./types.ts";
 
-export function advanceDay(day: number): number { return Math.min(30, Math.max(0, day) + 1); }
+export function advanceDay(day: number): number { return Math.max(0, day) + 1; }
 
 export function resolveDay(state: GameState): GameState {
   if (state.phase !== "night") throw new Error("DAY 정산은 야간 단계에서 한 번만 실행할 수 있습니다.");
@@ -32,10 +34,11 @@ export function resolveDay(state: GameState): GameState {
     ...checkedOutGuestIds.map((guestId): HotelLogEntry => ({ day: nextDay, type: "CHECK_OUT", message: `${state.guests.find((guest) => guest.id === guestId)?.name ?? guestId} · 숙박 종료 자동 체크아웃` })),
   ];
   const eleanor = guests.find((guest) => guest.id === "eleanor");
-  return {
+  const stayingAfter = guests.filter((guest) => guest.status === "STAYING");
+  const nextState: GameState = {
     ...state,
     day: nextDay,
-    phase: state.day >= 30 ? "ending" : "report",
+    phase: "report",
     guests,
     rooms: recalculateRoomEffects(emptied, guests),
     resources: {
@@ -51,5 +54,15 @@ export function resolveDay(state: GameState): GameState {
     },
     eventHistory: [...state.eventHistory, ...entries],
     lastDaySummary: summary,
+    hotelStats: {
+      ...state.hotelStats,
+      security: state.resources.security,
+      survivorPopulation: stayingAfter.filter((guest) => guest.alive).length,
+      averageTrust: stayingAfter.length ? Math.round(stayingAfter.reduce((sum, guest) => sum + guest.trust, 0) / stayingAfter.length) : 0,
+      resources: Math.min(100, Math.round((state.resources.food + state.resources.water + state.resources.fuel) / 3)),
+    },
   };
+  nextState.worldState = determineWorldState(nextState);
+  const endings = evaluateEndings(nextState);
+  return { ...nextState, availableEndings: endings.available, endingProgress: endings.progress };
 }

@@ -50,7 +50,7 @@ test("DAY 정산은 호텔 로그에 자원 소비와 자동 체크아웃을 남
 test("DAY 2 저장 복원 후 남은 숙박과 자원, 로그가 유지된다", () => {
   const day2 = resolveDay(checkedInState());
   const restored = restoreGameState(serializeGameState(day2));
-  assert.equal(restored.version, 4);
+  assert.equal(restored.version, 5);
   assert.equal(restored.day, 2);
   assert.equal(restored.guests[0].remainingNights, 1);
   assert.equal(restored.resources.food, 47);
@@ -58,10 +58,12 @@ test("DAY 2 저장 복원 후 남은 숙박과 자원, 로그가 유지된다", 
   assert.ok(restored.eventHistory.some((entry) => entry.type === "EVENT"));
 });
 
-test("DAY 30 정산은 반복 가능한 보고서가 아니라 종료 상태로 진입한다", () => {
+test("DAY 30 이후에도 정산과 운영을 계속할 수 있다", () => {
   const state = checkedInState();
   state.day = 30;
   const result = resolveDay(state);
-  assert.equal(result.phase, "ending");
-  assert.throws(() => resolveDay(result));
+  assert.equal(result.day, 31);
+  assert.equal(result.phase, "report");
+  result.phase = "night";
+  assert.equal(resolveDay(result).day, 32);
 });

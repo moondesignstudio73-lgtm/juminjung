@@ -2,6 +2,8 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 
+.destiny-panel{margin-top:18px;padding:20px;background:#121711;border:1px solid #655638}.destiny-panel>span{display:block;color:#b69154;font:10px var(--font-display);letter-spacing:.18em}.destiny-panel>div{margin-top:12px;padding-top:12px;border-top:1px solid #3d3a2d}.destiny-panel strong{color:#e4cfaa;font:500 18px var(--font-display)}.destiny-panel p{color:#aaa697;font-size:12px}.destiny-panel button{background:#71342d!important}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
