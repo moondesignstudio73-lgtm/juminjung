@@ -6,19 +6,19 @@ const display = Oswald({ variable: '--font-display', subsets: ['latin'] });
 const typewriter = Special_Elite({ variable: '--font-typewriter', weight: '400', subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://may-i-have-a-room-juju-hotel.chan123473.chatgpt.site'),
+  metadataBase: new URL('https://moondesignstudio73-lgtm.github.io/juminjung/'),
   title: 'May I Have a Room? — JUJU HOTEL',
   description: '30일 동안 JUJU HOTEL을 지키고, 누구에게 문을 열지 결정하세요.',
   openGraph: {
     title: 'May I Have a Room? — JUJU HOTEL',
     description: '30일 동안 JUJU HOTEL을 지키고, 누구에게 문을 열지 결정하세요.',
-    images: [{ url: '/og.png', width: 1536, height: 1024, alt: '빗속의 JUJU HOTEL' }],
+    images: [{ url: '/juminjung/og.png', width: 1536, height: 1024, alt: '빗속의 JUJU HOTEL' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'May I Have a Room? — JUJU HOTEL',
     description: '30일 동안 JUJU HOTEL을 지키고, 누구에게 문을 열지 결정하세요.',
-    images: ['/og.png'],
+    images: ['/juminjung/og.png'],
   },
 };
 

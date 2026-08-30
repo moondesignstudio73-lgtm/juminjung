@@ -76,7 +76,7 @@ export default function Home() {
     const beat = prologue[save.prologue];
     return (
       <main className="cinematic-screen">
-        <img src="/assets/front-desk-night.png" alt="아버지가 떠난 밤의 어두운 JUJU HOTEL 로비." />
+        <img src="/juminjung/assets/front-desk-night.png" alt="아버지가 떠난 밤의 어두운 JUJU HOTEL 로비." />
         <div className="cinematic-wash" />
         <p className="scene-index">{beat.tag}</p>
         <section className="cutscene-copy" aria-live="polite">
@@ -107,7 +107,7 @@ export default function Home() {
       </header>
 
       <section className="desk-scene" aria-label="밤의 JUJU HOTEL 프런트">
-        <img src="/assets/front-desk-night.png" alt="비에 젖은 의사 엘리너가 낡은 프런트 카운터 앞에 서 있다." />
+        <img src="/juminjung/assets/front-desk-night.png" alt="비에 젖은 의사 엘리너가 낡은 프런트 카운터 앞에 서 있다." />
         <div className="scene-vignette" />
         <aside className="case-file left-panel">
           <span className="panel-label">방문자 001</span><h2>엘리너 리드</h2><p>31세 · 응급의학과 의사</p>
@@ -153,7 +153,7 @@ function Status({ icon: Icon, label, value }: { icon: typeof Fuel; label: string
 }
 
 function TitleScreen({ onStart, muted, setMuted }: { onStart:()=>void; muted:boolean; setMuted:(v:boolean)=>void }) {
-  return <main className="title-screen"><img src="/assets/front-desk-night.png" alt="빗속의 JUJU HOTEL 프런트."/><div className="title-wash"/><button className="sound-corner" onClick={()=>setMuted(!muted)} aria-label="소리 전환">{muted?<VolumeX/>:<Volume2/>}</button><section className="title-lockup"><p>선택형 호텔 생존 스토리</p><h1><span>MAY I HAVE</span>A ROOM?</h1><div className="neon-rule"/><p className="title-tagline">30일 · 12개 객실 · 누구를 들일지는 당신의 선택</p><Button className="start-button" onClick={onStart}>DAY 0 시작<ChevronRight/></Button><small>진행 상황은 매 장면마다 이 기기에 자동 저장됩니다.</small></section></main>;
+  return <main className="title-screen"><img src="/juminjung/assets/front-desk-night.png" alt="빗속의 JUJU HOTEL 프런트."/><div className="title-wash"/><button className="sound-corner" onClick={()=>setMuted(!muted)} aria-label="소리 전환">{muted?<VolumeX/>:<Volume2/>}</button><section className="title-lockup"><p>선택형 호텔 생존 스토리</p><h1><span>MAY I HAVE</span>A ROOM?</h1><div className="neon-rule"/><p className="title-tagline">30일 · 12개 객실 · 누구를 들일지는 당신의 선택</p><Button className="start-button" onClick={onStart}>DAY 0 시작<ChevronRight/></Button><small>진행 상황은 매 장면마다 이 기기에 자동 저장됩니다.</small></section></main>;
 }
 
 function NightEvent({ decision, onContinue }: { decision: Exclude<Decision,null>; onContinue:()=>void }) {
