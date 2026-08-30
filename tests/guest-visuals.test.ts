@@ -9,7 +9,7 @@ const guest = (id: string) => createGuests().find((item) => item.id === id)!;
 
 test("등록된 모든 반신 일러스트는 실제 1024×1536 PNG 자산을 사용한다", () => {
   const illustrated = createGuests().filter((item) => item.portrait);
-  assert.deepEqual(illustrated.map((item) => item.id), ["eleanor", "walter", "mia", "ruth", "owen", "hayes", "rosa"]);
+  assert.deepEqual(illustrated.map((item) => item.id), ["eleanor", "walter", "mia", "ruth", "owen", "hayes", "lily", "rosa", "vale"]);
   for (const item of illustrated) {
     assert.equal(getGuestVisualState(item).asset, item.portrait);
     const relativePath = item.portrait.replace("/juminjung/", "public/");
@@ -23,6 +23,7 @@ test("등록된 모든 반신 일러스트는 실제 1024×1536 PNG 자산을 �
 test("관계 야간 사건은 두 NPC의 대치 초상화 ID를 제공한다", () => {
   assert.deepEqual(getNightEventPortraitGuestIds("owen_hayes_standoff"), ["owen", "hayes"]);
   assert.deepEqual(getNightEventPortraitGuestIds("medical_shift"), ["eleanor", "ruth"]);
+  assert.deepEqual(getNightEventPortraitGuestIds("lily_vale_breakthrough"), ["lily", "vale"]);
   assert.equal(getNightEventPortraitGuestIds("quiet_watch"), null);
 });
 
