@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { applyStoryChoice, canChooseStoryChoice, getPendingStoryChoice } from "../game/story-choice-manager.ts";
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
 import { advanceHotelStories } from "../game/story-event-manager.ts";
+import { evaluateEndings } from "../game/ending-manager.ts";
 
 function conflictState(guestId: string) {
   const state = createInitialGameState();
@@ -151,4 +152,65 @@ test("오래된 사건 ID나 감당할 수 없는 선택은 조용히 대체되�
   assert.throws(() => applyStoryChoice(state, "walter-father-lie", "wait"), /일치하지 않습니다/);
   state.resources.medicine = 0;
   assert.throws(() => applyStoryChoice(state, "eleanor-triage", "treat_all"), /자원이 부족합니다/);
+});
+
+test("Lily와 Dr. Vale의 조사 갈등은 자동 진행 대신 선택 장면으로 열린다", () => {
+  assert.equal(getPendingStoryChoice(conflictState("lily"))?.id, "lily-redactions");
+  assert.equal(getPendingStoryChoice(conflictState("vale"))?.id, "vale-sample");
+});
+
+test("Lily의 결말 선택은 문서 해독과 숨겨진 특성을 기록한다", () => {
+  const result = applyStoryChoice(resolutionState("lily"), "lily-truth", "archive");
+  const lily = result.state.guests.find((guest) => guest.id === "lily")!;
+  assert.equal(result.state.flags.lily_documents_decoded, true);
+  assert.equal(result.state.flags.lily_truth_archived, true);
+  assert.ok(lily.discoveredTraits.includes("OriginDocuments"));
+});
+
+test("Vale의 연구 완성은 Lily 관계와 THE TRUTH 핵심 플래그를 기록한다", () => {
+  const state = resolutionState("vale");
+  state.flags.vale_sample_stabilized = true;
+  const result = applyStoryChoice(state, "vale-research", "complete");
+  const vale = result.state.guests.find((guest) => guest.id === "vale")!;
+  assert.equal(result.state.flags.vale_research_complete, true);
+  assert.equal(vale.relationships.find((relation) => relation.targetId === "lily")?.value, 45);
+  assert.ok(vale.discoveredTraits.includes("PreOutbreakResearch"));
+});
+
+test("Lily와 Vale의 실제 선택 결과가 THE TRUTH를 해금한다", () => {
+  const lilyState = resolutionState("lily");
+  lilyState.flags.lily_documents_decoded = true;
+  let state = applyStoryChoice(lilyState, "lily-truth", "broadcast").state;
+  state.guests = state.guests.map((guest) => guest.id === "vale" ? {
+    ...guest,
+    status: "STAYING",
+    currentRoomNumber: 302,
+    checkedInDay: 1,
+    remainingNights: 1,
+    eventChain: guest.eventChain.map((event) => event.stage === "CONFLICT" ? { ...event, completed: true } : event),
+  } : guest);
+  state.flags.vale_sample_stabilized = true;
+  state = applyStoryChoice(state, "vale-research", "complete").state;
+  Object.assign(state.flags, { monster_origin_clue_1: true, monster_origin_clue_2: true, father_secret_discovered: true });
+  assert.ok(evaluateEndings(state).available.includes("THE_TRUTH"));
+});
+
+test("Lily의 갈등 선택이 방송 가능 여부를 결정한다", () => {
+  const state = conflictState("lily");
+  state.guests.find((guest) => guest.id === "lily")!.remainingNights = 1;
+  const secured = applyStoryChoice(state, "lily-redactions", "copy").state;
+  const event = getPendingStoryChoice(secured)!;
+  assert.equal(event.id, "lily-truth");
+  assert.equal(canChooseStoryChoice(secured, event.choices.find((choice) => choice.id === "broadcast")!), false);
+  assert.equal(canChooseStoryChoice(secured, event.choices.find((choice) => choice.id === "archive")!), true);
+});
+
+test("Vale의 샘플 안정화 여부가 연구 완성 가능 여부를 결정한다", () => {
+  const state = conflictState("vale");
+  state.guests.find((guest) => guest.id === "vale")!.remainingNights = 1;
+  const quarantined = applyStoryChoice(state, "vale-sample", "quarantine").state;
+  const event = getPendingStoryChoice(quarantined)!;
+  const complete = event.choices.find((choice) => choice.id === "complete")!;
+  assert.equal(canChooseStoryChoice(quarantined, complete), false);
+  assert.throws(() => applyStoryChoice(quarantined, "vale-research", "complete"), /선행 사건/);
 });

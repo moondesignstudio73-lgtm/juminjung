@@ -4,6 +4,8 @@ import type { GameState, HotelLogEntry, StoryChoice, StoryChoiceEvent } from "./
 
 const clamp = (value: number) => Math.max(0, Math.min(100, value));
 const canAfford = (state: GameState, choice: StoryChoice) => !choice.requiredResources || Object.entries(choice.requiredResources).every(([key, value]) => state.resources[key as keyof GameState["resources"]] >= Number(value));
+const meetsRequiredFlags = (state: GameState, choice: StoryChoice) => !choice.requiredFlags || Object.entries(choice.requiredFlags).every(([key, value]) => state.flags[key] === value || state.endingRelatedFlags[key] === value);
+const canApply = (state: GameState, choice: StoryChoice) => canAfford(state, choice) && meetsRequiredFlags(state, choice);
 const add = <T extends Record<string, number>>(current: T, changes: Partial<T> | undefined): T => !changes ? current : Object.fromEntries(Object.entries(current).map(([key, value]) => [key, clamp(value + Number(changes[key] ?? 0))])) as T;
 
 export function getPendingStoryChoice(state: GameState): StoryChoiceEvent | null {
@@ -18,7 +20,7 @@ export function getPendingStoryChoice(state: GameState): StoryChoiceEvent | null
   }) ?? null;
 }
 
-export function canChooseStoryChoice(state: GameState, choice: StoryChoice): boolean { return canAfford(state, choice); }
+export function canChooseStoryChoice(state: GameState, choice: StoryChoice): boolean { return canApply(state, choice); }
 
 export function applyStoryChoice(state: GameState, eventId: string, choiceId: string): { state: GameState; event: StoryChoiceEvent; choice: StoryChoice; entry: HotelLogEntry } {
   const pending = getPendingStoryChoice(state);
@@ -28,6 +30,7 @@ export function applyStoryChoice(state: GameState, eventId: string, choiceId: st
   const requested = event.choices.find((choice) => choice.id === choiceId);
   if (!requested) throw new Error("선택할 수 없는 NPC 스토리 응답입니다.");
   if (!canAfford(state, requested)) throw new Error("이 선택에 필요한 자원이 부족합니다.");
+  if (!meetsRequiredFlags(state, requested)) throw new Error("이 선택에 필요한 선행 사건이 완료되지 않았습니다.");
   const choice = requested;
   const effect = choice.effect;
   const guests = state.guests.map((guest) => {

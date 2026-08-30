@@ -16,6 +16,7 @@ import { getActiveRelationships } from '@/game/relationship-manager';
 import { completeEventStage } from '@/game/story-event-manager';
 import { applyStoryChoice, canChooseStoryChoice, getPendingStoryChoice } from '@/game/story-choice-manager';
 import { getEndingCondition } from '@/game/ending-manager';
+import { ENDING_CONDITIONS } from '@/game/ending-data';
 import { FACILITIES } from '@/game/facility-data';
 import { buildFacility, canBuildFacility, performHotelAction } from '@/game/hotel-action-manager';
 import { canChooseNightChoice, selectNightEvent } from '@/game/night-event-manager';
@@ -246,7 +247,7 @@ function StoryChoiceScene({ state, onChoose }: { state:UiSave; onChoose:(eventId
   const event = getPendingStoryChoice(state);
   const guest = state.guests.find((item)=>item.id===event?.guestId);
   if (!event || !guest) return <main className="event-screen"><section><h1>스토리 기록을 확인할 수 없습니다.</h1></section></main>;
-  return <main className="event-screen story-event"><div className="event-light"/><p className="scene-index">DAY {state.day} · {guest.name} · CONFLICT</p><section><span>NPC STORY EVENT</span><h1>{event.title}</h1><p>{event.description}</p><blockquote>{event.quote}</blockquote><div className="night-choices">{event.choices.map((choice)=><Button key={choice.id} disabled={!canChooseStoryChoice(state,choice)} onClick={()=>onChoose(event.id,choice.id)}><span>{choice.label}</span><small>{choice.description}</small><ChevronRight/></Button>)}</div></section></main>;
+  return <main className="event-screen story-event"><div className="event-light"/><p className="scene-index">DAY {state.day} · {guest.name} · {event.stage==='CONFLICT'?'갈등':'결말'}</p><section><span>NPC STORY EVENT</span><h1>{event.title}</h1><p>{event.description}</p><blockquote>{event.quote}</blockquote><div className="night-choices">{event.choices.map((choice)=><Button key={choice.id} disabled={!canChooseStoryChoice(state,choice)} onClick={()=>onChoose(event.id,choice.id)}><span>{choice.label}</span><small>{choice.description}</small><ChevronRight/></Button>)}</div></section></main>;
 }
 
 function MorningReport({ state, onNext, onReset, onStartEnding }: { state:UiSave; onNext:()=>void; onReset:()=>void; onStartEnding:(endingId:GameState['availableEndings'][number])=>void }) {
@@ -254,12 +255,13 @@ function MorningReport({ state, onNext, onReset, onStartEnding }: { state:UiSave
   const staying = state.guests.filter((guest) => guest.status==='STAYING');
   const departed = summary?.checkedOutGuestIds.map((id)=>state.guests.find((guest)=>guest.id===id)?.name??id)??[];
   const visibleEndings = state.availableEndings.map(getEndingCondition).filter(Boolean);
+  const destinyRoutes = ENDING_CONDITIONS.filter((ending)=>!ending.hidden).sort((a,b)=>b.priority-a.priority);
   return <main className="report-screen">
     <header><p className="eyebrow">JUJU HOTEL · 아침 장부</p><h1>DAY {state.day}</h1><span>WORLD STATE · {state.worldState}</span></header>
     <section className="report-paper"><div className="stamp">{departed.length?'숙박 종료':'야간 정산'}</div><p className="panel-label">현재 목표</p><h2>호텔을 지키고, 아버지에게 무슨 일이 있었는지 밝혀내십시오.</h2><p>DAY는 호텔이 버틴 시간의 기록입니다. 정해진 마지막 날은 없습니다.</p>
       <div className="ledger-grid"><Result icon={BedDouble} label="투숙객" before={String(summary?.occupiedGuests??0)} after={String(staying.length)}/><Result icon={Soup} label="식량" before={`-${summary?.consumed.food??0}`} after={String(state.resources.food)}/><Result icon={Droplets} label="물" before={`-${summary?.consumed.water??0}`} after={String(state.resources.water)}/><Result icon={Fuel} label="연료" before={`-${summary?.consumed.fuel??0}`} after={String(state.resources.fuel)}/></div>
       <div className="consequence"><span>HOTEL LOG</span><strong>{state.eventHistory.at(-1)?.message??'특이사항 없음'}</strong><p>세계의 압력과 호텔의 선택이 다음 방문자, 자원, 세력 활동을 바꿉니다.</p></div>
-      <div className="destiny-panel"><span>ENDGAME / DESTINY</span>{visibleEndings.length ? visibleEndings.map((ending) => <div key={ending!.endingId}><strong>NEW PATH AVAILABLE · {ending!.name}</strong><p>{ending!.description}</p><Button onClick={() => onStartEnding(ending!.endingId)}>FINAL EVENT 시작</Button></div>) : <div><strong>IN PROGRESS</strong><p>호텔이 어떤 장소가 될지는 아직 정해지지 않았습니다. 숨겨진 조건은 장부에 공개되지 않습니다.</p></div>}</div>
+      <div className="destiny-panel"><span>ENDGAME / DESTINY</span>{destinyRoutes.map((ending)=>{const status=state.endingProgress[ending.endingId]??'IN_PROGRESS';const available=visibleEndings.some((item)=>item?.endingId===ending.endingId);return <div key={ending.endingId}><strong>{status==='AVAILABLE'?'NEW PATH AVAILABLE':status} · {ending.name}</strong><p>{ending.description}</p>{available&&<Button onClick={()=>onStartEnding(ending.endingId)}>FINAL EVENT 시작</Button>}</div>})}<div><strong>UNKNOWN · 숨겨진 경로</strong><p>일부 결말은 장부에 조건이나 이름이 표시되지 않습니다.</p></div></div>
       <footer><div><span>DAY {summary?.completedDay??state.day-1} 완료</span><p>원한다면 해금된 최종 사건을 미루고 운영을 계속할 수 있습니다.</p></div><div className="report-actions"><Button variant="secondary" onClick={onReset}><RotateCcw/> 새 게임</Button><Button onClick={onNext}>DAY {state.day} 운영 계속 <ChevronRight/></Button></div></footer>
     </section>
   </main>;

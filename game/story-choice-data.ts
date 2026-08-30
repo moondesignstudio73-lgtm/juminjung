@@ -21,6 +21,14 @@ export const STORY_CHOICE_EVENTS: StoryChoiceEvent[] = [
     { id: "open", label: "문을 열게 둔다", description: "호텔 아래의 비밀과 아버지의 흔적에 가까워지지만 위협이 커집니다.", effect: { trust: 8, stress: 10, threat: 15, fatherStoryProgress: 10, flags: { mr_white_door: true, monster_origin_clue_2: true }, discoverTrait: "MonsterRelated" } },
     { id: "seal", label: "지하 문을 봉쇄한다", description: "당장의 안전을 택하고 Mr. White의 목적을 거부합니다.", effect: { trust: -10, hotelStats: { security: 5 }, flags: { white_door_sealed: true } } },
   ] },
+  { id: "lily-redactions", guestId: "lily", stage: "CONFLICT", title: "검게 칠한 문장", description: "Lily의 문서에는 괴물 최초 출현지와 아버지의 이동 경로가 같은 검은 잉크 아래 숨겨져 있습니다.", quote: "‘누군가 재난이 시작되기 전부터 이 문서를 지우고 있었어요.’", choices: [
+    { id: "decode", label: "밤새 원본을 복원한다", description: "문서의 층을 벗겨 최초 출현 기록을 해독하지만 추적자에게 흔적을 남깁니다.", effect: { trust: 10, stress: 8, threat: 6, fatherStoryProgress: 10, flags: { lily_documents_decoded: true, father_route_in_documents: true }, discoverTrait: "OriginDocuments" } },
+    { id: "copy", label: "사본을 만들고 원본을 숨긴다", description: "즉시 해독하지 않고 증거를 여러 곳에 나누어 보존합니다.", effect: { trust: 5, hotelStats: { security: 3 }, flags: { lily_documents_secured: true } } },
+  ] },
+  { id: "vale-sample", guestId: "vale", stage: "CONFLICT", title: "살아 있는 세포", description: "밀봉된 조직 샘플이 인간의 목소리에 반응합니다. Vale는 연구를 계속할 허가를 요구합니다.", quote: "‘이건 병원체가 아닙니다. 우리를 관찰하고 있어요.’", choices: [
+    { id: "stabilize", label: "의약품으로 샘플을 안정화한다", description: "의약품 2를 사용해 연구 가능한 상태로 보존합니다.", requiredResources: { medicine: 2 }, effect: { resources: { medicine: -2 }, trust: 10, threat: 8, flags: { vale_sample_stabilized: true }, discoverTrait: "PreOutbreakResearch" } },
+    { id: "quarantine", label: "지하 금고에 격리한다", description: "연구 속도보다 호텔의 안전을 우선합니다.", effect: { trust: -4, hotelStats: { security: 5 }, flags: { vale_sample_quarantined: true } } },
+  ] },
   { id: "eleanor-standard", guestId: "eleanor", stage: "RESOLUTION", title: "호텔의 진료 원칙", description: "Eleanor는 임시 진료실을 계속 운영하려면 호텔이 누구를, 어디까지 치료할지 정해야 한다고 말합니다.", quote: "‘원칙이 없으면 약보다 먼저 사람이 바닥나요.’", choices: [
     { id: "clinic", label: "상설 진료 구역을 만든다", description: "의약품 3을 투입해 JUJU HOTEL을 피난민도 치료하는 의료 거점으로 만듭니다.", requiredResources: { medicine: 3 }, effect: { resources: { medicine: -3 }, trust: 10, reputations: { community: 8, humanitarian: 8 }, flags: { eleanor_clinic_established: true, medical_network_active: true } } },
     { id: "mobile", label: "순회 진료만 허용한다", description: "비축분을 지키면서 Eleanor가 필요한 방만 찾아가도록 합니다.", effect: { trust: 5, reputations: { refugee: 5 }, flags: { eleanor_mobile_medic: true } } },
@@ -40,5 +48,13 @@ export const STORY_CHOICE_EVENTS: StoryChoiceEvent[] = [
   { id: "white-answer", guestId: "white", stage: "RESOLUTION", title: "문 너머의 대답", description: "지하에서 들려오는 목소리가 호텔의 주인에게 마지막 질문을 던집니다.", quote: "‘괴물을 들이는 것과 사람을 내쫓는 것, 어느 쪽이 더 인간답습니까?’", choices: [
     { id: "yes", label: "문 너머의 존재를 받아들인다", description: "Mr. White와 호텔의 비밀을 끝까지 마주하고 위험한 공존을 선택합니다.", effect: { trust: 8, fatherStoryProgress: 20, threat: 20, flags: { the_door_answer_yes: true, mr_white_door: true }, discoverTrait: "NonHumanPossible" } },
     { id: "no", label: "문을 닫고 그를 추방한다", description: "진실보다 생존을 택해 지하와 Mr. White를 호텔에서 끊어 냅니다.", effect: { trust: -15, threat: -10, hotelStats: { security: 8 }, flags: { the_door_answer_no: true, white_banished: true } } },
+  ] },
+  { id: "lily-truth", guestId: "lily", stage: "RESOLUTION", title: "누가 진실을 소유하는가", description: "복원된 기록을 세상에 공개할지, 호텔 안에서 다음 단서를 기다릴지 결정해야 합니다.", quote: "‘진실은 사람을 구할 수도 있고, 마지막 피난처를 불태울 수도 있어요.’", choices: [
+    { id: "broadcast", label: "라디오로 해독 결과를 공개한다", description: "직접 복원한 문서를 모두가 검증할 수 있게 공개하지만 호텔의 위치도 드러납니다.", requiredFlags: { lily_documents_decoded: true }, effect: { trust: 12, threat: 12, reputations: { community: 6, humanitarian: 5 }, flags: { lily_documents_decoded: true, lily_truth_broadcast: true }, discoverTrait: "OriginDocuments" } },
+    { id: "archive", label: "암호화해 호텔 금고에 보관한다", description: "기록을 해독하고 보존하되 최종 진실이 모일 때까지 공개를 미룹니다.", effect: { trust: 5, hotelStats: { security: 4 }, flags: { lily_documents_decoded: true, lily_truth_archived: true }, discoverTrait: "OriginDocuments" } },
+  ] },
+  { id: "vale-research", guestId: "vale", stage: "RESOLUTION", title: "괴물의 이름", description: "Vale의 연구는 괴물이 감염체가 아니라 인간의 기억을 모방하는 별개의 생명이라는 결론에 도달합니다.", quote: "‘이 결과를 완성하면, 우리도 이전의 인간으로 돌아갈 수 없습니다.’", choices: [
+    { id: "complete", label: "연구를 완성하고 Lily와 공유한다", description: "안정화한 샘플로 괴물 기원 연구를 완성해 THE TRUTH 경로의 핵심 증거로 남깁니다.", requiredFlags: { vale_sample_stabilized: true }, effect: { trust: 12, fatherStoryProgress: 10, flags: { vale_research_complete: true, lily_vale_research_shared: true }, relationship: { targetId: "lily", delta: 25 }, discoverTrait: "PreOutbreakResearch" } },
+    { id: "destroy", label: "연구와 샘플을 소각한다", description: "호텔의 안전을 위해 연구를 포기하고 위협을 낮춥니다.", effect: { trust: -10, threat: -12, reputations: { humanitarian: 4 }, flags: { vale_research_destroyed: true } } },
   ] },
 ];
