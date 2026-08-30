@@ -15,7 +15,12 @@ Understood as: grow the published browser game into a stable DAY 1 → DAY 30 ho
 
 ## Next system priorities
 
-- Replace the repeated Eleanor encounter with a data-driven visitor schedule and multiple NPC states
+- Complete the five featured event chains by evaluating their stored stage conditions and choices
+- Add relationship-distance event modifiers and the Eleanor + Ruth Medical Ward synergy
 - Add action points and meaningful daytime hotel actions
 - Add conditional night events, shortage consequences, monster threat, and reputation
 - Expand HOTEL LOG into an accessible journal and build the full DAY 30 ending evaluation
+
+## Main NPC catalog
+
+Twenty story NPCs share one versioned data contract for arrival conditions, offers, room Aura, relationships, hidden-trait discovery, four-stage story progression, survival state, and ending state. The UI and save migration consume this catalog generically; adding a visitor must not require another character-specific branch in the core loop.

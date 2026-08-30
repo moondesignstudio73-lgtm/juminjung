@@ -3,12 +3,13 @@ export type DiseaseType = "NORMAL_DISEASE" | "MONSTER_INFECTION" | "STORY_DISEAS
 
 export type Position = { x: number; y: number };
 
+export type AuraMetric = "diseaseChance" | "breakdownRisk" | "stress" | "security" | "foodUse" | "trade" | "information" | "monsterThreat" | "theftRisk" | "trust";
 export type RoomEffect = {
   id: string;
   sourceGuestId: string;
   name: string;
-  metric: "diseaseChance";
-  diseaseType: DiseaseType;
+  metric: AuraMetric;
+  diseaseType?: DiseaseType;
   operation: "SET" | "ADD" | "MULTIPLY";
   value: number;
 };
@@ -36,6 +37,34 @@ export type Guest = {
   id: string;
   name: string;
   role: string;
+  age: number;
+  gender: string;
+  description: string;
+  portrait: string;
+  expressions: string[];
+  arrivalDay: number;
+  arrivalDayRange: [number, number];
+  arrivalConditions: { type: "GUEST_APPEARED" | "FLAG"; key: string; value?: boolean | number | string }[];
+  conditionLabel: string;
+  introDialogue: string;
+  negotiationDialogue: string;
+  questions: { id: string; label: string; answer: string }[];
+  offeredItems: { id: string; type: "FOOD" | "FUEL" | "MEDICINE" | "VALUABLE" | "INFORMATION"; name: string; short: string; detail: string; negotiatedOnly?: boolean }[];
+  offer: Partial<Resources>;
+  negotiatedOffer: Partial<Resources>;
+  hiddenTraits: string[];
+  baseTraits: string[];
+  discoveredTraits: string[];
+  health: number;
+  stress: number;
+  trust: number;
+  riskLevel: number;
+  relationships: { targetId: string; type: string; value: number }[];
+  storyFlags: Record<string, boolean | number | string>;
+  eventChain: { id: string; stage: "ARRIVAL" | "LIFE_AT_HOTEL" | "CONFLICT" | "RESOLUTION"; title: string; completed: boolean }[];
+  infectionState: "HEALTHY" | "INJURED" | "SICK" | "INFECTED_SUSPECTED" | "INFECTED";
+  alive: boolean;
+  endingState: string | null;
   currentRoomNumber: number | null;
   stayDuration: number;
   remainingNights: number;
@@ -76,7 +105,7 @@ export type GamePhase =
   | "ending";
 
 export type GameState = {
-  version: 3;
+  version: 4;
   phase: GamePhase;
   day: number;
   rooms: Room[];

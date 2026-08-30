@@ -12,6 +12,7 @@ import { setGuestRoomFlags } from '@/game/event-manager';
 import { ELEANOR_ID } from '@/game/guest-data';
 import { clearBrowserGame, createInitialGameState, loadBrowserGame, saveBrowserGame } from '@/game/save-manager';
 import { assignGuest, checkoutGuest, isRoomSelectable, moveGuest } from '@/game/room-manager';
+import { getEligibleVisitor, markVisitorRefused } from '@/game/visitor-manager';
 import type { GameState, Guest, Room } from '@/game/types';
 
 type Decision = GameState['decision'];
@@ -39,6 +40,7 @@ const items = [
 ];
 
 const defaultDialogue = '“방값만큼 일할게요. 이틀이면 됩니다. 그 이상은 바라지 않아요.”';
+const itemIcons = { FOOD: Soup, FUEL: Fuel, MEDICINE: HeartPulse, VALUABLE: PackageSearch, INFORMATION: Inspect } as const;
 
 export default function Home() {
   const [save, setSave] = useState<UiSave>(makeInitial);
@@ -47,6 +49,8 @@ export default function Home() {
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [showQuestions, setShowQuestions] = useState(false);
   const [muted, setMuted] = useState(false);
+  const eligibleVisitor = getEligibleVisitor(save.guests, save.day);
+  const visitor = eligibleVisitor ?? save.guests.find((guest) => guest.status === 'STAYING') ?? save.guests[0];
 
   useEffect(() => {
     const restored = loadBrowserGame();
@@ -58,6 +62,10 @@ export default function Home() {
     if (hydrated && save.phase !== 'title') saveBrowserGame(save);
   }, [save, hydrated]);
 
+  useEffect(() => {
+    if (save.phase === 'desk' && eligibleVisitor) setDialogue(`“${eligibleVisitor.introDialogue}”`);
+  }, [save.phase, save.day, eligibleVisitor?.id]);
+
   const update = (patch: Partial<UiSave>) => setSave((current) => ({ ...current, ...patch }));
   const reset = () => { clearBrowserGame(); setSave(makeInitial()); setDialogue(defaultDialogue); setSelectedItem(null); };
   const ask = (id: string, answer: string) => {
@@ -66,11 +74,11 @@ export default function Home() {
   const inspect = (id: string) => {
     update({ inspected: [...new Set([...save.inspected, id])] }); setSelectedItem(id);
   };
-  const refuse = () => update({ decision: 'refuse', phase: 'night' });
+  const refuse = () => update({ guests: markVisitorRefused(save.guests, visitor.id), eventHistory: [...save.eventHistory, { day: save.day, type: 'EVENT', message: `${visitor.name} · 입실 거절` }], decision: 'refuse', phase: 'night' });
   const openAssignment = (mode: 'checkin' | 'move') => update({ phase: 'assignment', assignmentMode: mode, selectedRoomNumber: null });
   const confirmRoom = () => {
     if (save.selectedRoomNumber === null) return;
-    const guests = save.guests.map((guest) => guest.id === ELEANOR_ID ? {
+    const guests = save.guests.map((guest) => guest.id === visitor.id ? {
       ...guest,
       currentRoomNumber: save.selectedRoomNumber,
       status: 'STAYING' as const,
@@ -78,25 +86,21 @@ export default function Home() {
       remainingNights: save.assignmentMode === 'checkin' ? guest.stayDuration : guest.remainingNights,
     } : guest);
     const positioned = save.assignmentMode === 'move'
-      ? moveGuest(save.rooms, ELEANOR_ID, save.selectedRoomNumber)
-      : assignGuest(save.rooms, save.selectedRoomNumber, ELEANOR_ID);
+      ? moveGuest(save.rooms, visitor.id, save.selectedRoomNumber)
+      : assignGuest(save.rooms, save.selectedRoomNumber, visitor.id);
+    const reward = save.assignmentMode === 'checkin' ? Object.fromEntries(Object.keys(save.resources).map((key) => [key, save.resources[key as keyof typeof save.resources] + (visitor.offer[key as keyof typeof visitor.offer] ?? 0) + (save.negotiated ? visitor.negotiatedOffer[key as keyof typeof visitor.negotiatedOffer] ?? 0 : 0)])) as typeof save.resources : save.resources;
     update({
       guests,
       rooms: recalculateRoomEffects(positioned, guests),
-      flags: setGuestRoomFlags(save.flags, save.selectedRoomNumber),
-      resources: save.assignmentMode === 'checkin' ? {
-        ...save.resources,
-        fuel: save.resources.fuel + 8,
-        medicine: save.resources.medicine + (save.negotiated ? 4 : 3),
-        security: save.resources.security + 4,
-      } : save.resources,
-      eventHistory: save.assignmentMode === 'checkin' ? [...save.eventHistory, { day: save.day, type: 'CHECK_IN' as const, message: `엘리너 리드 · ${save.selectedRoomNumber}호 체크인` }] : save.eventHistory,
+      flags: visitor.id === ELEANOR_ID ? setGuestRoomFlags(save.flags, save.selectedRoomNumber) : save.flags,
+      resources: reward,
+      eventHistory: save.assignmentMode === 'checkin' ? [...save.eventHistory, { day: save.day, type: 'CHECK_IN' as const, message: `${visitor.name} · ${save.selectedRoomNumber}호 체크인` }] : save.eventHistory,
       decision: 'checkin', phase: 'management', assignmentMode: null,
     });
   };
   const checkout = () => {
-    const guests = save.guests.map((guest) => guest.id === ELEANOR_ID ? { ...guest, currentRoomNumber: null, status: 'CHECKED_OUT' as const, remainingNights: 0 } : guest);
-    update({ guests, rooms: recalculateRoomEffects(checkoutGuest(save.rooms, ELEANOR_ID), guests), flags: setGuestRoomFlags(save.flags, null), eventHistory: [...save.eventHistory, { day: save.day, type: 'CHECK_OUT', message: '엘리너 리드 · 수동 체크아웃' }], decision: null, phase: 'desk' });
+    const guests = save.guests.map((guest) => guest.id === visitor.id ? { ...guest, currentRoomNumber: null, status: 'CHECKED_OUT' as const, remainingNights: 0 } : guest);
+    update({ guests, rooms: recalculateRoomEffects(checkoutGuest(save.rooms, visitor.id), guests), flags: visitor.id === ELEANOR_ID ? setGuestRoomFlags(save.flags, null) : save.flags, eventHistory: [...save.eventHistory, { day: save.day, type: 'CHECK_OUT', message: `${visitor.name} · 수동 체크아웃` }], decision: null, phase: 'desk' });
   };
 
   if (save.phase === 'title') return <TitleScreen onStart={() => update({ phase: 'prologue' })} muted={muted} setMuted={setMuted} />;
@@ -117,15 +121,17 @@ export default function Home() {
       </main>
     );
   }
-  const eleanor = save.guests.find((guest) => guest.id === ELEANOR_ID)!;
-  if (save.phase === 'assignment') return <RoomAssignment day={save.day} rooms={save.rooms} guest={eleanor} selected={save.selectedRoomNumber} mode={save.assignmentMode!} onSelect={(roomNumber) => update({ selectedRoomNumber: roomNumber })} onConfirm={confirmRoom} onCancel={() => update({ phase: save.assignmentMode === 'move' ? 'management' : 'desk', assignmentMode: null, selectedRoomNumber: null })} />;
-  if (save.phase === 'management') return <HotelManagement day={save.day} rooms={save.rooms} guest={eleanor} resources={save.resources} onMove={() => openAssignment('move')} onCheckout={checkout} onContinue={() => update({ phase: 'night' })} />;
-  if (save.phase === 'night') return <NightEvent day={save.day} decision={save.decision!} roomNumber={eleanor.currentRoomNumber} onContinue={() => setSave((current) => ({ ...resolveDay(current), prologue: current.prologue }))} />;
-  if (save.phase === 'report') return <MorningReport state={save} onNext={() => update({ phase: eleanor.status === 'STAYING' ? 'management' : 'desk', decision: eleanor.status === 'STAYING' ? 'checkin' : null, asked: [], inspected: [], negotiated: false, held: false })} onReset={reset} />;
+  const managedGuest = [...save.guests].filter((guest) => guest.status === 'STAYING').sort((a,b) => (b.checkedInDay ?? 0) - (a.checkedInDay ?? 0))[0] ?? visitor;
+  if (save.phase === 'assignment') return <RoomAssignment day={save.day} rooms={save.rooms} guest={visitor} selected={save.selectedRoomNumber} mode={save.assignmentMode!} onSelect={(roomNumber) => update({ selectedRoomNumber: roomNumber })} onConfirm={confirmRoom} onCancel={() => update({ phase: save.assignmentMode === 'move' ? 'management' : 'desk', assignmentMode: null, selectedRoomNumber: null })} />;
+  if (save.phase === 'management') return <HotelManagement day={save.day} rooms={save.rooms} guest={managedGuest} resources={save.resources} onMove={() => openAssignment('move')} onCheckout={checkout} onContinue={() => update({ phase: 'night' })} />;
+  if (save.phase === 'night') return <NightEvent day={save.day} decision={save.decision!} guestName={managedGuest.name} roomNumber={managedGuest.currentRoomNumber} onContinue={() => setSave((current) => ({ ...resolveDay(current), prologue: current.prologue }))} />;
+  if (save.phase === 'report') return <MorningReport state={save} onNext={() => { const nextVisitor = getEligibleVisitor(save.guests, save.day); const staying = save.guests.some((guest) => guest.status === 'STAYING'); update({ phase: nextVisitor ? 'desk' : staying ? 'management' : 'desk', decision: staying ? 'checkin' : null, asked: [], inspected: [], negotiated: false, held: false }); if (nextVisitor) setDialogue(nextVisitor.introDialogue); }} onReset={reset} />;
   if (save.phase === 'ending') return <CampaignEnding state={save} onReset={reset} />;
 
-  const availableItems = save.negotiated ? items : items.filter((item) => item.id !== 'medicine');
-  const detail = items.find((item) => item.id === selectedItem);
+  if (!eligibleVisitor) return <QuietDesk day={save.day} resources={save.resources} staying={save.guests.filter((guest)=>guest.status==='STAYING').length} onManage={() => update({ phase: 'management' })} onEnd={() => update({ decision: 'refuse', phase: 'night' })} />;
+  const availableItems = visitor.offeredItems.filter((item) => !item.negotiatedOnly || save.negotiated);
+  const detail = visitor.offeredItems.find((item) => item.id === selectedItem);
+  const DetailIcon = detail ? itemIcons[detail.type] : Inspect;
   return (
     <main className="game-shell">
       <div className="rain" aria-hidden="true" />
@@ -139,15 +145,15 @@ export default function Home() {
       </header>
 
       <section className="desk-scene" aria-label="밤의 JUJU HOTEL 프런트">
-        <img src="/juminjung/assets/front-desk-night.png" alt="비에 젖은 의사 엘리너가 낡은 프런트 카운터 앞에 서 있다." />
+        <img src="/juminjung/assets/front-desk-night.png" alt={`${visitor.name} 방문자가 낡은 프런트 카운터 앞에 서 있다.`} />
         <div className="scene-vignette" />
         <aside className="case-file left-panel">
-          <span className="panel-label">방문자 001</span><h2>엘리너 리드</h2><p>31세 · 응급의학과 의사</p>
+          <span className="panel-label">방문자 · {visitor.id.toUpperCase()}</span><h2>{visitor.name}</h2><p>{visitor.age}세 · {visitor.role}</p>
           <dl>
-            <div><dt>요청</dt><dd>2박</dd></div><div><dt>상태</dt><dd>부상 · 안정</dd></div>
-            <div><dt>제시품</dt><dd>{save.negotiated ? '보급품 + 항생제' : '보급품'}</dd></div>
+            <div><dt>요청</dt><dd>{visitor.stayDuration}박</dd></div><div><dt>상태</dt><dd>{visitor.conditionLabel}</dd></div>
+            <div><dt>위험도</dt><dd>{visitor.riskLevel}</dd></div>
           </dl>
-          <div className="clue-count">단서 {save.asked.length + save.inspected.length} / 7<small>질문과 조사는 시간을 쓰지 않습니다.</small></div>
+          <div className="clue-count">단서 {save.asked.length + save.inspected.length} / {visitor.questions.length + visitor.offeredItems.length}<small>숨겨진 특성은 조사 전 표시되지 않습니다.</small></div>
         </aside>
         <aside className="hotel-status right-panel">
           <span className="panel-label">야간 장부 · 자원 점수</span><strong>{save.rooms.filter(isRoomSelectable).length}</strong><small>빈 객실 · 총 30실</small>
@@ -155,18 +161,18 @@ export default function Home() {
         </aside>
 
         <div className="item-tray" aria-label="제시한 물품">
-          {availableItems.map(({ id, icon: Icon, name }) => <button key={id} className={save.inspected.includes(id) ? 'item inspected' : 'item'} onClick={() => inspect(id)}><Icon/><span>{name}</span><small>{save.inspected.includes(id) ? '조사 완료' : '조사'}</small></button>)}
+          {availableItems.map(({ id, type, name }) => { const Icon = itemIcons[type]; return <button key={id} className={save.inspected.includes(id) ? 'item inspected' : 'item'} onClick={() => inspect(id)}><Icon/><span>{name}</span><small>{save.inspected.includes(id) ? '조사 완료' : '조사'}</small></button>; })}
         </div>
 
         <div className="dialogue-card">
-          <div className="speaker"><Radio size={15}/> 엘리너 리드</div><p>{dialogue}</p>
+          <div className="speaker"><Radio size={15}/> {visitor.name}</div><p>{dialogue}</p>
           <div className="action-row">
             <Button variant="secondary" onClick={() => setShowQuestions(!showQuestions)}><CircleHelp/> 질문</Button>
             <Button variant="secondary" onClick={() => { setDialogue('카운터 위 물건을 선택하세요. 사람보다 소지품이 더 솔직할 때가 있습니다.'); }}><PackageSearch/> 조사</Button>
-            <Button variant="secondary" title="항생제를 추가 숙박료로 요구합니다." disabled={save.negotiated} onClick={() => { update({ negotiated:true }); setDialogue('“좋아요. 밀봉된 약 한 병을 더 내죠. 대신 문은 잠가주고, 자정 뒤에는 아무것도 묻지 마세요.”'); }}><Droplets/> 협상</Button>
+            <Button variant="secondary" title="추가 숙박 대가를 요구합니다." disabled={save.negotiated} onClick={() => { update({ negotiated:true }); setDialogue(`“${visitor.negotiationDialogue}”`); }}><Droplets/> 협상</Button>
             <Button variant="secondary" title="방문자를 현관 안쪽에 잠시 대기시킵니다." disabled={save.held} onClick={() => { update({ held:true }); setDialogue('꺼져가는 현관등 아래 그녀를 잠시 대기시킨다. 등 뒤 유리문에서 무언가 한 번 길게 긁히는 소리가 난다.'); }}><Radio/> 보류</Button>
           </div>
-          {showQuestions && <div className="question-menu">{questions.map((q) => <button key={q.id} className={save.asked.includes(q.id) ? 'asked' : ''} onClick={() => ask(q.id,q.answer)}>{q.label}<ChevronRight/></button>)}</div>}
+          {showQuestions && <div className="question-menu">{visitor.questions.map((q) => <button key={q.id} className={save.asked.includes(q.id) ? 'asked' : ''} onClick={() => ask(q.id,`“${q.answer}”`)}>{q.label}<ChevronRight/></button>)}</div>}
         </div>
         <div className="decision-bar">
           <p><span>호텔 규칙 01</span> 이 문을 통과한 모든 사람은 당신의 책임입니다.</p>
@@ -175,7 +181,7 @@ export default function Home() {
         </div>
       </section>
 
-      {detail && <div className="modal-backdrop" onClick={() => setSelectedItem(null)}><section className="item-modal" role="dialog" aria-modal="true" aria-labelledby="item-title" onClick={(e) => e.stopPropagation()}><span className="panel-label">조사 기록 · {detail.id.toUpperCase()}</span><detail.icon/><h2 id="item-title">{detail.name}</h2><p>{detail.short}</p><blockquote>{detail.detail}</blockquote><Button onClick={() => setSelectedItem(null)}>프런트로 돌아가기</Button></section></div>}
+      {detail && <div className="modal-backdrop" onClick={() => setSelectedItem(null)}><section className="item-modal" role="dialog" aria-modal="true" aria-labelledby="item-title" onClick={(e) => e.stopPropagation()}><span className="panel-label">조사 기록 · {detail.id.toUpperCase()}</span><DetailIcon/><h2 id="item-title">{detail.name}</h2><p>{detail.short}</p><blockquote>{detail.detail}</blockquote><Button onClick={() => setSelectedItem(null)}>프런트로 돌아가기</Button></section></div>}
     </main>
   );
 }
@@ -196,27 +202,39 @@ function HotelGrid({ rooms, selected, affected, onSelect }: { rooms: Room[]; sel
 function RoomAssignment({ day, rooms, guest, selected, mode, onSelect, onConfirm, onCancel }: { day:number; rooms:Room[]; guest:Guest; selected:number|null; mode:'checkin'|'move'; onSelect:(roomNumber:number)=>void; onConfirm:()=>void; onCancel:()=>void }) {
   const previewGuest = { ...guest, currentRoomNumber: selected };
   const affected = selected === null ? [] : getAffectedRoomNumbers(rooms, previewGuest);
-  return <main className="room-screen"><header><div><p className="eyebrow">JUJU HOTEL · 객실 배치 전략</p><h1>{mode === 'move' ? '엘리너 객실 이동' : '투숙객 객실 배정'}</h1></div><div className="day-chip"><span>DAY {day}</span><small>빈 객실 {rooms.filter(isRoomSelectable).length} / 30</small></div></header><section className="room-layout"><div className="room-board"><HotelGrid rooms={rooms} selected={selected} affected={affected} onSelect={onSelect}/><div className="room-legend"><span>빈 객실</span><span>사용 중</span><span>Medical Care Zone</span></div></div><aside className="aura-preview"><span className="panel-label">투숙객 능력 미리보기</span><h2>{guest.name}</h2><p>{guest.role} · {guest.stayDuration}박 요청</p><div className="aura-card"><HeartPulse/><div><strong>Medical Care Zone</strong><p>배정 객실과 인접한 객실의 <b>일반 질병</b> 발생률을 0%로 설정합니다.</p></div></div><dl><div><dt>선택 객실</dt><dd>{selected ?? '선택 전'}</dd></div><div><dt>영향 객실</dt><dd>{affected.length ? affected.join(' · ') : '객실을 선택하세요'}</dd></div><div><dt>제외</dt><dd>괴물 감염 · 스토리 질병 · 부상</dd></div></dl><div className="assignment-actions"><Button variant="secondary" onClick={onCancel}>취소</Button><Button className="checkin" disabled={selected === null} onClick={onConfirm}>{mode === 'move' ? '이동 확정' : '체크인 확정'} <ChevronRight/></Button></div></aside></section></main>;
+  return <main className="room-screen">
+    <header><div><p className="eyebrow">JUJU HOTEL · 객실 배치 전략</p><h1>{guest.name} 객실 {mode==='move'?'이동':'배정'}</h1></div><div className="day-chip"><span>DAY {day}</span><small>빈 객실 {rooms.filter(isRoomSelectable).length} / 30</small></div></header>
+    <section className="room-layout"><div className="room-board"><HotelGrid rooms={rooms} selected={selected} affected={affected} onSelect={onSelect}/><div className="room-legend"><span>빈 객실</span><span>사용 중</span><span>{guest.aura?.name??'Aura 없음'}</span></div></div>
+    <aside className="aura-preview"><span className="panel-label">투숙객 능력 미리보기</span><h2>{guest.name}</h2><p>{guest.role} · {guest.stayDuration}박 요청</p>
+      {guest.aura?<div className="aura-card"><HeartPulse/><div><strong>{guest.aura.name}</strong><p>{guest.aura.description}</p></div></div>:<p className="system-note">이 투숙객은 현재 객실 Aura가 없습니다. 관계와 숨겨진 특성은 이후 사건에 영향을 줍니다.</p>}
+      <dl><div><dt>선택 객실</dt><dd>{selected??'선택 전'}</dd></div><div><dt>영향 객실</dt><dd>{affected.length?affected.join(' · '):guest.aura?'객실을 선택하세요':'없음'}</dd></div><div><dt>Health / Stress / Trust</dt><dd>{guest.health} / {guest.stress} / {guest.trust}</dd></div></dl>
+      <div className="assignment-actions"><Button variant="secondary" onClick={onCancel}>취소</Button><Button className="checkin" disabled={selected===null} onClick={onConfirm}>{mode==='move'?'이동 확정':'체크인 확정'} <ChevronRight/></Button></div>
+    </aside></section>
+  </main>;
 }
 
 function HotelManagement({ day, rooms, guest, resources, onMove, onCheckout, onContinue }: { day:number; rooms:Room[]; guest:Guest; resources:GameState['resources']; onMove:()=>void; onCheckout:()=>void; onContinue:()=>void }) {
   const affected = getAffectedRoomNumbers(rooms, guest);
-  return <main className="room-screen"><header><div><p className="eyebrow">JUJU HOTEL · 운영 현황</p><h1>객실 관리</h1></div><div className="day-chip"><span>DAY {day}</span><small>식량 {resources.food} · 물 {resources.water} · 연료 {resources.fuel}</small></div></header><section className="room-layout"><div className="room-board"><HotelGrid rooms={rooms} affected={affected}/></div><aside className="aura-preview"><span className="panel-label">현재 투숙객</span><h2>{guest.name} · {guest.currentRoomNumber}호</h2><p>남은 숙박 {guest.remainingNights}박</p><div className="aura-card active"><HeartPulse/><div><strong>Medical Care Zone 활성</strong><p>{affected.join(' · ')}호의 일반 질병 확률 0%</p></div></div><p className="system-note">오늘 밤 예상 소비: 식량 1 · 물 1 · 연료 1. 객실 이동 시 보호 범위가 즉시 다시 계산됩니다.</p><div className="management-actions"><Button variant="secondary" onClick={onMove}>객실 이동</Button><Button className="refuse" onClick={onCheckout}>체크아웃</Button><Button className="checkin" onClick={onContinue}>DAY {day} 종료 <ChevronRight/></Button></div></aside></section></main>;
+  return <main className="room-screen"><header><div><p className="eyebrow">JUJU HOTEL · 운영 현황</p><h1>객실 관리</h1></div><div className="day-chip"><span>DAY {day}</span><small>식량 {resources.food} · 물 {resources.water} · 연료 {resources.fuel}</small></div></header><section className="room-layout"><div className="room-board"><HotelGrid rooms={rooms} affected={affected}/></div><aside className="aura-preview"><span className="panel-label">현재 투숙객</span><h2>{guest.name} · {guest.currentRoomNumber}호</h2><p>{guest.role} · 남은 숙박 {guest.remainingNights}박</p>{guest.aura?<div className="aura-card active"><HeartPulse/><div><strong>{guest.aura.name} 활성</strong><p>{guest.aura.description}<br/>{affected.length?`영향 객실 ${affected.join(' · ')}`:'영향 범위 없음'}</p></div></div>:<p className="system-note">객실 Aura 없음 · 관계 및 숨겨진 특성 이벤트 대상</p>}<dl><div><dt>Health</dt><dd>{guest.health}</dd></div><div><dt>Stress</dt><dd>{guest.stress}</dd></div><div><dt>Trust</dt><dd>{guest.trust}</dd></div></dl><p className="system-note">오늘 밤 투숙객당 식량 1 · 물 1, 호텔 연료 1이 소비됩니다.</p><div className="management-actions"><Button variant="secondary" onClick={onMove}>객실 이동</Button><Button className="refuse" onClick={onCheckout}>체크아웃</Button><Button className="checkin" onClick={onContinue}>DAY {day} 종료 <ChevronRight/></Button></div></aside></section></main>;
 }
 
-function NightEvent({ day, decision, roomNumber, onContinue }: { day:number; decision: Exclude<Decision,null>; roomNumber:number|null; onContinue:()=>void }) {
+function NightEvent({ day, decision, guestName, roomNumber, onContinue }: { day:number; decision: Exclude<Decision,null>; guestName:string; roomNumber:number|null; onContinue:()=>void }) {
   const accepted=decision==='checkin';
-  return <main className="event-screen"><div className="event-light"/><Radio className="event-icon"/><p className="scene-index">DAY {day} · 오전 2:13</p><section><span>야간 사건 · {accepted?`${roomNumber}호`:'동쪽 철문'}</span><h1>{accepted?'문틈 아래의 불빛':'세 번의 노크, 그리고 침묵'}</h1><p>{accepted?'무언가 깨지는 소리에 호텔 전체가 깨어난다. 엘리너는 이미 복도에 나와 월터의 피 흘리는 옆구리를 두 손으로 누르고 있다. 그녀는 허락도 구하지 않고 약장을 연다. 동이 틀 무렵, 월터는 다시 안정적으로 숨을 쉰다.':'라디오에서 잡음과 함께 여자의 목소리가 흘러나온다. 해 뜰 무렵 철문에는 깨끗한 의료용 붕대가 묶여 있다. 진흙 위에는 발자국 하나 없다.'}</p><blockquote>{accepted?'“의사라는 증거를 원했죠.” — 엘리너':'같은 목소리가 한 번 더 말한다. “42마일 지점.”'}</blockquote><Button onClick={onContinue}>밤을 넘긴다 <ChevronRight/></Button></section></main>;
+  return <main className="event-screen"><div className="event-light"/><Radio className="event-icon"/><p className="scene-index">DAY {day} · 오전 2:13</p><section><span>야간 사건 · {accepted?`${roomNumber}호`:'동쪽 철문'}</span><h1>{accepted?'복도에서 들린 발소리':'세 번의 노크, 그리고 침묵'}</h1><p>{accepted?`${guestName}의 방문이 호텔의 밤을 바꾸었다. 복도 센서가 한 번 켜졌지만 침입 흔적은 없다. 투숙객들의 Health, Stress, 관계와 객실 Aura가 다음 조건부 사건의 원인이 된다.`:'라디오에서 잡음과 함께 낯선 목소리가 흘러나온다. 해 뜰 무렵 철문에는 발자국 하나 남아 있지 않다.'}</p><blockquote>{accepted?`“오늘 밤은 넘겼습니다.” — ${guestName}`:'같은 목소리가 한 번 더 말한다. “문을 열어.”'}</blockquote><Button onClick={onContinue}>밤을 넘긴다 <ChevronRight/></Button></section></main>;
 }
 
 function MorningReport({ state, onNext, onReset }: { state:UiSave; onNext:()=>void; onReset:()=>void }) {
   const summary = state.lastDaySummary;
-  const guest = state.guests.find((item) => item.id === ELEANOR_ID)!;
-  const checkedOut = summary?.checkedOutGuestIds.includes(ELEANOR_ID) ?? false;
-  return <main className="report-screen"><header><p className="eyebrow">JUJU HOTEL · 아침 장부</p><h1>DAY {state.day}</h1><span>오전 6:32 · 자동 저장 완료</span></header><section className="report-paper"><div className="stamp">{checkedOut?'숙박 종료':'야간 정산'}</div><p className="panel-label">간밤의 보고</p><h2>{checkedOut?'엘리너가 예정된 숙박을 마치고 떠났습니다.':guest.status === 'STAYING'?`${guest.currentRoomNumber}호 · 남은 숙박 ${guest.remainingNights}박`:'30개 객실이 모두 비어 있습니다.'}</h2><p>{state.decision === 'checkin'?'엘리너가 호텔 사람들의 경계 어린 관심을 얻었습니다. 객실 배치와 보호 범위는 다음 날에도 유지됩니다.':'동쪽 철문의 카메라가 잠시 꺼졌지만 침입 흔적은 발견되지 않았습니다.'}</p><div className="ledger-grid"><Result icon={BedDouble} label="투숙객" before={String(summary?.occupiedGuests ?? 0)} after={String(state.guests.filter((item)=>item.status==='STAYING').length)}/><Result icon={Soup} label="식량" before={`-${summary?.consumed.food ?? 0}`} after={String(state.resources.food)}/><Result icon={Droplets} label="물" before={`-${summary?.consumed.water ?? 0}`} after={String(state.resources.water)}/><Result icon={Fuel} label="연료" before={`-${summary?.consumed.fuel ?? 0}`} after={String(state.resources.fuel)}/></div><div className="consequence"><span>HOTEL LOG</span><strong>{state.eventHistory.at(-1)?.message ?? '특이사항 없음'}</strong><p>숙박기간, 객실 상태, Aura와 자원은 현재 DAY 저장에 포함됩니다.</p></div><footer><div><span>DAY {summary?.completedDay ?? state.day - 1} 완료</span><p>다음 날에도 객실 배치와 운영 결과가 이어집니다.</p></div><div className="report-actions"><Button variant="secondary" onClick={onReset}><RotateCcw/> 새 게임</Button><Button onClick={onNext}>DAY {state.day} 운영 계속 <ChevronRight/></Button></div></footer></section></main>;
+  const staying = state.guests.filter((guest) => guest.status==='STAYING');
+  const departed = summary?.checkedOutGuestIds.map((id)=>state.guests.find((guest)=>guest.id===id)?.name??id)??[];
+  return <main className="report-screen"><header><p className="eyebrow">JUJU HOTEL · 아침 장부</p><h1>DAY {state.day}</h1><span>오전 6:32 · 자동 저장 완료</span></header><section className="report-paper"><div className="stamp">{departed.length?'숙박 종료':'야간 정산'}</div><p className="panel-label">간밤의 보고</p><h2>{departed.length?`${departed.join(' · ')} 숙박 종료`:staying.length?`${staying.length}명의 투숙객이 호텔에 있습니다.`:'30개 객실이 모두 비어 있습니다.'}</h2><p>{departed.length?'비워진 객실의 Aura는 제거되었고 기록은 HOTEL LOG에 남았습니다.':state.decision==='checkin'?'새 투숙객의 객실 배치와 관계 상태가 다음 날에도 유지됩니다.':'동쪽 철문의 카메라가 잠시 꺼졌지만 침입 흔적은 발견되지 않았습니다.'}</p><div className="ledger-grid"><Result icon={BedDouble} label="투숙객" before={String(summary?.occupiedGuests??0)} after={String(staying.length)}/><Result icon={Soup} label="식량" before={`-${summary?.consumed.food??0}`} after={String(state.resources.food)}/><Result icon={Droplets} label="물" before={`-${summary?.consumed.water??0}`} after={String(state.resources.water)}/><Result icon={Fuel} label="연료" before={`-${summary?.consumed.fuel??0}`} after={String(state.resources.fuel)}/></div><div className="consequence"><span>HOTEL LOG</span><strong>{state.eventHistory.at(-1)?.message??'특이사항 없음'}</strong><p>20명의 NPC 상태, 객실, Aura, Trust, Stress와 발견된 특성은 저장 데이터에 유지됩니다.</p></div><footer><div><span>DAY {summary?.completedDay??state.day-1} 완료</span><p>다음 방문자와 기존 투숙객의 관계가 이어집니다.</p></div><div className="report-actions"><Button variant="secondary" onClick={onReset}><RotateCcw/> 새 게임</Button><Button onClick={onNext}>DAY {state.day} 운영 계속 <ChevronRight/></Button></div></footer></section></main>;
 }
 
 function Result({icon:Icon,label,before,after,good}:{icon:typeof Fuel;label:string;before:string;after:string;good?:boolean}) { return <div className="ledger-item"><Icon/><span>{label}</span><s>{before}</s><strong className={good?'good':''}>{after}</strong></div>; }
+
+function QuietDesk({day,resources,staying,onManage,onEnd}:{day:number;resources:GameState['resources'];staying:number;onManage:()=>void;onEnd:()=>void}) {
+  return <main className="event-screen"><div className="event-light"/><Radio className="event-icon"/><p className="scene-index">DAY {day} · 오후 8:47</p><section><span>JUJU HOTEL · 방문 기록</span><h1>오늘은 문을 두드리는 사람이 없다.</h1><p>투숙객 {staying}명이 호텔 안에 있습니다. 객실을 점검하거나 오늘 밤을 정산할 수 있습니다.</p><blockquote>식량 {resources.food} · 물 {resources.water} · 연료 {resources.fuel}</blockquote><div className="assignment-actions">{staying>0&&<Button variant="secondary" onClick={onManage}>객실 관리</Button>}<Button onClick={onEnd}>밤을 넘긴다 <ChevronRight/></Button></div></section></main>;
+}
 
 function CampaignEnding({ state, onReset }: { state:UiSave; onReset:()=>void }) {
   const survivors = state.guests.filter((guest) => guest.status === 'STAYING').length;

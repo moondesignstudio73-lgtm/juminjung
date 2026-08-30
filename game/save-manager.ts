@@ -8,18 +8,36 @@ import type { GameState } from "./types.ts";
 export const SAVE_KEY = "juju-hotel-save-v2";
 export const LEGACY_SAVE_KEY = "juju-hotel-save-v1";
 
+function mergeGuest(catalogGuest: ReturnType<typeof createGuests>[number], savedGuest: Partial<ReturnType<typeof createGuests>[number]> | undefined) {
+  if (!savedGuest) return catalogGuest;
+  const savedEvents = savedGuest.eventChain ?? [];
+  return {
+    ...catalogGuest,
+    ...savedGuest,
+    baseTraits: [...new Set([...catalogGuest.baseTraits, ...(savedGuest.baseTraits ?? [])])],
+    hiddenTraits: [...new Set([...catalogGuest.hiddenTraits, ...(savedGuest.hiddenTraits ?? [])])],
+    discoveredTraits: [...new Set(savedGuest.discoveredTraits ?? [])],
+    relationships: catalogGuest.relationships.map((relation) => savedGuest.relationships?.find((item) => item.targetId === relation.targetId) ?? relation),
+    storyFlags: { ...catalogGuest.storyFlags, ...savedGuest.storyFlags },
+    eventChain: catalogGuest.eventChain.map((event) => ({ ...event, ...savedEvents.find((item) => item.id === event.id) })),
+    remainingNights: Math.max(0, Math.min(savedGuest.remainingNights ?? catalogGuest.remainingNights, savedGuest.stayDuration ?? catalogGuest.stayDuration)),
+  };
+}
+
 export function createInitialGameState(): GameState {
-  return { version: 3, phase: "title", day: 0, rooms: createRooms(), guests: createGuests(), resources: createResources(), flags: createEventFlags(), asked: [], inspected: [], negotiated: false, held: false, decision: null, assignmentMode: null, selectedRoomNumber: null, eventHistory: [], lastDaySummary: null };
+  return { version: 4, phase: "title", day: 0, rooms: createRooms(), guests: createGuests(), resources: createResources(), flags: createEventFlags(), asked: [], inspected: [], negotiated: false, held: false, decision: null, assignmentMode: null, selectedRoomNumber: null, eventHistory: [], lastDaySummary: null };
 }
 
 export function restoreGameState(raw: string | null): GameState {
   if (!raw) return createInitialGameState();
   try {
     const decoded = JSON.parse(raw) as { version?: number; rooms?: unknown; guests?: unknown };
-    if ((decoded.version !== 2 && decoded.version !== 3) || !Array.isArray(decoded.rooms) || !Array.isArray(decoded.guests)) return createInitialGameState();
+    if (![2, 3, 4].includes(decoded.version ?? 0) || !Array.isArray(decoded.rooms) || !Array.isArray(decoded.guests)) return createInitialGameState();
     const parsed = decoded as unknown as Partial<GameState>;
     const base = createInitialGameState();
-    const state = { ...base, ...parsed, version: 3, resources: { ...base.resources, ...parsed.resources }, flags: { ...base.flags, ...parsed.flags }, rooms: parsed.rooms!, guests: parsed.guests!.map((guest) => ({ ...createGuests().find((item) => item.id === guest.id), ...guest })), eventHistory: parsed.eventHistory ?? [], lastDaySummary: parsed.lastDaySummary ?? null } as GameState;
+    const savedGuests = parsed.guests!;
+    const guests = createGuests().map((catalogGuest) => mergeGuest(catalogGuest, savedGuests.find((guest) => guest.id === catalogGuest.id)));
+    const state = { ...base, ...parsed, version: 4, resources: { ...base.resources, ...parsed.resources }, flags: { ...base.flags, ...parsed.flags }, rooms: parsed.rooms!, guests, eventHistory: parsed.eventHistory ?? [], lastDaySummary: parsed.lastDaySummary ?? null } as GameState;
     return { ...state, rooms: recalculateRoomEffects(state.rooms, state.guests) };
   } catch { return createInitialGameState(); }
 }
