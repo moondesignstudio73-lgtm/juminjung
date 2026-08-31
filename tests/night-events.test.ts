@@ -804,13 +804,13 @@ test("야간 선택은 정산 로그와 마지막 사건으로 저장되고 임�
   assert.ok(resolved.eventHistory.some((entry) => entry.message.includes("긴 복도, 짧은 밤")));
 });
 
-test("Save v10은 야간 선택과 진행 중인 컷신을 복원한다", () => {
+test("Save v11은 야간 선택과 진행 중인 컷신을 복원한다", () => {
   const state = createInitialGameState();
   state.selectedNightEventId = "quiet_watch";
   state.selectedNightChoiceId = "patrol";
   state.activeCutsceneId = "first_monster_sighting";
   const restored = restoreGameState(serializeGameState(state));
-  assert.equal(restored.version, 10);
+  assert.equal(restored.version, 11);
   assert.equal(restored.selectedNightEventId, "quiet_watch");
   assert.equal(restored.selectedNightChoiceId, "patrol");
   assert.equal(restored.activeCutsceneId, "first_monster_sighting");

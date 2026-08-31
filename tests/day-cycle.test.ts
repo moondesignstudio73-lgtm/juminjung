@@ -6,6 +6,9 @@ import { getHotelLogEntries } from "../game/hotel-log-manager.ts";
 import { ELEANOR_ID } from "../game/guest-data.ts";
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
 import { assignGuest } from "../game/room-manager.ts";
+import { createNormalVisitor } from "../game/normal-visitor-data.ts";
+
+const NORMAL_ID = "normal-test";
 
 function checkedInState() {
   const state = createInitialGameState();
@@ -14,6 +17,14 @@ function checkedInState() {
   state.decision = "checkin";
   state.guests = state.guests.map((guest) => guest.id === ELEANOR_ID ? { ...guest, status: "STAYING", currentRoomNumber: 301, checkedInDay: 1 } : guest);
   state.rooms = recalculateRoomEffects(assignGuest(state.rooms, 301, ELEANOR_ID), state.guests);
+  return state;
+}
+
+function temporaryGuestState() {
+  const state = createInitialGameState();
+  const generated = { ...createNormalVisitor(77,1,0), id:NORMAL_ID, stayDuration:2, remainingNights:2, status:"STAYING" as const, currentRoomNumber:301, checkedInDay:1, aura:state.guests[0].aura };
+  state.day=1; state.phase="night"; state.decision="checkin"; state.guests=[...state.guests,generated];
+  state.rooms=recalculateRoomEffects(assignGuest(state.rooms,301,NORMAL_ID),state.guests);
   return state;
 }
 
@@ -34,27 +45,32 @@ test("Thomas의 독립 마이크로그리드는 기본 발전기 연료를 절�
   assert.ok(result.eventHistory.some((entry) => entry.message === "독립 마이크로그리드 · 기본 발전기 연료 1 절감"));
 });
 
-test("첫날 종료 후 숙박기간이 1박 남고 객실과 Aura는 유지된다", () => {
+test("메인 NPC는 스토리 시계가 진행돼도 자동 퇴실하지 않고 객실 Aura를 유지한다", () => {
   const result = resolveDay(checkedInState());
   assert.equal(result.day, 2);
   assert.equal(result.guests[0].remainingNights, 1);
   assert.equal(result.guests[0].currentRoomNumber, 301);
   assert.ok(result.rooms.find((room) => room.roomNumber === 202)?.temporaryEffects.length);
+  const later=resolveDay({...result,phase:"night"});
+  assert.equal(later.guests[0].remainingNights,0);
+  assert.equal(later.guests[0].status,"STAYING");
+  assert.equal(later.guests[0].currentRoomNumber,301);
 });
 
-test("두 번째 밤이 끝나면 자동 체크아웃하고 Aura를 제거한다", () => {
-  const day2 = resolveDay(checkedInState());
+test("일반 NPC는 두 번째 밤이 끝나면 자동 체크아웃하고 Aura를 제거한다", () => {
+  const day2 = resolveDay(temporaryGuestState());
   const day3 = resolveDay({ ...day2, phase: "night" });
-  assert.equal(day3.guests[0].status, "CHECKED_OUT");
-  assert.equal(day3.guests[0].currentRoomNumber, null);
-  assert.equal(day3.guests[0].storyFlags.last_checked_out_day, 2);
-  assert.equal(day3.guests[0].storyFlags.next_revisit_day, 8);
+  const guest=day3.guests.find((candidate)=>candidate.id===NORMAL_ID)!;
+  assert.equal(guest.status, "CHECKED_OUT");
+  assert.equal(guest.currentRoomNumber, null);
+  assert.equal(guest.storyFlags.last_checked_out_day, 2);
+  assert.equal(guest.storyFlags.next_revisit_day, 8);
   assert.equal(day3.rooms.find((room) => room.roomNumber === 301)?.occupied, false);
   assert.equal(day3.rooms.some((room) => room.temporaryEffects.length > 0), false);
 });
 
 test("DAY 정산은 호텔 로그에 자원 소비와 자동 체크아웃을 남긴다", () => {
-  const day3 = resolveDay({ ...resolveDay(checkedInState()), phase: "night" });
+  const day3 = resolveDay({ ...resolveDay(temporaryGuestState()), phase: "night" });
   assert.ok(day3.eventHistory.some((entry) => entry.type === "RESOURCE"));
   assert.ok(day3.eventHistory.some((entry) => entry.type === "CHECK_OUT"));
 });
@@ -62,7 +78,7 @@ test("DAY 정산은 호텔 로그에 자원 소비와 자동 체크아웃을 남
 test("DAY 2 저장 복원 후 남은 숙박과 자원, 로그가 유지된다", () => {
   const day2 = resolveDay(checkedInState());
   const restored = restoreGameState(serializeGameState(day2));
-  assert.equal(restored.version, 10);
+  assert.equal(restored.version, 11);
   assert.equal(restored.day, 2);
   assert.equal(restored.guests[0].remainingNights, 1);
   assert.equal(restored.resources.food, 47);

@@ -280,7 +280,7 @@ test("Aura 보정은 실제 DAY 정산의 호텔 상태와 치안에 반영된�
     state.selectedNightChoiceId = "rest";
     state.guests = state.guests.map((guest) => guest.id === guestId ? {
       ...guest,
-      aura:auraEnabled ? guest.aura : undefined,
+      aura:auraEnabled ? guest.aura : null,
       remainingNights:2,
     } : guest);
     state.rooms = recalculateRoomEffects(state.rooms,state.guests);

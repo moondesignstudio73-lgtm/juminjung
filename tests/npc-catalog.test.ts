@@ -307,7 +307,7 @@ test("방문 반응의 신뢰와 위험 변화는 0에서 100 범위를 넘지 �
   assert.equal(reacted.riskLevel, 0);
 });
 
-test("Save v10은 객실 선택 중 고정된 방문 반응 ID를 복원한다", () => {
+test("Save v11은 객실 선택 중 고정된 방문 반응 ID를 복원한다", () => {
   const state = createInitialGameState();
   state.pendingVisitorReactionId = "rosa-refugees-sheltered";
   const restored = restoreGameState(serializeGameState(state));

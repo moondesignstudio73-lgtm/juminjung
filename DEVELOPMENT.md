@@ -1,6 +1,6 @@
 # May I Have a Room? — Development Notes
 
-Understood as: grow the published browser game into an open-duration hotel survival loop where story, management, faction, and world-state conditions unlock player-chosen final events; extend it with a saved, data-driven NORMAL + MAIN visitor queue and a daily survival loop built around visible objectives, three action points, urgent problems, power allocation, and ration trade-offs.
+Understood as: grow the published browser game into an open-duration hotel survival loop where story, management, faction, and world-state conditions unlock player-chosen final events. Every day persists one seeded 2–6 person screening queue: procedural NORMAL survivors sustain hotel pressure, at most one condition-gated MAIN character can replace a normal slot without overt UI identification, MAIN stays remain story-controlled, and saved history carries every decision into later visits.
 
 Aura presentation is understood as data-owned: every Aura defines its own short label, category, and icon, and room UI must never infer presentation from an NPC role.
 
@@ -11,7 +11,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - Explicit choice among 30 rooms, with movement and manual or stay-expiry checkout
 - Data-driven grid Aura calculation; Eleanor's Medical Care Zone affects only `NORMAL_DISEASE`
 - Nightly food, water, and generator-fuel settlement based on actual occupancy, selected ration policy, and active power circuits
-- Remaining-stay countdown, automatic checkout, Aura removal, and HOTEL LOG entries
+- NORMAL remaining-stay countdown, automatic checkout, Aura removal, and HOTEL LOG entries; MAIN residents never leave because a generic stay counter expired
 - Four-stage guest stories that advance from arrival through resolution and persist in the hotel log
 - Relationship event strength based on room distance: adjacent ×2, same floor ×1.5, otherwise ×1, recorded when conflict stages fire
 - Eleanor + Ruth `MEDICAL WARD` Aura synergy heals 10 Health nightly in overlapping treatment rooms
@@ -24,7 +24,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - Saved night preparation controls three fuel-limited power circuits for security, clinic, and kitchen operations; disabled circuits create visible, logged penalties instead of hidden failure
 - Saved NORMAL, LIMITED, and SEVERE food-ration policies trade food demand against resident Stress and Health, with the morning ledger showing base demand, actual consumption, powered circuits, and warnings
 - Four buildable facilities with resource costs, passive production, stat changes, and faction reputation effects
-- Save v10 restoration for facilities, reputations, three daily actions, power allocation, ration policy, night choices, pending NPC story scenes, and one-time cutscene progress; full unused AP in older saves migrates to the new three-point day
+- Save v11 restoration for facilities, reputations, three daily actions, power allocation, ration policy, night choices, pending NPC story scenes, one-time cutscene progress, generated visitors, the current queue position, and visitor history; full unused AP in older saves migrates to the new three-point day
 - Conditional night events driven by World State, shortages, Monster Threat, Security, and resources
 - Two-choice night outcomes that alter resources, hotel stats, faction reputation, flags, and guest condition
 - All twenty catalog NPCs have authored conflict and resolution choices with persistent consequences
@@ -55,6 +55,10 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - From DAY 24, only players who answered that signal can meet the father's likeness at the locked gate; quarantine verification trades medical and security supplies for an anomalous biological clue, while opening the gate gains carried generator supplies and a riskier reunion route, with choice-specific illustrated aftermaths
 - From DAY 25, CRITICAL or END STAGE pressure with high Monster Threat and weakened Security can trigger a one-time full-hotel siege; holding the lobby spends scarce defense supplies and inflicts a nonfatal defender injury while supporting military/fortress play, and retreating preserves lives at heavy structural cost that a later hotel-repair action can clear, each with a choice-specific illustrated aftermath
 - Checked-out survivors can return after five complete road days once no first-time arrival is waiting, using the actual checkout day as the next-visit anchor and preserving their trust, health, relationships, story progress, and Aura while restarting their stay; repeat offers are bound once to each visit count, and refusing a returning survivor delays rather than permanently removes them
+- Each DAY now owns a weighted 2–6 visitor queue generated once from the save seed. World State, reputation, radio exposure, storms, and Monster Threat modify the count; the queue and its current index survive reloads without rerolling
+- Procedural NORMAL visitors draw from age-gated job profiles, bounded role skills, weighted stays, visible and hidden traits, illness/injury risk, factions, offers, portrait templates, rare expertise, and optional data-owned Aura definitions
+- MAIN arrival is evaluated separately with prerequisite flags/NPC appearances, a hidden wait-time probability correction, weighted selection, and a strict one-per-day limit; it replaces a normal slot and the front desk never labels it as a main character
+- Visitor History records first and latest visit days, accepts, refusals, occupied rooms, paid resources, event notes, and final state for both generated and authored visitors; eligible NORMAL survivors can later replace a fresh slot as remembered returnees
 - Major NPC story choices can own data-driven one-time full-screen cutscenes. Mia and Daniel's HOME-route reunion uses dedicated artwork, and a saved cutscene queue prevents unique story scenes from being lost when another scene is already active
 - Walter's decision to use the inherited brass key opens a dedicated basement-archive cutscene, visually linking his story resolution to the later 91.3 MHz signal and THE TRUTH investigation
 - Eleanor's permanent clinic spends scarce medicine to open a dedicated illustrated scene and lowers hotel-wide normal disease risk by five percentage points, logging the residents whose illness it prevents
@@ -76,7 +80,6 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 
 ## Next system priorities
 
-- Add the data-driven NORMAL + MAIN visitor split, seeded 2–6 visitor queues, story-locked MAIN residency, history, and save restoration without changing a day's queue on reload
 - Extend the survival loop with evidence cases, staff assignments, scavenging, and deeper night-preparation choices after the visitor queue is stable
 - Expand full-screen illustrated cutscenes for the remaining major story and ending beats
 

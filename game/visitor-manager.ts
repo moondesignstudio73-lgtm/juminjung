@@ -10,13 +10,13 @@ export function getEligibleVisitor(guests: Guest[], day: number, flags: EventFla
   const firstArrival = guests.filter((guest) => guest.status === "WAITING" && guest.arrivalDay <= day && guest.arrivalConditions.every((condition) => condition.type === "GUEST_APPEARED" ? appeared.has(condition.key) : flags[condition.key] === (condition.value ?? true))).sort((a, b) => a.arrivalDay - b.arrivalDay)[0];
   if (firstArrival) return firstArrival;
   const readyDay = (guest: Guest) => Number(guest.storyFlags.next_revisit_day ?? (Number(guest.checkedInDay ?? day) + guest.stayDuration + REVISIT_COOLDOWN_DAYS));
-  return guests.filter((guest) => guest.status === "CHECKED_OUT" && guest.alive && guest.checkedInDay !== null && day >= readyDay(guest) && day >= Number(guest.storyFlags.revisit_refused_until ?? 0)).sort((a, b) => readyDay(a) - readyDay(b) || a.id.localeCompare(b.id))[0] ?? null;
+  return guests.filter((guest) => (guest.status === "CHECKED_OUT" || guest.status === "REFUSED") && guest.alive && guest.revisitPolicy !== "NEVER" && (guest.checkedInDay !== null || guest.storyFlags.next_revisit_day !== undefined) && day >= readyDay(guest) && day >= Number(guest.storyFlags.revisit_refused_until ?? 0)).sort((a, b) => readyDay(a) - readyDay(b) || a.id.localeCompare(b.id))[0] ?? null;
 }
 
-export function prepareGuestCheckIn(guests: Guest[], guestId: string, roomNumber: number, day: number, flags: EventFlags = {}): Guest[] {
+export function prepareGuestCheckIn(guests: Guest[], guestId: string, roomNumber: number, day: number, flags: EventFlags = {}, expectedGuestId?: string): Guest[] {
   const guest = guests.find((candidate) => candidate.id === guestId);
   if (!guest) throw new Error(`체크인 방문자를 찾을 수 없습니다: ${guestId}`);
-  if (!guest.alive || getEligibleVisitor(guests, day, flags)?.id !== guestId) throw new Error("현재 체크인할 수 없는 방문자입니다.");
+  if (!guest.alive || (expectedGuestId ?? getEligibleVisitor(guests, day, flags)?.id) !== guestId) throw new Error("현재 체크인할 수 없는 방문자입니다.");
   return guests.map((candidate) => candidate.id === guestId ? { ...candidate, currentRoomNumber: roomNumber, status: "STAYING" as const, checkedInDay: day, remainingNights: candidate.stayDuration, storyFlags: { ...candidate.storyFlags, visit_count: Number(candidate.storyFlags.visit_count ?? 0) + 1, revisit_refused_until: 0, next_revisit_day: 0 } } : candidate);
 }
 
@@ -57,7 +57,7 @@ export function applyVisitorCheckInBenefits(resources: Resources, guests: Guest[
 export function markVisitorRefused(guests: Guest[], guestId: string, day?: number): Guest[] {
   return guests.map((guest) => {
     if (guest.id !== guestId) return guest;
-    if (guest.status === "CHECKED_OUT" && day !== undefined) return { ...guest, trust: Math.max(0, guest.trust - 5), storyFlags: { ...guest.storyFlags, last_revisit_refused_day: day, revisit_refused_until: day + REVISIT_REFUSAL_DELAY_DAYS + 1 } };
+    if (day !== undefined && guest.revisitPolicy !== "NEVER") return { ...guest, status: guest.status === "CHECKED_OUT" ? "CHECKED_OUT" as const : "REFUSED" as const, trust: Math.max(0, guest.trust - (guest.status === "CHECKED_OUT" ? 5 : 10)), storyFlags: { ...guest.storyFlags, last_revisit_refused_day: day, revisit_refused_until: day + REVISIT_REFUSAL_DELAY_DAYS + 1, next_revisit_day: day + REVISIT_REFUSAL_DELAY_DAYS + 1 } };
     return { ...guest, status: "REFUSED" as const, trust: Math.max(0, guest.trust - 10) };
   });
 }

@@ -10,6 +10,7 @@ import { queueNightEventCutscene } from "./cutscene-manager.ts";
 import { resolveAuraNight } from "./aura-night-manager.ts";
 import { getNextRevisitDay } from "./visitor-manager.ts";
 import { applySurvivalGuestEffects, calculatePowerPlan, getRationPlan, RATION_POLICIES } from "./daily-survival-manager.ts";
+import { updateVisitorFinalState } from "./visitor-queue-manager.ts";
 import type { DaySummary, GameState, HotelLogEntry } from "./types.ts";
 
 const FACILITY_NAMES = Object.fromEntries(FACILITIES.map((facility) => [facility.id, facility.name])) as Record<string, string>;
@@ -40,6 +41,7 @@ export function resolveDay(state: GameState): GameState {
     const survivalGuest = applySurvivalGuestEffects(guest, rationPlan, powerPlan.clinicPowered);
     const room = activeRooms.find((candidate) => candidate.roomNumber === guest.currentRoomNumber);
     const health = Math.min(100, survivalGuest.health + (room ? getInjuryRecovery(room) : 0));
+    if (guest.npcType === "MAIN" && guest.storyLockedResident) return { ...survivalGuest, health, remainingNights: Math.max(0,guest.remainingNights-1) };
     const remainingNights = Math.max(0, guest.remainingNights - 1);
     if (remainingNights === 0) {
       checkedOutGuestIds.push(guest.id);
@@ -48,6 +50,7 @@ export function resolveDay(state: GameState): GameState {
     return { ...survivalGuest, health, remainingNights };
   });
   const emptied = checkedOutGuestIds.reduce((rooms, guestId) => checkoutGuest(rooms, guestId), activeRooms);
+  const visitorHistory = checkedOutGuestIds.reduce((history,guestId)=>updateVisitorFinalState(history,guestId,"CHECKED_OUT",`DAY ${state.day} · 숙박 종료`),state.visitorHistory);
   const nextDay = advanceDay(state.day);
   const afterGuestConsumption = {
     ...state.resources,
@@ -118,6 +121,7 @@ export function resolveDay(state: GameState): GameState {
       eleanor_room: eleanor?.currentRoomNumber ?? 0,
     },
     eventHistory: [...state.eventHistory, ...entries],
+    visitorHistory,
     lastDaySummary: summary,
     hotelStats: {
       ...state.hotelStats,

@@ -24,7 +24,8 @@ import { FACILITIES } from '@/game/facility-data';
 import { buildFacility, canBuildFacility, canPerformHotelAction, getHotelActionDefinition, performHotelAction } from '@/game/hotel-action-manager';
 import { canChooseNightChoice, getEffectiveNightChoice, selectNightEvent } from '@/game/night-event-manager';
 import { getHotelLogEntries } from '@/game/hotel-log-manager';
-import { applyVisitorCheckInBenefits, getEligibleVisitor, getNextRevisitDay, getVisitorReaction, getVisitorReactionById, markVisitorRefused, prepareGuestCheckIn } from '@/game/visitor-manager';
+import { applyVisitorCheckInBenefits, getNextRevisitDay, getVisitorReaction, getVisitorReactionById, markVisitorRefused, prepareGuestCheckIn } from '@/game/visitor-manager';
+import { advanceDailyVisitorQueue, getCurrentQueuedVisitor, hasPendingDailyVisitors, prepareDailyVisitorQueue, recordVisitorDecision, updateVisitorFinalState } from '@/game/visitor-queue-manager';
 import { getGuestVisualState, getNightEventPortraits, getStoryEventExpression } from '@/game/guest-visual-manager';
 import { getCutscene } from '@/game/cutscene-data';
 import { dismissCutscene } from '@/game/cutscene-manager';
@@ -49,10 +50,10 @@ export default function Home() {
   const [showQuestions, setShowQuestions] = useState(false);
   const [muted, setMuted] = useState(false);
   const [managedGuestId, setManagedGuestId] = useState<string | null>(null);
-  const eligibleVisitor = getEligibleVisitor(save.guests, save.day, save.flags);
-  const isReturningVisitor = eligibleVisitor?.status === 'CHECKED_OUT';
+  const eligibleVisitor = getCurrentQueuedVisitor(save);
+  const isReturningVisitor = Boolean(eligibleVisitor && eligibleVisitor.status !== 'WAITING');
   const visitor = eligibleVisitor ?? save.guests.find((guest) => guest.status === 'STAYING') ?? save.guests[0];
-  const visitorReaction = eligibleVisitor && !isReturningVisitor ? getVisitorReaction(save, eligibleVisitor) : null;
+  const visitorReaction = eligibleVisitor && eligibleVisitor.npcType === 'MAIN' && !isReturningVisitor ? getVisitorReaction(save, eligibleVisitor) : null;
   const stayingGuests = getStayingGuestsForManagement(save.guests);
   const managedGuest = getManagedGuest(save.guests, managedGuestId) ?? visitor;
   const activeCutscene = getCutscene(save.activeCutsceneId);
@@ -68,7 +69,16 @@ export default function Home() {
   }, [save, hydrated]);
 
   useEffect(() => {
-    if (save.phase === 'desk' && eligibleVisitor) setDialogue(isReturningVisitor ? `“길 위에서 다시 돌아왔습니다. 이번에도 ${eligibleVisitor.stayDuration}박을 부탁하죠. 지난번처럼 값을 치르겠습니다.”` : visitorReaction?.dialogue ?? `“${eligibleVisitor.introDialogue}”`);
+    if (hydrated && save.phase === 'desk' && save.day > 0 && save.visitorQueueDay !== save.day) {
+      setSave((current) => ({ ...prepareDailyVisitorQueue(current), prologue: current.prologue }));
+    }
+  }, [hydrated, save.phase, save.day, save.visitorQueueDay]);
+
+  useEffect(() => {
+    if (save.phase === 'desk' && eligibleVisitor) {
+      setDialogue(isReturningVisitor ? `“길 위에서 다시 돌아왔습니다. 이번에도 ${eligibleVisitor.stayDuration}박을 부탁하죠. 지난번 일을 기억하고 있습니다.”` : visitorReaction?.dialogue ?? `“${eligibleVisitor.introDialogue}”`);
+      setSelectedItem(null); setShowQuestions(false);
+    }
   }, [save.phase, save.day, eligibleVisitor?.id, isReturningVisitor, visitorReaction?.id]);
 
   const update = (patch: Partial<UiSave>) => setSave((current) => ({ ...current, ...patch }));
@@ -81,13 +91,20 @@ export default function Home() {
   const inspect = (id: string) => {
     update({ inspected: [...new Set([...save.inspected, id])] }); setSelectedItem(id);
   };
-  const refuse = () => setSave((current) => routeToNight({ ...current, guests: markVisitorRefused(current.guests, visitor.id, current.day), eventHistory: [...current.eventHistory, { day: current.day, type: 'EVENT', message: `${visitor.name} · ${visitor.status === 'CHECKED_OUT' ? '재입실 거절' : '입실 거절'}` }], decision: 'refuse', pendingVisitorReactionId: null }));
+  const refuse = () => setSave((current) => {
+    const currentVisitor = getCurrentQueuedVisitor(current);
+    if (!currentVisitor) return current;
+    let next:UiSave = { ...current, guests: markVisitorRefused(current.guests, currentVisitor.id, current.day), eventHistory: [...current.eventHistory, { day: current.day, type: 'EVENT', message: `${currentVisitor.name} · ${currentVisitor.status === 'WAITING' ? '입실 거절' : '재입실 거절'}` }], decision: 'refuse', pendingVisitorReactionId: null };
+    next = recordVisitorDecision(next,currentVisitor.id,'REFUSED',null) as UiSave;
+    next = advanceDailyVisitorQueue(next) as UiSave;
+    return { ...next, phase: hasPendingDailyVisitors(next) ? 'desk' : 'management', prologue: current.prologue };
+  });
   const openAssignment = (mode: 'checkin' | 'move') => update({ phase: 'assignment', assignmentMode: mode, selectedRoomNumber: null, pendingVisitorReactionId: mode === 'checkin' ? visitorReaction?.id ?? null : null });
   const confirmRoom = () => {
     if (save.selectedRoomNumber === null) return;
     const assignmentGuest = save.assignmentMode === 'move' ? managedGuest : visitor;
     const reaction = save.assignmentMode === 'checkin' ? getVisitorReactionById(assignmentGuest, save.pendingVisitorReactionId) : null;
-    const positionedGuests = save.assignmentMode === 'checkin' ? prepareGuestCheckIn(save.guests, assignmentGuest.id, save.selectedRoomNumber, save.day, save.flags) : save.guests.map((guest) => guest.id === assignmentGuest.id ? {
+    const positionedGuests = save.assignmentMode === 'checkin' ? prepareGuestCheckIn(save.guests, assignmentGuest.id, save.selectedRoomNumber, save.day, save.flags, assignmentGuest.id) : save.guests.map((guest) => guest.id === assignmentGuest.id ? {
       ...guest,
       currentRoomNumber: save.selectedRoomNumber,
       status: 'STAYING' as const,
@@ -104,18 +121,27 @@ export default function Home() {
     const roomFlags = assignmentGuest.id === ELEANOR_ID ? setGuestRoomFlags(save.flags, save.selectedRoomNumber) : save.flags;
     const reactionApplied = benefits.applied && reaction;
     setManagedGuestId(assignmentGuest.id);
-    update({
+    let next:UiSave = {
+      ...save,
       guests,
       rooms: recalculateRoomEffects(positioned, guests),
       flags: reactionApplied ? { ...roomFlags, [`visitor_reaction_${assignmentGuest.id}_${reactionApplied.id}`]: true } : roomFlags,
       resources: benefits.resources,
       eventHistory: save.assignmentMode === 'checkin' ? [...save.eventHistory, { day: save.day, type: 'CHECK_IN' as const, message: `${visitor.name} · ${save.selectedRoomNumber}호 ${isReturningVisitor ? '재체크인' : '체크인'}` }, ...(reactionApplied ? [{ day: save.day, type: 'EVENT' as const, message: `세력 반응 · ${visitor.name} · ${reactionApplied.label}` }] : []), ...(arrival.entry ? [{ ...arrival.entry, day: save.day }] : [])] : save.eventHistory,
       decision: 'checkin', phase: 'management', assignmentMode: null, selectedRoomNumber: null, pendingVisitorReactionId: null,
-    });
+    };
+    if (save.assignmentMode === 'checkin') {
+      const itemsPaid = Object.fromEntries(Object.entries(benefits.resources).map(([key,value])=>[key,Math.max(0,Number(value)-Number(save.resources[key as keyof typeof save.resources]))]).filter(([,value])=>Number(value)>0));
+      next = recordVisitorDecision(next,assignmentGuest.id,'ACCEPTED',save.selectedRoomNumber,itemsPaid) as UiSave;
+      next = advanceDailyVisitorQueue(next) as UiSave;
+      next = { ...next, phase: hasPendingDailyVisitors(next) ? 'desk' : 'management' };
+    }
+    setSave({ ...next, prologue: save.prologue });
   };
   const checkout = () => {
-    const guests = save.guests.map((guest) => guest.id === managedGuest.id ? { ...guest, currentRoomNumber: null, status: 'CHECKED_OUT' as const, remainingNights: 0, storyFlags: { ...guest.storyFlags, last_checked_out_day: save.day, next_revisit_day: getNextRevisitDay(save.day) } } : guest);
-    update({ guests, rooms: recalculateRoomEffects(checkoutGuest(save.rooms, managedGuest.id), guests), flags: managedGuest.id === ELEANOR_ID ? setGuestRoomFlags(save.flags, null) : save.flags, eventHistory: [...save.eventHistory, { day: save.day, type: 'CHECK_OUT', message: `${managedGuest.name} · 수동 체크아웃` }], decision: null, phase: 'desk' });
+    const expelledMain = managedGuest.npcType === 'MAIN' && managedGuest.storyLockedResident;
+    const guests = save.guests.map((guest) => guest.id === managedGuest.id ? { ...guest, currentRoomNumber: null, status: 'CHECKED_OUT' as const, remainingNights: 0, storyFlags: { ...guest.storyFlags, last_checked_out_day: save.day, next_revisit_day: getNextRevisitDay(save.day), ...(expelledMain?{player_expelled:true,forced_leave:true}:{}) } } : guest);
+    update({ guests, rooms: recalculateRoomEffects(checkoutGuest(save.rooms, managedGuest.id), guests), flags: managedGuest.id === ELEANOR_ID ? setGuestRoomFlags(save.flags, null) : save.flags, visitorHistory:updateVisitorFinalState(save.visitorHistory,managedGuest.id,expelledMain?'PLAYER_EXPELLED':'CHECKED_OUT',`DAY ${save.day} · ${expelledMain?'플레이어 추방':'수동 체크아웃'}`), eventHistory: [...save.eventHistory, { day: save.day, type: 'CHECK_OUT', message: `${managedGuest.name} · ${expelledMain?'플레이어 추방':'수동 체크아웃'}` }], decision: null, phase: 'management' });
   };
 
   if (!hydrated) return <LobbyLoading />;
@@ -131,7 +157,7 @@ export default function Home() {
         <p className="scene-index">{beat.tag}</p>
         <section className="cutscene-copy" aria-live="polite">
           <span>{beat.speaker}</span><p>{beat.line}</p>
-          <Button className="advance" onClick={() => save.prologue < PROLOGUE_BEATS.length - 1 ? update({ prologue: save.prologue + 1 }) : update({ phase: 'desk', day: 1 })}>
+          <Button className="advance" onClick={() => save.prologue < PROLOGUE_BEATS.length - 1 ? update({ prologue: save.prologue + 1 }) : setSave((current)=>({ ...prepareDailyVisitorQueue({ ...current, phase:'desk',day:1 }), prologue:current.prologue }))}>
             {save.prologue < PROLOGUE_BEATS.length - 1 ? '계속' : '문을 연다'} <ChevronRight />
           </Button>
         </section>
@@ -139,11 +165,12 @@ export default function Home() {
       </main>
     );
   }
+  if (save.phase === 'desk' && save.day > 0 && save.visitorQueueDay !== save.day) return <LobbyLoading />;
   if (save.phase === 'assignment') return <RoomAssignment day={save.day} rooms={save.rooms} guest={save.assignmentMode === 'move' ? managedGuest : visitor} selected={save.selectedRoomNumber} mode={save.assignmentMode!} onSelect={(roomNumber) => update({ selectedRoomNumber: roomNumber })} onConfirm={confirmRoom} onCancel={() => update({ phase: save.assignmentMode === 'move' ? 'management' : 'desk', assignmentMode: null, selectedRoomNumber: null, pendingVisitorReactionId: null })} />;
   if (save.phase === 'management') return <HotelManagement state={save} guest={managedGuest} stayingGuests={stayingGuests} hasStayingGuest={stayingGuests.length > 0} onSelectGuest={setManagedGuestId} onBuild={(id) => setSave((current) => ({ ...buildFacility(current, id).state, prologue: current.prologue }))} onAction={(id) => setSave((current) => ({ ...performHotelAction(current, id).state, prologue: current.prologue }))} onPower={(id,enabled) => setSave((current) => ({ ...configurePowerCircuit(current,id,enabled).state, prologue:current.prologue }))} onRation={(policy) => setSave((current) => ({ ...configureFoodRation(current,policy), prologue:current.prologue }))} onMove={() => openAssignment('move')} onCheckout={checkout} onContinue={() => setSave((current) => routeToNight(current))} />;
   if (save.phase === 'story') return <StoryChoiceScene state={save} onChoose={(eventId,choiceId) => setSave((current) => routeToNight({ ...applyStoryChoice(current,eventId,choiceId).state, prologue:current.prologue }))} />;
   if (save.phase === 'night') return <NightEvent state={save} onChoose={(eventId,choiceId) => setSave((current) => ({ ...resolveDay({ ...current, selectedNightEventId:eventId, selectedNightChoiceId:choiceId }), prologue: current.prologue }))} />;
-  if (save.phase === 'report') return <MorningReport state={save} onStartEnding={(endingId) => setSave((current)=>({ ...startEnding(current,endingId), prologue:current.prologue }))} onNext={() => { const nextVisitor = getEligibleVisitor(save.guests, save.day, save.flags); const staying = save.guests.some((guest) => guest.status === 'STAYING'); update({ phase: nextVisitor ? 'desk' : staying ? 'management' : 'desk', decision: staying ? 'checkin' : null, asked: [], inspected: [], negotiated: false, held: false }); if (nextVisitor) setDialogue(nextVisitor.introDialogue); }} onReset={reset} />;
+  if (save.phase === 'report') return <MorningReport state={save} onStartEnding={(endingId) => setSave((current)=>({ ...startEnding(current,endingId), prologue:current.prologue }))} onNext={() => setSave((current)=>({ ...prepareDailyVisitorQueue({ ...current, phase:'desk',decision:null,asked:[],inspected:[],negotiated:false,held:false }), prologue:current.prologue }))} onReset={reset} />;
   if (save.phase === 'ending') return <CampaignEnding state={save} onReturn={() => setSave((current)=>({ ...leaveEnding(current), prologue:current.prologue }))} onAdvance={() => setSave((current)=>current.activeEndingId?({ ...advanceEnding(current), prologue:current.prologue }):current)} />;
 
   if (!eligibleVisitor) return <QuietDesk day={save.day} resources={save.resources} staying={save.guests.filter((guest)=>guest.status==='STAYING').length} onManage={() => update({ phase: 'management' })} onEnd={() => setSave((current) => routeToNight({ ...current, decision:'refuse' }))} />;
@@ -171,7 +198,7 @@ export default function Home() {
         <div className="scene-vignette" />
         <div className="visitor-layer"><CharacterSprite guest={visitor} context="desk" /></div>
         <aside className="case-file left-panel">
-          <span className="panel-label">방문자 · {visitor.id.toUpperCase()}</span><h2>{visitor.name}</h2><p>{visitor.age}세 · {visitor.role}</p>
+          <span className="panel-label">오늘 방문 {save.dailyVisitorIndex+1} / {save.dailyVisitorQueue.length}</span><h2>{visitor.name}</h2><p>{visitor.age}세 · {visitor.role}</p>
           <dl>
             <div><dt>요청</dt><dd>{visitor.stayDuration}박</dd></div><div><dt>상태</dt><dd>{visitor.conditionLabel} · {getGuestVisualState(visitor).label}</dd></div>
             <div><dt>위험도</dt><dd>{visitor.riskLevel}</dd></div>
@@ -300,8 +327,8 @@ function HotelManagement({ state, guest, stayingGuests, hasStayingGuest, onSelec
     <section className="room-layout"><div className="room-board"><div className="room-board-toolbar"><span>Aura 범위는 필요할 때만 객실 위에 표시됩니다.</span><Button variant="secondary" aria-label="Aura 범위 표시" aria-pressed={showAura} disabled={!hasStayingGuest||!guest.aura} onClick={()=>setAuraGuestId((visibleGuestId)=>toggleAuraGuestId(visibleGuestId,guest.id))}>{guest.aura&&<AuraGlyph aura={guest.aura} size={14}/>} Aura 범위 <small>{showAura?'표시 중':'숨김'}</small></Button></div><HotelGrid rooms={state.rooms} auraDefinition={showAura?guest.aura:null} auraMode="ambient" affected={showAura?affected:[]}/><div className="operations-panel"><div className="daily-survival-panel"><div className="objective-column"><span className="panel-label">오늘의 목표 · 긴급 문제</span>{objectives.map((objective)=><article key={objective.id} className={`daily-objective priority-${objective.priority.toLowerCase()}`}><b>{objective.priority}</b><strong>{objective.title}</strong><p>{objective.description}</p><small>{objective.actionHint}</small></article>)}</div><div className="night-plan-column"><span className="panel-label">야간 생존 계획</span><div className="power-plan"><strong>전력 배분 · {activePower.length}/{powerCapacity} 회로</strong>{POWER_CIRCUITS.map((circuit)=>{const selected=state.powerAllocation.includes(circuit.id);const active=activePower.includes(circuit.id);return <button key={circuit.id} type="button" aria-pressed={selected} className={`${selected?'selected':''} ${active?'active':'standby'}`} onClick={()=>onPower(circuit.id,!selected)}><span>{circuit.name}</span><small>{active?'가동':selected?'용량 부족':'정지'} · {circuit.description}</small></button>})}</div><div className="ration-plan"><strong>식량 배급</strong>{RATION_POLICIES.map((policy)=><button key={policy.id} type="button" aria-pressed={state.foodRationPolicy===policy.id} className={state.foodRationPolicy===policy.id?'selected':''} onClick={()=>onRation(policy.id)}><span>{policy.name}</span><small>{policy.description}</small></button>)}</div></div></div><span className="panel-label">낮 행동 · 1 AP</span><div className="operation-grid"><Button disabled={state.actionPoints<1||state.resources.parts<2} onClick={()=>onAction('repair_hotel')}>호텔 보수 · 부품 2</Button><Button disabled={state.actionPoints<1} onClick={()=>onAction('community_outreach')}>공동체 회의</Button><Button disabled={state.actionPoints<1||state.resources.fuel<1} onClick={()=>onAction('security_patrol')}>경계 순찰 · 연료 1</Button><Button disabled={!canPerformHotelAction(state,'trade_run')} onClick={()=>onAction('trade_run')}>{tradeRun.name} · 연료 {tradeRun.cost.fuel}</Button></div><span className="panel-label">시설 건설 · 업그레이드 · 1 AP</span><div className="facility-grid">{FACILITIES.map((facility)=>{const level=state.facilities[facility.id]??0;const active=level?facility.levels[level-1]:null;const next=facility.levels[level];return <article key={facility.id} className={level?'built':''}><strong>{facility.name} · LV.{level}</strong><p>{active?active.description:facility.description}{next&&<><br/><em>다음: {next.name} · {next.description}</em></>}</p><small>{next?Object.entries(next.cost).map(([key,value])=>`${key} ${value}`).join(' · '):'최고 단계 · 안정 가동'}</small><Button disabled={!canBuildFacility(state,facility.id)} onClick={()=>onBuild(facility.id)}>{!next?'MAX':level?'강화':'건설'}</Button></article>})}</div></div></div>
       <aside className="aura-preview">
         <span className="panel-label">{hasStayingGuest?'현재 투숙객':'호텔 운영'}</span>
-        {hasStayingGuest&&<label className="resident-selector"><span>관리할 투숙객</span><select aria-label="관리할 투숙객" value={guest.id} onChange={(event)=>onSelectGuest(event.target.value)}>{stayingGuests.map((resident)=><option key={resident.id} value={resident.id}>{resident.name} · {resident.currentRoomNumber}호 · {resident.remainingNights}박</option>)}</select></label>}
-        <h2>{hasStayingGuest?`${guest.name} · ${guest.currentRoomNumber}호`:'현재 투숙객 없음'}</h2><p>{hasStayingGuest?`${guest.role} · 남은 숙박 ${guest.remainingNights}박`:'빈 호텔에서도 낮 행동과 시설 건설을 진행할 수 있습니다.'}</p>{hasStayingGuest&&guest.aura?<div className={`aura-card active aura-${guest.aura.category.toLowerCase()}`}><AuraGlyph aura={guest.aura} size={20}/><div><strong>{guest.aura.name} 활성</strong><p>{guest.aura.description}<br/>{affected.length?`영향 객실 ${affected.join(' · ')}`:'영향 범위 없음'}</p></div></div>:<p className="system-note">{hasStayingGuest?'객실 Aura 없음 · 관계 이벤트 대상':'다음 방문자를 기다리며 호텔을 정비하십시오.'}</p>}<dl><div><dt>호텔 상태</dt><dd>{state.hotelStats.hotelCondition}</dd></div><div><dt>Security</dt><dd>{state.hotelStats.security}</dd></div><div><dt>공동체 / 군 / 상인</dt><dd>{state.reputations.community} / {state.reputations.military} / {state.reputations.merchant}</dd></div><div><dt>활성 관계</dt><dd>{relationships.length}</dd></div><div><dt>Aura 시너지</dt><dd>{synergies.map((item)=>item.name).join(' · ')||'없음'}</dd></div></dl><p className="system-note">{state.eventHistory.at(-1)?.message??'행동을 선택하면 시설·평판·엔딩 경로가 변화합니다.'}</p><div className="management-actions"><Button variant="secondary" disabled={!hasStayingGuest} onClick={onMove}>객실 이동</Button><Button className="refuse" disabled={!hasStayingGuest} onClick={onCheckout}>체크아웃</Button><Button className="checkin" onClick={onContinue}>DAY {state.day} 종료 <ChevronRight/></Button></div>
+        {hasStayingGuest&&<label className="resident-selector"><span>관리할 투숙객</span><select aria-label="관리할 투숙객" value={guest.id} onChange={(event)=>onSelectGuest(event.target.value)}>{stayingGuests.map((resident)=><option key={resident.id} value={resident.id}>{resident.name} · {resident.currentRoomNumber}호 · {resident.storyLockedResident?'스토리 체류':`${resident.remainingNights}박`}</option>)}</select></label>}
+        <h2>{hasStayingGuest?`${guest.name} · ${guest.currentRoomNumber}호`:'현재 투숙객 없음'}</h2><p>{hasStayingGuest?`${guest.role} · ${guest.storyLockedResident?'특별 사건 전까지 체류':`남은 숙박 ${guest.remainingNights}박`}`:'빈 호텔에서도 낮 행동과 시설 건설을 진행할 수 있습니다.'}</p>{hasStayingGuest&&guest.aura?<div className={`aura-card active aura-${guest.aura.category.toLowerCase()}`}><AuraGlyph aura={guest.aura} size={20}/><div><strong>{guest.aura.name} 활성</strong><p>{guest.aura.description}<br/>{affected.length?`영향 객실 ${affected.join(' · ')}`:'영향 범위 없음'}</p></div></div>:<p className="system-note">{hasStayingGuest?'객실 Aura 없음 · 관계 이벤트 대상':'다음 방문자를 기다리며 호텔을 정비하십시오.'}</p>}<dl><div><dt>호텔 상태</dt><dd>{state.hotelStats.hotelCondition}</dd></div><div><dt>Security</dt><dd>{state.hotelStats.security}</dd></div><div><dt>공동체 / 군 / 상인</dt><dd>{state.reputations.community} / {state.reputations.military} / {state.reputations.merchant}</dd></div><div><dt>활성 관계</dt><dd>{relationships.length}</dd></div><div><dt>Aura 시너지</dt><dd>{synergies.map((item)=>item.name).join(' · ')||'없음'}</dd></div></dl><p className="system-note">{state.eventHistory.at(-1)?.message??'행동을 선택하면 시설·평판·엔딩 경로가 변화합니다.'}</p><div className="management-actions"><Button variant="secondary" disabled={!hasStayingGuest} onClick={onMove}>객실 이동</Button><Button className="refuse" disabled={!hasStayingGuest} onClick={onCheckout}>{guest.storyLockedResident?'추방':'체크아웃'}</Button><Button className="checkin" onClick={onContinue}>DAY {state.day} 종료 <ChevronRight/></Button></div>
       </aside>
     </section>
   </main>;

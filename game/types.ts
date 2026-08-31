@@ -1,6 +1,10 @@
 export type RoomStatus = "EMPTY" | "OCCUPIED" | "DAMAGED" | "LOCKED";
 export type DiseaseType = "NORMAL_DISEASE" | "MONSTER_INFECTION" | "STORY_DISEASE" | "INJURY";
 export type GuestExpression = "neutral" | "happy" | "sad" | "angry" | "afraid" | "suspicious" | "injured";
+export type NpcType = "NORMAL" | "MAIN";
+export type GuestResidency = "TEMPORARY" | "STORY_LOCKED" | "RESIDENT" | "STAFF";
+export type RevisitPolicy = "ALWAYS" | "CONDITIONAL" | "NEVER";
+export type GuestSkills = { work: number; combat: number; medical: number; repair: number; scavenge: number; social: number };
 
 export type Position = { x: number; y: number };
 
@@ -42,6 +46,12 @@ export type AuraDefinition = Omit<RoomEffect, "id" | "sourceGuestId"> & {
 
 export type Guest = {
   id: string;
+  npcType: NpcType;
+  residency: GuestResidency;
+  storyLockedResident: boolean;
+  revisitPolicy: RevisitPolicy;
+  generated: boolean;
+  faction: "INDEPENDENT" | "REFUGEE" | "MERCHANT" | "MILITARY" | "COMMUNITY";
   name: string;
   role: string;
   age: number;
@@ -67,6 +77,7 @@ export type Guest = {
   stress: number;
   trust: number;
   riskLevel: number;
+  skills: GuestSkills;
   relationships: { targetId: string; type: string; value: number }[];
   storyFlags: Record<string, boolean | number | string>;
   eventChain: { id: string; stage: "ARRIVAL" | "LIFE_AT_HOTEL" | "CONFLICT" | "RESOLUTION"; title: string; completed: boolean }[];
@@ -79,6 +90,19 @@ export type Guest = {
   checkedInDay: number | null;
   status: "WAITING" | "STAYING" | "CHECKED_OUT" | "REFUSED";
   aura: AuraDefinition | null;
+};
+
+export type VisitorDecision = "ACCEPTED" | "REFUSED";
+export type VisitorHistoryRecord = {
+  visitorId: string;
+  firstVisitDay: number;
+  lastVisitDay: number;
+  acceptedCount: number;
+  refusedCount: number;
+  roomsStayed: number[];
+  itemsPaid: Partial<Resources>;
+  events: string[];
+  finalState: string;
 };
 
 export type Resources = {
@@ -175,7 +199,7 @@ export type GamePhase =
   | "ending";
 
 export type GameState = {
-  version: 10;
+  version: 11;
   phase: GamePhase;
   day: number;
   rooms: Room[];
@@ -211,6 +235,11 @@ export type GameState = {
   lastNightEventId: string | null;
   pendingStoryEventId: string | null;
   pendingVisitorReactionId: string | null;
+  visitorSeed: number;
+  visitorQueueDay: number;
+  dailyVisitorQueue: string[];
+  dailyVisitorIndex: number;
+  visitorHistory: VisitorHistoryRecord[];
   activeCutsceneId: CutsceneId | null;
   queuedCutsceneIds: CutsceneId[];
   seenCutsceneIds: CutsceneId[];

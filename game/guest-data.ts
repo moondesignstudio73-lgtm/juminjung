@@ -84,15 +84,38 @@ const featuredTitles:Record<string,string[]> = {
   white:["깨끗한 흰 셔츠","서로 다른 기억","잠기지 않은 문","흔적 없는 손님"],
 };
 
+const MAIN_SKILLS:Record<string,Guest["skills"]> = {
+  eleanor:{work:72,combat:18,medical:95,repair:18,scavenge:35,social:66},
+  walter:{work:82,combat:32,medical:15,repair:94,scavenge:58,social:38},
+  mia:{work:8,combat:2,medical:3,repair:5,scavenge:18,social:42},
+  daniel:{work:63,combat:48,medical:18,repair:42,scavenge:60,social:55},
+  samuel:{work:74,combat:82,medical:20,repair:35,scavenge:52,social:67},
+  ruth:{work:78,combat:14,medical:88,repair:20,scavenge:38,social:81},
+  jack:{work:55,combat:32,medical:12,repair:28,scavenge:72,social:92},
+  grace:{work:52,combat:8,medical:32,repair:14,scavenge:24,social:90},
+  owen:{work:70,combat:90,medical:28,repair:44,scavenge:68,social:35},
+  hayes:{work:80,combat:88,medical:18,repair:38,scavenge:55,social:76},
+  lily:{work:68,combat:20,medical:12,repair:18,scavenge:70,social:84},
+  noah:{work:86,combat:22,medical:18,repair:28,scavenge:45,social:78},
+  victor:{work:72,combat:14,medical:8,repair:18,scavenge:44,social:95},
+  rosa:{work:80,combat:18,medical:48,repair:30,scavenge:45,social:82},
+  eli:{work:45,combat:42,medical:8,repair:35,scavenge:92,social:46},
+  vale:{work:76,combat:10,medical:74,repair:32,scavenge:40,social:42},
+  hazel:{work:74,combat:84,medical:30,repair:46,scavenge:96,social:32},
+  thomas:{work:78,combat:18,medical:12,repair:97,scavenge:46,social:40},
+  claire:{work:52,combat:14,medical:24,repair:20,scavenge:38,social:62},
+  white:{work:50,combat:50,medical:50,repair:50,scavenge:50,social:50},
+};
+
 export function createGuests():Guest[] {
   return seeds.map((s) => {
     const desk = FRONT_DESK_PROFILES[s.id];
     if (!desk) throw new Error(`프런트 대화 데이터가 없습니다: ${s.id}`);
     return ({
-    id:s.id,name:s.name,age:s.age,gender:s.gender,role:s.role,description:s.description,portrait:s.portrait??"",portraitVariants:s.portraitVariants??{},expressions:["neutral","happy","sad","angry","afraid","suspicious","injured"],
+    id:s.id,npcType:"MAIN",residency:"STORY_LOCKED",storyLockedResident:true,revisitPolicy:s.id==="white"||s.id==="jack"?"ALWAYS":"CONDITIONAL",generated:false,faction:s.id==="hayes"||s.id==="owen"?"MILITARY":s.id==="jack"||s.id==="victor"?"MERCHANT":s.id==="rosa"||s.id==="grace"?"COMMUNITY":"INDEPENDENT",name:s.name,age:s.age,gender:s.gender,role:s.role,description:s.description,portrait:s.portrait??"",portraitVariants:s.portraitVariants??{},expressions:["neutral","happy","sad","angry","afraid","suspicious","injured"],
     arrivalDay:s.days[0],arrivalDayRange:s.days,arrivalConditions:s.arrivalConditions??conditionalArrivals[s.id]??[],conditionLabel:s.condition??"피로 · 안정",introDialogue:s.intro??desk.introDialogue,negotiationDialogue:desk.negotiationDialogue,
     questions:desk.questions,offeredItems:s.items??[],offer:s.offer??{},negotiatedOffer:desk.negotiatedOffer,
-    baseTraits:s.traits,hiddenTraits:s.hidden,discoveredTraits:[],health:80,stress:45,trust:25,riskLevel:s.risk??35,relationships:s.relations??[],storyFlags:{},eventChain:stages.map((e,index)=>({...e,id:`${s.id}-${e.id}`,title:featuredTitles[s.id]?.[index]??e.title})),infectionState:"HEALTHY",alive:true,endingState:null,
+    baseTraits:s.traits,hiddenTraits:s.hidden,discoveredTraits:[],health:80,stress:45,trust:25,riskLevel:s.risk??35,skills:MAIN_SKILLS[s.id],relationships:s.relations??[],storyFlags:{},eventChain:stages.map((e,index)=>({...e,id:`${s.id}-${e.id}`,title:featuredTitles[s.id]?.[index]??e.title})),infectionState:"HEALTHY",alive:true,endingState:null,
     currentRoomNumber:null,stayDuration:s.stay,remainingNights:s.stay,checkedInDay:null,status:"WAITING",aura:s.aura,
   });
   });

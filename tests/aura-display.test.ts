@@ -19,7 +19,7 @@ test("일반 운영 화면은 사용자가 요청한 동안만 Aura 범위를 �
 test("Aura 표시 요청은 선택한 투숙객 ID에만 귀속되고 같은 버튼으로 해제된다", () => {
   const walter = toggleAuraGuestId(null, "walter");
   assert.equal(walter, "walter");
-  assert.equal(walter === "samuel", false);
+  assert.notEqual(walter, "samuel" as string | null);
   assert.equal(toggleAuraGuestId(walter, "walter"), null);
   assert.equal(toggleAuraGuestId(walter, "samuel"), "samuel");
 });
