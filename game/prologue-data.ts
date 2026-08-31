@@ -1,5 +1,7 @@
+import { DEFAULT_FRONT_DESK_BACKGROUND } from "./background-data.ts";
+
 export const FATHER_DEPARTURE_IMAGE = "/juminjung/assets/cutscenes/father-departure-v1.png";
-export const EMPTY_FRONT_DESK_IMAGE = "/juminjung/assets/front-desk-night.png";
+export const EMPTY_FRONT_DESK_IMAGE = DEFAULT_FRONT_DESK_BACKGROUND.image;
 export const FATHER_DEPARTURE_ALT = "낡은 가방과 무전기를 들고 비 내리는 거리로 나가기 전 JUJU HOTEL 문턱에 멈춰 선 아버지의 뒷모습.";
 
 export const PROLOGUE_BEATS = [

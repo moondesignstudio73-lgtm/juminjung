@@ -20,7 +20,7 @@ test("DAY 0 프롤로그는 출발 원화에서 빈 프런트와 첫 노크로 �
   assert.equal(PROLOGUE_BEATS.length, 4);
   assert.ok(PROLOGUE_BEATS.slice(0, 3).every((beat) => beat.image.endsWith("father-departure-v1.png")));
   assert.equal(new Set(PROLOGUE_BEATS.slice(0, 3).map((beat) => beat.imageAlt)).size, 1);
-  assert.ok(PROLOGUE_BEATS[3].image.endsWith("front-desk-night.png"));
+  assert.ok(PROLOGUE_BEATS[3].image.endsWith("juju-frontdesk-night-rain-v1.png"));
   assert.equal(PROLOGUE_BEATS[2].speaker, "아버지");
   assert.equal(PROLOGUE_BEATS[3].speaker, "라디오 91.3");
 });

@@ -27,6 +27,8 @@ import { getGuestVisualState, getNightEventPortraits, getStoryEventExpression } 
 import { getCutscene } from '@/game/cutscene-data';
 import { dismissCutscene } from '@/game/cutscene-manager';
 import { normalizePrologueIndex, PROLOGUE_BEATS } from '@/game/prologue-data';
+import { DEFAULT_FRONT_DESK_BACKGROUND } from '@/game/background-data';
+import { beginSpriteLoad, canDisplaySprite, completeSpriteLoad, failSpriteLoad, shouldDisplaySpritePlaceholder, type SpriteLoadState } from '@/game/sprite-load-manager';
 import type { AuraDefinition, FacilityId, GameState, Guest, GuestExpression, HotelActionId, Room } from '@/game/types';
 
 type UiSave = GameState & { prologue: number };
@@ -122,6 +124,7 @@ export default function Home() {
     update({ guests, rooms: recalculateRoomEffects(checkoutGuest(save.rooms, managedGuest.id), guests), flags: managedGuest.id === ELEANOR_ID ? setGuestRoomFlags(save.flags, null) : save.flags, eventHistory: [...save.eventHistory, { day: save.day, type: 'CHECK_OUT', message: `${managedGuest.name} · 수동 체크아웃` }], decision: null, phase: 'desk' });
   };
 
+  if (!hydrated) return <LobbyLoading />;
   if (activeCutscene) return <StoryCutscene day={save.day} cutscene={activeCutscene} onContinue={() => setSave((current) => ({ ...dismissCutscene(current), prologue: current.prologue }))} />;
   if (save.phase === 'title') return <TitleScreen onStart={() => update({ phase: 'prologue' })} muted={muted} setMuted={setMuted} />;
   if (save.phase === 'prologue') {
@@ -166,9 +169,10 @@ export default function Home() {
       </header>
 
       <section className="desk-scene" aria-label="밤의 JUJU HOTEL 프런트">
-        <img src="/juminjung/assets/front-desk-night.png" alt={`${visitor.name} 방문자가 낡은 프런트 카운터 앞에 서 있다.`} />
+        <div className="frontdesk-background"><img src={DEFAULT_FRONT_DESK_BACKGROUND.image} alt={DEFAULT_FRONT_DESK_BACKGROUND.alt} /></div>
+        <div className="frontdesk-environment" aria-hidden="true"><div className="lobby-rain" /></div>
         <div className="scene-vignette" />
-        <CharacterSprite guest={visitor} context="desk" />
+        <div className="visitor-layer"><CharacterSprite guest={visitor} context="desk" /></div>
         <aside className="case-file left-panel">
           <span className="panel-label">방문자 · {visitor.id.toUpperCase()}</span><h2>{visitor.name}</h2><p>{visitor.age}세 · {visitor.role}</p>
           <dl>
@@ -215,15 +219,39 @@ function Status({ icon: Icon, label, value }: { icon: typeof Fuel; label: string
 
 function CharacterSprite({ guest, context, expression }: { guest: Guest; context: 'desk' | 'story' | 'event-left' | 'event-right'; expression?: GuestExpression }) {
   const visual = getGuestVisualState(guest, expression);
-  if (!visual.asset) return null;
+  const requestedAsset = visual.asset ?? null;
+  const [loadState, setLoadState] = useState<SpriteLoadState>(() => beginSpriteLoad(requestedAsset));
+
+  useEffect(() => {
+    let active = true;
+    setLoadState(beginSpriteLoad(requestedAsset));
+    if (!requestedAsset) { setLoadState(failSpriteLoad(null)); return () => { active = false; }; }
+    const image = new Image();
+    image.onload = async () => {
+      try { await image.decode(); } catch { /* onload already confirmed usable image data */ }
+      if (active) setLoadState(completeSpriteLoad(requestedAsset));
+    };
+    image.onerror = () => { if (active) setLoadState(failSpriteLoad(requestedAsset)); };
+    image.src = requestedAsset;
+    return () => { active = false; image.onload = null; image.onerror = null; };
+  }, [guest.id, requestedAsset]);
+
+  if (!canDisplaySprite(requestedAsset, loadState)) {
+    if (!shouldDisplaySpritePlaceholder(requestedAsset, loadState)) return null;
+    return <figure className={`character-sprite ${context} sprite-placeholder`} aria-label={`${guest.name} 방문객 이미지 로드 실패`}><div className="generic-silhouette" aria-hidden="true"/><figcaption>방문객 이미지 없음</figcaption></figure>;
+  }
   return <figure className={`character-sprite ${context} expression-${visual.expression} ${visual.modifiers.map((item)=>`state-${item.toLowerCase()}`).join(' ')}`} data-expression={visual.expression} aria-label={`${guest.name} · ${visual.label}`}>
-    <img src={visual.asset} alt={`${guest.name}의 ${visual.expression} 표정 반신 일러스트`} />
+    <img className="sprite-ready" src={requestedAsset!} alt={`${guest.name}의 ${visual.expression} 표정 반신 일러스트`} onError={() => setLoadState(failSpriteLoad(requestedAsset))} />
     <figcaption>{visual.label}</figcaption>
   </figure>;
 }
 
 function TitleScreen({ onStart, muted, setMuted }: { onStart:()=>void; muted:boolean; setMuted:(v:boolean)=>void }) {
-  return <main className="title-screen"><img src="/juminjung/assets/front-desk-night.png" alt="빗속의 JUJU HOTEL 프런트."/><div className="title-wash"/><button className="sound-corner" onClick={()=>setMuted(!muted)} aria-label="소리 전환">{muted?<VolumeX/>:<Volume2/>}</button><section className="title-lockup"><p>선택형 호텔 생존 스토리</p><h1><span>MAY I HAVE</span>A ROOM?</h1><div className="neon-rule"/><p className="title-tagline">30개 객실 · 이 호텔이 어떤 곳이 될지는 당신의 선택</p><Button className="start-button" onClick={onStart}>DAY 0 시작<ChevronRight/></Button><small>진행 상황은 매 장면마다 이 기기에 자동 저장됩니다.</small></section></main>;
+  return <main className="title-screen"><img src={DEFAULT_FRONT_DESK_BACKGROUND.image} alt={DEFAULT_FRONT_DESK_BACKGROUND.alt}/><div className="title-wash"/><button className="sound-corner" onClick={()=>setMuted(!muted)} aria-label="소리 전환">{muted?<VolumeX/>:<Volume2/>}</button><section className="title-lockup"><p>선택형 호텔 생존 스토리</p><h1><span>MAY I HAVE</span>A ROOM?</h1><div className="neon-rule"/><p className="title-tagline">30개 객실 · 이 호텔이 어떤 곳이 될지는 당신의 선택</p><Button className="start-button" onClick={onStart}>DAY 0 시작<ChevronRight/></Button><small>진행 상황은 매 장면마다 이 기기에 자동 저장됩니다.</small></section></main>;
+}
+
+function LobbyLoading() {
+  return <main className="lobby-loading" aria-label="저장된 방문객 불러오는 중"><img src={DEFAULT_FRONT_DESK_BACKGROUND.image} alt={DEFAULT_FRONT_DESK_BACKGROUND.alt}/><div className="scene-vignette"/><span>방문 기록 확인 중…</span></main>;
 }
 
 const ROOM_GUEST_CATALOG = createGuests();
@@ -323,5 +351,5 @@ function CampaignEnding({ state, onReturn, onAdvance }: { state:UiSave; onReturn
   const index = Math.max(0,Math.min(state.endingSceneIndex,(narrative?.scenes.length??1)-1));
   const scene = narrative?.scenes[index];
   const last = Boolean(narrative&&index===narrative.scenes.length-1);
-  return <main className="cinematic-screen ending-cutscene"><img src="/juminjung/assets/front-desk-night.png" alt={`${ending?.name??'JUJU HOTEL'} 최종 사건의 호텔 로비.`}/><div className="cinematic-wash"/><p className="scene-index">DAY {state.day} · {narrative?.kicker??'FINAL EVENT'} · {index+1}/{narrative?.scenes.length??1}</p><section className="cutscene-copy"><span>{ending?.name??'DESTINY'}</span><h1>{scene?.title??'기록을 찾을 수 없습니다.'}</h1><p>{scene?.body??ending?.description}</p><blockquote>{scene?.quote??'“May I have a room?”'}</blockquote><div className="ending-progress" aria-label="엔딩 장면 진행도">{narrative?.scenes.map((beat,beatIndex)=><i key={beat.id} className={beatIndex<=index?'active':''}/>)}</div><div className="assignment-actions"><Button variant="secondary" onClick={onReturn}>아침 장부로 돌아가기 · 진행 초기화</Button><Button onClick={onAdvance}>{last?'에필로그 기록 완료':'다음 장면'} <ChevronRight/></Button></div></section></main>;
+  return <main className="cinematic-screen ending-cutscene"><img src={DEFAULT_FRONT_DESK_BACKGROUND.image} alt={`${ending?.name??'JUJU HOTEL'} 최종 사건의 호텔 로비.`}/><div className="cinematic-wash"/><p className="scene-index">DAY {state.day} · {narrative?.kicker??'FINAL EVENT'} · {index+1}/{narrative?.scenes.length??1}</p><section className="cutscene-copy"><span>{ending?.name??'DESTINY'}</span><h1>{scene?.title??'기록을 찾을 수 없습니다.'}</h1><p>{scene?.body??ending?.description}</p><blockquote>{scene?.quote??'“May I have a room?”'}</blockquote><div className="ending-progress" aria-label="엔딩 장면 진행도">{narrative?.scenes.map((beat,beatIndex)=><i key={beat.id} className={beatIndex<=index?'active':''}/>)}</div><div className="assignment-actions"><Button variant="secondary" onClick={onReturn}>아침 장부로 돌아가기 · 진행 초기화</Button><Button onClick={onAdvance}>{last?'에필로그 기록 완료':'다음 장면'} <ChevronRight/></Button></div></section></main>;
 }
