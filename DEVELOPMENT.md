@@ -20,11 +20,13 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - Seven data-driven ending routes that unlock optional final events without stopping normal management
 - A soft-pressure World State derived from time, scarcity, threat, and hotel stability
 - Three daily action points for repair, community, patrol, trade, and facility decisions, restored at each morning report
+- Five saved staff duties turn resident repair, combat, medical, work, and scavenging skills into hotel operations. One resident can hold one assignment; nightly maintenance, security, medical, and kitchen results appear in the morning ledger, and departed residents are removed automatically
+- Three data-driven daytime scavenging missions spend one AP and use a visible skill-based success chance. Results are deterministic for the save seed, DAY, mission, and scout, and persist rewards, injury, stress, exposure, reputation, hotel-log entries, and visitor history without reload rerolls
 - State-derived daily objectives and up to five priority-sorted urgent problems expose resource, power, threat, and hotel-damage pressure in both the morning report and management screen
 - Saved night preparation controls three fuel-limited power circuits for security, clinic, and kitchen operations; disabled circuits create visible, logged penalties instead of hidden failure
 - Saved NORMAL, LIMITED, and SEVERE food-ration policies trade food demand against resident Stress and Health, with the morning ledger showing base demand, actual consumption, powered circuits, and warnings
 - Four buildable facilities with resource costs, passive production, stat changes, and faction reputation effects
-- Save v11 restoration for facilities, reputations, three daily actions, power allocation, ration policy, night choices, pending NPC story scenes, one-time cutscene progress, generated visitors, the current queue position, and visitor history; full unused AP in older saves migrates to the new three-point day
+- Save v12 restoration for facilities, reputations, three daily actions, power allocation, ration policy, night choices, pending NPC story scenes, one-time cutscene progress, generated visitors, the current queue position, visitor history, staff assignments, and the latest scavenging report; full unused AP in older saves migrates to the new three-point day
 - Conditional night events driven by World State, shortages, Monster Threat, Security, and resources
 - Two-choice night outcomes that alter resources, hotel stats, faction reputation, flags, and guest condition
 - All twenty catalog NPCs have authored conflict and resolution choices with persistent consequences
@@ -80,7 +82,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 
 ## Next system priorities
 
-- Extend the survival loop with evidence cases, staff assignments, scavenging, and deeper night-preparation choices after the visitor queue is stable
+- Extend the survival loop with multi-stage evidence cases and deeper night-preparation choices
 - Expand full-screen illustrated cutscenes for the remaining major story and ending beats
 
 ## Main NPC catalog

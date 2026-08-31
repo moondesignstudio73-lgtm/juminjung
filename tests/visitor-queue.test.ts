@@ -139,12 +139,12 @@ test("이전 저장에서 복원된 거절 손님도 명시적 재방문 날짜�
   assert.equal(found,true);
 });
 
-test("v10 저장은 v11 큐 기본값으로 이관되고 이후 생성된 큐를 저장한다",()=>{
+test("v10 저장은 v12 큐 기본값으로 이관되고 이후 생성된 큐를 저장한다",()=>{
   const raw=JSON.parse(serializeGameState(dayState(6,456)));
   raw.version=10; delete raw.visitorQueueDay; delete raw.dailyVisitorQueue; delete raw.dailyVisitorIndex; delete raw.visitorHistory;
   raw.guests[0].status="REFUSED"; raw.guests[0].storyFlags.last_revisit_refused_day=2;
   const migrated=restoreGameState(JSON.stringify(raw));
-  assert.equal(migrated.version,11); assert.deepEqual(migrated.dailyVisitorQueue,[]);
+  assert.equal(migrated.version,12); assert.deepEqual(migrated.dailyVisitorQueue,[]);
   assert.equal(migrated.visitorHistory.find((entry)=>entry.visitorId==="eleanor")?.finalState,"REFUSED");
   const prepared=prepareDailyVisitorQueue(migrated);
   assert.equal(restoreGameState(serializeGameState(prepared)).dailyVisitorQueue.length,prepared.dailyVisitorQueue.length);

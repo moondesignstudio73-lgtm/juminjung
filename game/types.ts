@@ -5,6 +5,10 @@ export type NpcType = "NORMAL" | "MAIN";
 export type GuestResidency = "TEMPORARY" | "STORY_LOCKED" | "RESIDENT" | "STAFF";
 export type RevisitPolicy = "ALWAYS" | "CONDITIONAL" | "NEVER";
 export type GuestSkills = { work: number; combat: number; medical: number; repair: number; scavenge: number; social: number };
+export type StaffDutyId = "MAINTENANCE" | "SECURITY" | "MEDICAL" | "KITCHEN" | "SCAVENGE";
+export type StaffAssignments = Partial<Record<StaffDutyId, string>>;
+export type ScavengeMissionId = "NEARBY_BLOCK" | "ABANDONED_PHARMACY" | "FUEL_DEPOT";
+export type ScavengeOutcome = "CLEAN_SUCCESS" | "SUCCESS" | "SETBACK";
 
 export type Position = { x: number; y: number };
 
@@ -141,7 +145,25 @@ export type DaySummary = {
   facilityProduction?: Partial<Resources>;
   facilityUpkeep?: Partial<Resources>;
   inactiveFacilities?: FacilityId[];
+  staffFoodSaving?: number;
+  staffDutyResults?: StaffDutyResult[];
   checkedOutGuestIds: string[];
+};
+
+export type StaffDutyResult = { dutyId: Exclude<StaffDutyId, "SCAVENGE">; guestId: string; guestName: string; effect: string };
+export type ScavengeReport = {
+  day: number;
+  missionId: ScavengeMissionId;
+  missionName: string;
+  guestId: string;
+  guestName: string;
+  chance: number;
+  roll: number;
+  outcome: ScavengeOutcome;
+  resources: Partial<Resources>;
+  threatDelta: number;
+  healthDelta: number;
+  message: string;
 };
 
 export type EventFlags = Record<string, boolean | number | string>;
@@ -199,7 +221,7 @@ export type GamePhase =
   | "ending";
 
 export type GameState = {
-  version: 11;
+  version: 12;
   phase: GamePhase;
   day: number;
   rooms: Room[];
@@ -240,6 +262,9 @@ export type GameState = {
   dailyVisitorQueue: string[];
   dailyVisitorIndex: number;
   visitorHistory: VisitorHistoryRecord[];
+  staffAssignments: StaffAssignments;
+  lastScavengeDay: number;
+  lastScavengeReport: ScavengeReport | null;
   activeCutsceneId: CutsceneId | null;
   queuedCutsceneIds: CutsceneId[];
   seenCutsceneIds: CutsceneId[];

@@ -91,6 +91,7 @@ export function getDailyObjectives(state: GameState): DailyObjective[] {
   if (threat >= 25) issues.push({ id: "monster_threat", priority: threat >= 45 ? "URGENT" : "RECOMMENDED", title: "외곽 위협 상승", description: `Monster Threat ${threat}`, actionHint: "경계 순찰 또는 방호 회로를 우선하십시오." });
   if (state.hotelStats.hotelCondition <= 50 || damagedRooms) issues.push({ id: "hotel_damage", priority: state.hotelStats.hotelCondition <= 35 ? "URGENT" : "RECOMMENDED", title: "호텔 손상 복구", description: `상태 ${state.hotelStats.hotelCondition} · 손상/봉쇄 객실 ${damagedRooms}`, actionHint: "부품 2와 AP 1로 가장 위험한 구역을 보수하십시오." });
   if (state.resources.medicine <= 3 && state.guests.some((guest) => guest.status === "STAYING" && guest.infectionState !== "HEALTHY")) issues.push({ id: "medicine_shortage", priority: "URGENT", title: "의약품 고갈 임박", description: `의약품 ${state.resources.medicine}`, actionHint: "진료 회로를 유지하고 교역 경로를 찾으십시오." });
+  if (staying > 0 && !state.staffAssignments.SCAVENGE) issues.push({ id: "scout_unassigned", priority: "RECOMMENDED", title: "외부 정찰 담당자 없음", description: "탐색 능력이 있는 투숙객이 아직 외부 임무에 배치되지 않았습니다.", actionHint: "외부 정찰 담당자를 배치해 식량·의약품·연료 탐색을 준비하십시오." });
   if (!issues.length) issues.push({ id: "stable_operations", priority: "OPTIONAL", title: "호텔 운영 안정화", description: `행동 포인트 ${state.actionPoints}/${state.maxActionPoints}`, actionHint: "시설을 강화하거나 공동체 신뢰를 쌓으십시오." });
   const order = { URGENT: 0, RECOMMENDED: 1, OPTIONAL: 2 } as const;
   return issues.sort((a, b) => order[a.priority] - order[b.priority]).slice(0, 5);
