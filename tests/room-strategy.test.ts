@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { getAffectedRoomNumbers, getDiseaseChance, recalculateRoomEffects } from "../game/aura-effect-manager.ts";
 import { ELEANOR_ID } from "../game/guest-data.ts";
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
-import { assignGuest, checkoutGuest, isRoomSelectable, moveGuest } from "../game/room-manager.ts";
+import { assignGuest, checkoutGuest, getRoomOccupantLabel, isRoomSelectable, moveGuest } from "../game/room-manager.ts";
 
 function placeEleanor(roomNumber: number) {
   const state = createInitialGameState();
@@ -108,4 +108,12 @@ test("13. 파손된 선호 객실은 점유하지 않고 사용 가능한 빈방
   assert.notEqual(eleanor.currentRoomNumber, 301);
   assert.equal(restored.rooms.find((room) => room.roomNumber === 301)?.status, "DAMAGED");
   assert.equal(restored.rooms.filter((room) => room.guestId === ELEANOR_ID).length, 1);
+});
+
+test("14. 객실 그리드는 하드코딩 이름 대신 실제 점유 NPC 이름을 표시한다", () => {
+  const state = createInitialGameState();
+  const room = assignGuest(state.rooms, 202, "samuel").find((candidate) => candidate.roomNumber === 202)!;
+  assert.equal(getRoomOccupantLabel(room, state.guests), "새뮤얼");
+  assert.equal(getRoomOccupantLabel({ ...room, guestId: "missing" }, state.guests), "사용 중");
+  assert.equal(getRoomOccupantLabel({ ...room, guestId: null }, state.guests), "사용 중");
 });

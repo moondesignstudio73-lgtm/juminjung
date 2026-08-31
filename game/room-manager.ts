@@ -1,4 +1,4 @@
-import type { Room } from "./types.ts";
+import type { Guest, Room } from "./types.ts";
 
 export function createRooms(): Room[] {
   return [1, 2, 3].flatMap((floor) =>
@@ -18,6 +18,13 @@ export function createRooms(): Room[] {
 
 export function isRoomSelectable(room: Room): boolean {
   return room.status === "EMPTY" && !room.occupied;
+}
+
+export function getRoomOccupantLabel(room: Room, guests: Guest[]): string {
+  if (!room.occupied) return room.status;
+  if (!room.guestId) return "사용 중";
+  const guest = guests.find((candidate) => candidate.id === room.guestId);
+  return guest?.name.trim().split(/\s+/)[0] || "사용 중";
 }
 
 export function assignGuest(rooms: Room[], roomNumber: number, guestId: string): Room[] {
