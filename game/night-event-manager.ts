@@ -1,4 +1,5 @@
 import { NIGHT_EVENTS } from "./night-event-data.ts";
+import { getNightFoodDemand } from "./aura-night-manager.ts";
 import { getActiveRelationships } from "./relationship-manager.ts";
 import type { GameState, HotelLogEntry, NightEventChoice, NightEventDefinition } from "./types.ts";
 
@@ -15,7 +16,10 @@ function meetsCondition(state: GameState, event: NightEventDefinition): boolean 
   if (condition.requiresGuests && staying.length === 0) return false;
   if (condition.requiredEmptyRoomNumber !== undefined && !state.rooms.some((room) => room.roomNumber === condition.requiredEmptyRoomNumber && room.status === "EMPTY" && !room.occupied && room.guestId === null)) return false;
   if (condition.maximumResource && !Object.entries(condition.maximumResource).every(([key, value]) => state.resources[key as keyof GameState["resources"]] <= Number(value))) return false;
-  if (condition.shortage && state.resources[condition.shortage] >= staying.length) return false;
+  if (condition.shortage) {
+    const demand = condition.shortage === "food" ? getNightFoodDemand(state.rooms,state.guests,state.flags).demand : staying.length;
+    if (state.resources[condition.shortage] >= demand) return false;
+  }
   if (condition.requiredFlags && !Object.entries(condition.requiredFlags).every(([key, value]) => state.flags[key] === value || state.endingRelatedFlags[key] === value)) return false;
   if (condition.forbiddenFlags?.some((key) => Boolean(state.flags[key]) || Boolean(state.endingRelatedFlags[key]))) return false;
   if (condition.relationship) {

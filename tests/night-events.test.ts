@@ -26,6 +26,15 @@ test("식량이 투숙객 수보다 적으면 배급실 사건이 선택된다",
   assert.equal(selectNightEvent(state).id, "food_shortage");
 });
 
+test("공동 식당이 줄인 실제 수요만큼 식량이 있으면 배급 위기를 만들지 않는다", () => {
+  const state = createInitialGameState();
+  state.guests = state.guests.map((guest,index)=>index<2?{...guest,status:"STAYING",currentRoomNumber:101+index,checkedInDay:1}:guest);
+  state.resources.food=1;
+  assert.equal(selectNightEvent(state).id,"food_shortage");
+  state.flags.noah_community_kitchen=true;
+  assert.equal(selectNightEvent(state).id,"quiet_watch");
+});
+
 test("낮은 연료는 발전기 고장 사건을 발생시킨다", () => {
   const state = createInitialGameState();
   state.resources.fuel = 10;

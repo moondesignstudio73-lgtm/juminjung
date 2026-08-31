@@ -434,3 +434,31 @@ test("Thomas의 라디오 중계망은 마이크로그리드 효과와 전용 �
   assert.equal(result.flags.generator_network_stable, undefined);
   assert.equal(result.activeCutsceneId, null);
 });
+
+test("Noah의 회복 경로는 공동 식당과 전용 컷신을 열고 저장된다", () => {
+  let state=applyStoryChoice(conflictState("noah"),"noah-cellar","rehabilitate").state;
+  state.guests=state.guests.map((guest)=>guest.id==="noah"?{...guest,remainingNights:1}:guest);
+  const result=applyStoryChoice(state,"noah-table","community_kitchen").state;
+  assert.equal(result.flags.noah_recovery_started,true);
+  assert.equal(result.flags.noah_community_kitchen,true);
+  assert.equal(result.activeCutsceneId,"noah_community_table");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/noah-community-table-v1.png");
+  const restored=restoreGameState(serializeGameState(result));
+  assert.equal(restored.flags.noah_community_kitchen,true);
+  assert.equal(restored.activeCutsceneId,"noah_community_table");
+});
+
+test("부엌에서 내보낸 Noah는 공동 식당을 열 수 없지만 보존식 연구는 가능하다", () => {
+  let state=applyStoryChoice(conflictState("noah"),"noah-cellar","dismiss").state;
+  state.guests=state.guests.map((guest)=>guest.id==="noah"?{...guest,remainingNights:1}:guest);
+  const pending=getPendingStoryChoice(state)!;
+  const kitchen=pending.choices.find((choice)=>choice.id==="community_kitchen")!;
+  const ration=pending.choices.find((choice)=>choice.id==="ration_lab")!;
+  assert.equal(canChooseStoryChoice(state,kitchen),false);
+  assert.equal(canChooseStoryChoice(state,ration),true);
+  assert.throws(()=>applyStoryChoice(state,"noah-table","community_kitchen"),/선행 사건/);
+  const result=applyStoryChoice(state,"noah-table","ration_lab").state;
+  assert.equal(result.flags.noah_ration_system,true);
+  assert.equal(result.flags.noah_community_kitchen,undefined);
+  assert.equal(result.activeCutsceneId,null);
+});

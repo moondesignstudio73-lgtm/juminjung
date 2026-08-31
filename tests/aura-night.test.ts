@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { getInjuryRecovery, recalculateRoomEffects } from "../game/aura-effect-manager.ts";
-import { resolveAuraNight } from "../game/aura-night-manager.ts";
+import { getNightFoodDemand, resolveAuraNight } from "../game/aura-night-manager.ts";
 import { resolveDay } from "../game/day-manager.ts";
 import { createInitialGameState } from "../game/save-manager.ts";
 import { assignGuest } from "../game/room-manager.ts";
@@ -63,6 +63,38 @@ test("Noah의 식량 Aura는 여러 투숙객의 실제 식량 수요를 줄인�
   const result = resolveAuraNight(state.rooms, state.guests, 7, "STABLE", 0);
   assert.equal(result.foodDemand, 6);
   assert.ok(result.foodDemand < result.guests.filter((guest) => guest.status === "STAYING").length);
+});
+
+test("Noah의 공동 식당은 두 명 이상이 식사할 때 최종 식량 수요를 1 절감한다", () => {
+  const state = place([["walter",101],["claire",110]]);
+  const withoutKitchen = resolveAuraNight(state.rooms,state.guests,1,"STABLE",0);
+  const withKitchen = resolveAuraNight(state.rooms,state.guests,1,"STABLE",0,{noah_community_kitchen:true});
+  assert.equal(withoutKitchen.foodDemand,2);
+  assert.equal(withKitchen.foodDemand,1);
+  assert.equal(withKitchen.communityKitchenFoodSaving,1);
+});
+
+test("공동 식당 수요는 배정된 투숙객만 세고 Aura 하한과 올림 뒤 정확히 1을 절감한다", () => {
+  const state = place([["walter",101],["claire",102]]);
+  state.rooms = state.rooms.map((room) => room.roomNumber===101 ? {
+    ...room,
+    permanentEffects:[...room.permanentEffects,{id:"test-low-food",sourceGuestId:"walter",name:"절약",metric:"foodUse",operation:"ADD",value:-75}],
+  } : room.roomNumber===102 ? {
+    ...room,
+    permanentEffects:[...room.permanentEffects,{id:"test-high-food",sourceGuestId:"claire",name:"추가 배급",metric:"foodUse",operation:"ADD",value:1}],
+  } : room);
+  state.guests = state.guests.map((guest) => guest.id==="mia" ? {...guest,status:"STAYING" as const,currentRoomNumber:null} : guest.id==="samuel" ? {...guest,status:"WAITING" as const,currentRoomNumber:103} : guest);
+  const withoutKitchen = getNightFoodDemand(state.rooms,state.guests);
+  const withKitchen = getNightFoodDemand(state.rooms,state.guests,{noah_community_kitchen:true});
+  assert.deepEqual(withoutKitchen,{demand:2,saving:0});
+  assert.deepEqual(withKitchen,{demand:1,saving:1});
+});
+
+test("공동 식당은 혼자 남은 투숙객의 식량 수요를 0으로 만들지 않는다", () => {
+  const state = place([["walter",101]]);
+  const result = resolveAuraNight(state.rooms,state.guests,1,"STABLE",0,{noah_community_kitchen:true});
+  assert.equal(result.foodDemand,1);
+  assert.equal(result.communityKitchenFoodSaving,0);
 });
 
 test("Eleanor의 의료 Aura는 범위 안 질병만 막고 범위 밖 투숙객은 보호하지 않는다", () => {
@@ -194,4 +226,16 @@ test("DAY 정산 로그는 저장 위협도 0 하한까지 반영한 실제 경�
   const resolved = resolveDay(state);
   assert.equal(resolved.flags.monster_threat, 0);
   assert.ok(resolved.eventHistory.some((entry) => entry.message === "외곽 조기경보망 가동 · Monster Threat 보정 -1"));
+});
+
+test("DAY 정산은 공동 식당의 실제 식량 절감과 공개 배급 로그를 반영한다", () => {
+  const state = place([["walter",101],["claire",110]]);
+  state.phase="night";
+  state.flags.noah_community_kitchen=true;
+  state.selectedNightEventId="quiet_watch";
+  state.selectedNightChoiceId="rest";
+  state.guests=state.guests.map((guest)=>guest.status==="STAYING"?{...guest,remainingNights:2}:guest);
+  const resolved=resolveDay(state);
+  assert.equal(resolved.lastDaySummary?.consumed.food,1);
+  assert.ok(resolved.eventHistory.some((entry)=>entry.message==="공동 식당 배급 · 식량 1 절감"));
 });

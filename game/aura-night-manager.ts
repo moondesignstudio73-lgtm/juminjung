@@ -12,6 +12,7 @@ export type AuraNightResolution = {
   sickGuestIds:string[];
   clinicPreventedGuestIds:string[];
   perimeterAlarmThreatReduction:number;
+  communityKitchenFoodSaving:number;
 };
 
 const clamp = (value:number,min=0,max=100) => Math.max(min,Math.min(max,value));
@@ -21,11 +22,23 @@ const diseaseBaseChance:Record<WorldState,number> = {STABLE:2,UNREST:6,COLLAPSE:
 const stableGuestSeed = (guestId:string) => [...guestId].reduce((seed,character)=>(seed*31+character.charCodeAt(0))%100,0);
 export const ELEANOR_CLINIC_DISEASE_REDUCTION = 5;
 export const PERIMETER_ALARM_THREAT_REDUCTION = 3;
+export const COMMUNITY_KITCHEN_FOOD_SAVING = 1;
+
+export function getNightFoodDemand(rooms:Room[], guests:Guest[], flags:EventFlags={}):{demand:number;saving:number} {
+  const staying = guests.filter((guest)=>guest.status==="STAYING"&&guest.currentRoomNumber!==null);
+  const foodUnits = staying.reduce((total,guest)=>{
+    const room = rooms.find((candidate)=>candidate.roomNumber===guest.currentRoomNumber);
+    return total+Math.max(.25,1+additiveValue(room,"foodUse")/100);
+  },0);
+  const demandBeforeKitchen = Math.ceil(foodUnits);
+  const saving = flags.noah_community_kitchen===true&&staying.length>=2 ? Math.min(COMMUNITY_KITCHEN_FOOD_SAVING,demandBeforeKitchen) : 0;
+  return {demand:demandBeforeKitchen-saving,saving};
+}
 
 export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, worldState:WorldState, baseDiseaseChance=diseaseBaseChance[worldState], flags:EventFlags={}):AuraNightResolution {
   const staying = guests.filter((guest)=>guest.status==="STAYING"&&guest.currentRoomNumber!==null);
   const guestById = new Map(guests.map((guest)=>[guest.id,guest]));
-  let foodUnits = 0;
+  const food = getNightFoodDemand(rooms,guests,flags);
   let securityScore = 0;
   let breakdownScore = 0;
   let crimeScore = 0;
@@ -46,8 +59,6 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
 
   const updatedById = new Map(staying.map((guest)=>{
     const room = rooms.find((candidate)=>candidate.roomNumber===guest.currentRoomNumber);
-    const foodUse = additiveValue(room,"foodUse");
-    foodUnits += Math.max(.25,1+foodUse/100);
     securityScore += additiveValue(room,"security");
     breakdownScore += additiveValue(room,"breakdownRisk");
     threatScore += additiveValue(room,"monsterThreat")-additiveValue(room,"information")/2;
@@ -70,7 +81,7 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
   const threatDelta = clamp(threatWithoutAlarm-(perimeterAlarmActive?PERIMETER_ALARM_THREAT_REDUCTION:0),-10,10);
   return {
     guests:guests.map((guest)=>updatedById.get(guest.id)??guest),
-    foodDemand:Math.ceil(foodUnits),
+    foodDemand:food.demand,
     securityDelta:clamp(Math.round(securityScore/10),-10,10),
     hotelConditionDelta:clamp(Math.round(-breakdownScore/10),-10,10),
     crimeDelta:clamp(Math.round(crimeScore/10),0,10),
@@ -79,5 +90,6 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
     sickGuestIds,
     clinicPreventedGuestIds,
     perimeterAlarmThreatReduction:threatWithoutAlarm-threatDelta,
+    communityKitchenFoodSaving:food.saving,
   };
 }

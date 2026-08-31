@@ -110,7 +110,7 @@ export const STORY_CHOICE_EVENTS: StoryChoiceEvent[] = [
     { id: "dismiss", label: "부엌에서 내보내고 물자를 압수한다", description: "즉시 식량을 회수하지만 Noah의 상태는 악화됩니다.", effect: { trust: -15, stress: 12, resources: { food: 3 }, flags: { noah_removed_from_kitchen: true }, discoverTrait: "Alcoholic" } },
   ] },
   { id: "noah-table", guestId: "noah", stage: "RESOLUTION", title: "다시 차린 저녁", description: "Noah가 남은 재료로 모두가 함께 먹을 수 있는 저녁을 준비합니다.", quote: "‘한 끼가 내일을 보장하진 않아도, 우리가 사람이라는 건 기억시켜 줍니다.’", choices: [
-    { id: "community_kitchen", label: "공동 식당을 연다", description: "배급을 공개하고 누구도 홀로 굶지 않는 식탁을 만듭니다.", effect: { trust: 15, hotelStats: { hotelCondition: 10 }, reputations: { community: 9, humanitarian: 5 }, flags: { noah_community_kitchen: true } } },
+    { id: "community_kitchen", label: "공동 식당을 연다", description: "배급을 공개하고 누구도 홀로 굶지 않는 식탁을 만듭니다.", requiredFlags: { noah_recovery_started: true }, effect: { trust: 15, hotelStats: { hotelCondition: 10 }, reputations: { community: 9, humanitarian: 5 }, flags: { noah_community_kitchen: true } } },
     { id: "ration_lab", label: "장기 보존식 연구를 맡긴다", description: "맛보다 생존 기간을 우선해 식량 효율을 높입니다.", effect: { trust: 8, resources: { food: 4 }, hotelStats: { foodSustainability: 3 }, flags: { noah_ration_system: true } } },
   ] },
   { id: "victor-contract", guestId: "victor", stage: "CONFLICT", title: "지하 벙커 계약서", description: "Victor는 제한된 벙커 좌석을 호텔 물자와 교환하자며 선택받을 사람의 명단을 내밉니다.", quote: "‘모두를 구한다는 말은 결국 아무도 구하지 못한다는 뜻입니다.’", choices: [

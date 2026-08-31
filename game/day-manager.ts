@@ -62,6 +62,7 @@ export function resolveDay(state: GameState): GameState {
     ...story.entries,
     { day: state.day, type: "RESOURCE", message: `식량 ${consumed.food}, 물 ${consumed.water}, 연료 ${consumed.fuel} 소비` },
     ...(microgridActive ? [{day:state.day,type:"RESOURCE" as const,message:`독립 마이크로그리드 · 기본 발전기 연료 ${BASE_GENERATOR_FUEL_DEMAND} 절감`}] : []),
+    ...(auraNight.communityKitchenFoodSaving ? [{day:state.day,type:"RESOURCE" as const,message:`공동 식당 배급 · 식량 ${auraNight.communityKitchenFoodSaving} 절감`}] : []),
     ...(auraNight.tradeBonus.food||auraNight.tradeBonus.parts ? [{day:state.day,type:"RESOURCE" as const,message:`Aura 교역 · 식량 +${auraNight.tradeBonus.food} · 부품 +${auraNight.tradeBonus.parts}`}] : []),
     ...(auraNight.sickGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`객실 질병 발생 · ${auraNight.sickGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
     ...(auraNight.clinicPreventedGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`상설 진료소 예방 · ${auraNight.clinicPreventedGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),

@@ -2,6 +2,18 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: "noah_community_table",
+    triggerStoryEventId: "noah-table",
+    triggerStoryChoiceId: "community_kitchen",
+    priority: 165,
+    kicker: "JUJU HOTEL · COMMON TABLE",
+    title: "배급표 대신 놓인 접시",
+    body: "Noah는 잠겨 있던 식당 문을 열고 남은 통조림과 말린 뿌리, 향신료를 한 냄비에 모았다. 장부의 몫은 그대로였지만 따로 끓일 때 버리던 물과 불, 남은 조각이 한 끼로 돌아왔다. 투숙객들은 객실 번호가 아니라 빈 의자 순서대로 앉았다. 부엌 열쇠는 다시 그의 허리에 있었고, 배급 기록은 누구나 볼 수 있는 식탁 끝에 놓였다.",
+    quote: "더 만든 게 아니에요. 버리지 않고 같이 먹은 겁니다.",
+    image: "/juminjung/assets/cutscenes/noah-community-table-v1.png",
+    imageAlt: "노아 그랜트가 낡은 JUJU HOTEL 식당의 긴 공동 식탁에 따뜻한 스튜를 나누고, 투숙객들이 객실 번호 대신 빈 의자에 둘러앉은 가운데 공개 배급 장부가 놓인 장면.",
+  },
+  {
     id: "thomas_microgrid_online",
     triggerStoryEventId: "thomas-grid",
     triggerStoryChoiceId: "microgrid",
