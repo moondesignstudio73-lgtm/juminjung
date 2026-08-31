@@ -6,7 +6,7 @@ export const ENDING_NARRATIVES: EndingNarrative[] = [
     { id: "charter", title: "JUJU HOTEL 헌장", body: "당신은 프런트 장부의 빈 페이지에 배급, 경계, 치료의 규칙을 쓴다. 누구도 방 하나를 독점하지 않고, 누구도 문밖의 목소리를 혼자 판단하지 않는다.", quote: "열쇠는 방을 잠그는 물건이 아니라 서로의 책임을 여는 증표가 되었다." },
     { id: "epilogue", title: "SAFE HAVEN", body: "몇 계절 뒤, 낡은 간판 아래에는 밤마다 따뜻한 등이 켜진다. 여행자들은 폐허의 지도에 JUJU HOTEL을 집을 뜻하는 작은 원으로 표시한다.", quote: "MAY I HAVE A ROOM? — 네. 함께 지킬 방이 있습니다." },
   ] },
-  { endingId: "THE_TRUTH", kicker: "FINAL EVENT · 기록 보관실", scenes: [
+  { endingId: "THE_TRUTH", kicker: "FINAL EVENT · 기록 보관실", image: "/juminjung/assets/cutscenes/ending-the-truth-v1.png", imageAlt: "Lily와 Vale가 호텔 지하 기록실에서 아버지의 테이프, 생체 샘플, 음성 파형과 도시 지도를 대조하며 괴물의 기원을 밝혀내는 장면.", scenes: [
     { id: "archive", title: "아버지의 마지막 테이프", body: "Lily의 문서와 Vale의 연구를 겹치자 지하 보관실 번호가 드러난다. 테이프 속 아버지는 재난이 감염이 아니라, 사람의 기억을 흉내 내는 실험에서 시작됐다고 고백한다.", quote: "‘내가 문을 닫은 건 널 가두기 위해서가 아니라, 저것이 네 목소리를 배우지 못하게 하려던 거다.’" },
     { id: "broadcast", title: "진실의 주파수", body: "호텔 안테나가 도시 전역으로 연구 기록과 대응법을 송출한다. 방송이 이어질수록 어둠 속에서 가족의 목소리를 흉내 내던 것들이 하나씩 침묵한다.", quote: "진실은 세상을 되돌리지 못했지만, 거짓 목소리와 싸울 이름을 주었다." },
     { id: "epilogue", title: "THE TRUTH", body: "당신은 아버지를 용서하지도, 완전히 미워하지도 못한다. 대신 모든 기록을 공개 보관하고 다음 세대가 같은 문을 만들지 못하게 지킨다.", quote: "괴물의 이름을 알게 된 날, 우리는 처음으로 그것을 두려움 밖에서 바라보았다." },

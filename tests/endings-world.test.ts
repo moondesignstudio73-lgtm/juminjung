@@ -21,6 +21,12 @@ test("7개 엔딩은 각각 고유한 3막 최종 사건과 에필로그를 가�
   }
 });
 
+test("THE TRUTH 엔딩은 지하 기록실 전용 원화와 대체 텍스트를 데이터에서 제공한다", () => {
+  const truth = ENDING_NARRATIVES.find((narrative) => narrative.endingId === "THE_TRUTH")!;
+  assert.equal(truth.image, "/juminjung/assets/cutscenes/ending-the-truth-v1.png");
+  assert.match(truth.imageAlt ?? "", /Lily.*Vale.*지하 기록실/);
+});
+
 test("조건이 충족된 여러 엔딩은 자동 종료 없이 동시에 AVAILABLE이 된다", () => {
   const state = createInitialGameState();
   Object.assign(state.flags, { military_resistance_failed: true });

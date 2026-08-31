@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { CUTSCENES } from "../game/cutscene-data.ts";
+import { ENDING_NARRATIVES } from "../game/ending-narrative-data.ts";
 import { normalizePrologueIndex, PROLOGUE_BEATS } from "../game/prologue-data.ts";
 
 function assertLandscapePng(asset: string) {
@@ -12,7 +13,8 @@ function assertLandscapePng(asset: string) {
 }
 
 test("프롤로그와 사건 컷신은 실제 1672×941 와이드 PNG 원화를 사용한다", () => {
-  const assets = new Set([...PROLOGUE_BEATS.map((beat) => beat.image), ...CUTSCENES.map((cutscene) => cutscene.image)]);
+  const endingAssets = ENDING_NARRATIVES.flatMap((narrative) => narrative.image ? [narrative.image] : []);
+  const assets = new Set([...PROLOGUE_BEATS.map((beat) => beat.image), ...CUTSCENES.map((cutscene) => cutscene.image), ...endingAssets]);
   for (const asset of assets) assertLandscapePng(asset);
 });
 
