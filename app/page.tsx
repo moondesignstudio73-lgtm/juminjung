@@ -29,6 +29,7 @@ import { dismissCutscene } from '@/game/cutscene-manager';
 import { normalizePrologueIndex, PROLOGUE_BEATS } from '@/game/prologue-data';
 import { DEFAULT_FRONT_DESK_BACKGROUND } from '@/game/background-data';
 import { beginSpriteLoad, canDisplaySprite, completeSpriteLoad, failSpriteLoad, shouldDisplaySpritePlaceholder, type SpriteLoadState } from '@/game/sprite-load-manager';
+import { applyVisitorQuestionClue, getAvailableVisitorQuestions, getVisitorClueRule, getVisitorTraitLabel } from '@/game/visitor-clue-data';
 import type { AuraDefinition, FacilityId, GameState, Guest, GuestExpression, HotelActionId, Room } from '@/game/types';
 
 type UiSave = GameState & { prologue: number };
@@ -67,8 +68,10 @@ export default function Home() {
 
   const update = (patch: Partial<UiSave>) => setSave((current) => ({ ...current, ...patch }));
   const reset = () => { clearBrowserGame(); setSave(makeInitial()); setDialogue(''); setSelectedItem(null); };
-  const ask = (id: string, answer: string) => {
-    update({ asked: [...new Set([...save.asked, id])] }); setDialogue(answer); setShowQuestions(false);
+  const ask = (question: Guest['questions'][number]) => {
+    const result = applyVisitorQuestionClue(save.guests, visitor.id, question.id, save.inspected);
+    update({ guests:result.guests, asked: [...new Set([...save.asked, question.id])] });
+    setDialogue(`“${question.answer}”${result.applied&&result.rule?`\n\n[확인된 단서] ${result.rule.finding}`:''}`); setShowQuestions(false);
   };
   const inspect = (id: string) => {
     update({ inspected: [...new Set([...save.inspected, id])] }); setSelectedItem(id);
@@ -140,7 +143,10 @@ export default function Home() {
 
   if (!eligibleVisitor) return <QuietDesk day={save.day} resources={save.resources} staying={save.guests.filter((guest)=>guest.status==='STAYING').length} onManage={() => update({ phase: 'management' })} onEnd={() => setSave((current) => routeToNight({ ...current, decision:'refuse' }))} />;
   const availableItems = visitor.offeredItems.filter((item) => !item.negotiatedOnly || save.negotiated);
+  const availableQuestions = getAvailableVisitorQuestions(visitor, save.inspected);
   const detail = visitor.offeredItems.find((item) => item.id === selectedItem);
+  const detailClue = detail ? getVisitorClueRule(visitor.id,'ITEM',detail.id) : null;
+  const unlockedQuestion = detailClue?.unlocksQuestionId ? visitor.questions.find((question)=>question.id===detailClue.unlocksQuestionId) : null;
   const DetailIcon = detail ? itemIcons[detail.type] : Inspect;
   return (
     <main className="game-shell">
@@ -166,6 +172,7 @@ export default function Home() {
             <div><dt>위험도</dt><dd>{visitor.riskLevel}</dd></div>
           </dl>
           <div className="clue-count">단서 {save.asked.length + save.inspected.length} / {visitor.questions.length + visitor.offeredItems.length}<small>숨겨진 특성은 조사 전 표시되지 않습니다.</small></div>
+          {visitor.discoveredTraits.length>0&&<div className="verified-traits"><span>확인된 특성</span>{visitor.discoveredTraits.map((trait)=><b key={trait}>{getVisitorTraitLabel(visitor.id,trait)}</b>)}</div>}
           {visitorReaction&&<div className="faction-reaction"><span>{visitorReaction.faction.toUpperCase()} REACTION</span><strong>{visitorReaction.label}</strong><small>Trust {visitorReaction.trustDelta>0?'+':''}{visitorReaction.trustDelta}{visitorReaction.offerBonus?' · 추가 제안 있음':''}</small></div>}
         </aside>
         <aside className="hotel-status right-panel">
@@ -185,7 +192,7 @@ export default function Home() {
             <Button variant="secondary" title="추가 숙박 대가를 요구합니다." disabled={save.negotiated} onClick={() => { update({ negotiated:true }); setDialogue(`“${visitor.negotiationDialogue}”`); }}><Droplets/> 협상</Button>
             <Button variant="secondary" title="방문자를 현관 안쪽에 잠시 대기시킵니다." disabled={save.held} onClick={() => { update({ held:true }); setDialogue('꺼져가는 현관등 아래 그녀를 잠시 대기시킨다. 등 뒤 유리문에서 무언가 한 번 길게 긁히는 소리가 난다.'); }}><Radio/> 보류</Button>
           </div>
-          {showQuestions && <div className="question-menu">{visitor.questions.map((q) => <button key={q.id} className={save.asked.includes(q.id) ? 'asked' : ''} onClick={() => ask(q.id,`“${q.answer}”`)}>{q.label}<ChevronRight/></button>)}</div>}
+          {showQuestions && <div className="question-menu">{availableQuestions.map((q) => <button key={q.id} className={save.asked.includes(q.id) ? 'asked' : ''} onClick={() => ask(q)}>{q.label}<ChevronRight/></button>)}{availableQuestions.length<visitor.questions.length&&<small className="locked-question-hint">물품을 조사하면 추가 질문이 열립니다.</small>}</div>}
         </div>
         <div className="decision-bar">
           <p><span>호텔 규칙 01</span> 이 문을 통과한 모든 사람은 당신의 책임입니다.</p>
@@ -194,7 +201,7 @@ export default function Home() {
         </div>
       </section>
 
-      {detail && <div className="modal-backdrop" onClick={() => setSelectedItem(null)}><section className="item-modal" role="dialog" aria-modal="true" aria-labelledby="item-title" onClick={(e) => e.stopPropagation()}><span className="panel-label">조사 기록 · {detail.id.toUpperCase()}</span><DetailIcon/><h2 id="item-title">{detail.name}</h2><p>{detail.short}</p><blockquote>{detail.detail}</blockquote><Button onClick={() => setSelectedItem(null)}>프런트로 돌아가기</Button></section></div>}
+      {detail && <div className="modal-backdrop" onClick={() => setSelectedItem(null)}><section className="item-modal" role="dialog" aria-modal="true" aria-labelledby="item-title" onClick={(e) => e.stopPropagation()}><span className="panel-label">조사 기록 · {detail.id.toUpperCase()}</span><DetailIcon/><h2 id="item-title">{detail.name}</h2><p>{detail.short}</p><blockquote>{detail.detail}</blockquote>{detailClue&&<div className="clue-unlock"><strong>새 단서</strong><p>{detailClue.finding}</p>{unlockedQuestion&&<small>질문 해금 · {unlockedQuestion.label}</small>}</div>}<Button onClick={() => setSelectedItem(null)}>프런트로 돌아가기</Button></section></div>}
     </main>
   );
 }
