@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { getInjuryRecovery, recalculateRoomEffects } from "../game/aura-effect-manager.ts";
-import { getNightFoodDemand, isCareTeamEligible, resolveAuraNight } from "../game/aura-night-manager.ts";
+import { getNightFoodDemand, getNightWaterDemand, isCareTeamEligible, resolveAuraNight } from "../game/aura-night-manager.ts";
 import { resolveDay } from "../game/day-manager.ts";
 import { createInitialGameState } from "../game/save-manager.ts";
 import { assignGuest } from "../game/room-manager.ts";
@@ -95,6 +95,27 @@ test("공동 식당은 혼자 남은 투숙객의 식량 수요를 0으로 만�
   const result = resolveAuraNight(state.rooms,state.guests,1,"STABLE",0,{noah_community_kitchen:true});
   assert.equal(result.foodDemand,1);
   assert.equal(result.communityKitchenFoodSaving,0);
+});
+
+test("Rosa의 공동 생활조는 배정된 투숙객 두 명 이상일 때 물 수요를 1 절감한다", () => {
+  const state=place([["walter",101],["claire",110]]);
+  assert.deepEqual(getNightWaterDemand(state.guests),{demand:2,saving:0});
+  assert.deepEqual(getNightWaterDemand(state.guests,{rosa_household_network:true}),{demand:1,saving:1});
+  const result=resolveAuraNight(state.rooms,state.guests,1,"STABLE",0,{rosa_household_network:true});
+  assert.equal(result.waterDemand,1);
+  assert.equal(result.householdWaterSaving,1);
+});
+
+test("공동 생활조는 한 명만 남거나 객실이 없는 투숙객 때문에 물 수요를 0으로 만들지 않는다", () => {
+  const state=place([["walter",101]]);
+  state.guests=state.guests.map((guest)=>guest.id==="mia"?{...guest,status:"STAYING" as const,currentRoomNumber:null}:guest);
+  assert.deepEqual(getNightWaterDemand(state.guests,{rosa_household_network:true}),{demand:1,saving:0});
+});
+
+test("공동 생활조는 객실 번호가 남은 비투숙객을 인원과 절감 기준에서 제외한다", () => {
+  const state=place([["walter",101],["claire",110]]);
+  state.guests=state.guests.map((guest)=>guest.id==="claire"?{...guest,status:"CHECKED_OUT" as const}:guest);
+  assert.deepEqual(getNightWaterDemand(state.guests,{rosa_household_network:true}),{demand:1,saving:0});
 });
 
 test("Samuel의 민간 경비대는 본인 체크아웃 뒤에도 야간 치안과 범죄를 보정한다", () => {
@@ -274,6 +295,18 @@ test("DAY 정산은 공동 식당의 실제 식량 절감과 공개 배급 로�
   const resolved=resolveDay(state);
   assert.equal(resolved.lastDaySummary?.consumed.food,1);
   assert.ok(resolved.eventHistory.some((entry)=>entry.message==="공동 식당 배급 · 식량 1 절감"));
+});
+
+test("DAY 정산은 공동 생활조의 실제 물 절감과 배급 로그를 반영한다", () => {
+  const state=place([["walter",101],["claire",110]]);
+  state.phase="night";
+  state.flags.rosa_household_network=true;
+  state.selectedNightEventId="quiet_watch";
+  state.selectedNightChoiceId="rest";
+  state.guests=state.guests.map((guest)=>guest.status==="STAYING"?{...guest,remainingNights:2}:guest);
+  const resolved=resolveDay(state);
+  assert.equal(resolved.lastDaySummary?.consumed.water,1);
+  assert.ok(resolved.eventHistory.some((entry)=>entry.message==="공동 생활조 배급 · 물 1 절감"));
 });
 
 test("DAY 정산은 민간 경비대의 지속 치안·범죄 보정과 순찰 로그를 반영한다", () => {

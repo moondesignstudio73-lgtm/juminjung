@@ -433,6 +433,23 @@ test("Ruth의 순회 간호대는 호텔 공동 돌봄 효과와 전용 컷신�
   assert.equal(result.activeCutsceneId,null);
 });
 
+test("Rosa의 공동 생활조는 지속 배급과 전용 컷신을 열고 저장된다", () => {
+  const result=applyStoryChoice(resolutionState("rosa"),"rosa-family","household").state;
+  assert.equal(result.flags.rosa_household_network,true);
+  assert.equal(result.activeCutsceneId,"rosa_household_network");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/rosa-household-network-v1.png");
+  const restored=restoreGameState(serializeGameState(result));
+  assert.equal(restored.flags.rosa_household_network,true);
+  assert.equal(restored.activeCutsceneId,"rosa_household_network");
+});
+
+test("Rosa의 가족 안전 구역은 공동 생활조 물 절감과 전용 컷신을 열지 않는다", () => {
+  const result=applyStoryChoice(resolutionState("rosa"),"rosa-family","family_room").state;
+  assert.equal(result.flags.rosa_family_zone,true);
+  assert.equal(result.flags.rosa_household_network,undefined);
+  assert.equal(result.activeCutsceneId,null);
+});
+
 test("Hazel의 외곽 경계대는 지속 경보망과 전용 컷신을 열고 저장된다", () => {
   const result = applyStoryChoice(resolutionState("hazel"), "hazel-watch", "ranger").state;
   assert.equal(result.flags.hazel_ranger_watch, true);

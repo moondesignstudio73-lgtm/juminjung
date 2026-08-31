@@ -60,6 +60,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - Noah's recovery route can open a dedicated illustrated community table that saves one food unit whenever at least two residents share a meal; food-shortage events use the same Aura- and kitchen-adjusted demand as nightly consumption
 - Samuel's accountable civilian-watch route opens a dedicated illustrated handover and permanently adds two Security while removing two Crime each night, with logs limited to the change that actually fits the hotel-stat boundaries
 - Ruth's community-care route opens a dedicated illustrated handover and permanently gives assigned children, elders, pregnant residents, injured residents, and sick residents up to three Health recovery and four Stress relief each night, logging only residents who actually receive care
+- Rosa's shared-household route opens a dedicated illustrated corridor routine and saves one water unit whenever at least two assigned residents share washing and ration-preparation work; the same demand drives actual nightly consumption and its hotel log
 
 ## Next system priorities
 

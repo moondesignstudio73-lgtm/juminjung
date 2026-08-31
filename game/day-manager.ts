@@ -28,7 +28,7 @@ export function resolveDay(state: GameState): GameState {
   const staying = auraNight.guests.filter((guest) => guest.status === "STAYING" && guest.currentRoomNumber !== null);
   const stayingIds = new Set(staying.map((guest) => guest.id));
   const microgridActive = state.flags.generator_network_stable === true;
-  const demand = { food: auraNight.foodDemand, water: staying.length, fuel: microgridActive ? 0 : BASE_GENERATOR_FUEL_DEMAND };
+  const demand = { food: auraNight.foodDemand, water: auraNight.waterDemand, fuel: microgridActive ? 0 : BASE_GENERATOR_FUEL_DEMAND };
   const consumed = { food: Math.min(state.resources.food, demand.food), water: Math.min(state.resources.water, demand.water), fuel: Math.min(state.resources.fuel, demand.fuel) };
   const checkedOutGuestIds: string[] = [];
   const guests = auraNight.guests.map((guest) => {
@@ -69,6 +69,7 @@ export function resolveDay(state: GameState): GameState {
     { day: state.day, type: "RESOURCE", message: `식량 ${consumed.food}, 물 ${consumed.water}, 연료 ${consumed.fuel} 소비` },
     ...(microgridActive ? [{day:state.day,type:"RESOURCE" as const,message:`독립 마이크로그리드 · 기본 발전기 연료 ${BASE_GENERATOR_FUEL_DEMAND} 절감`}] : []),
     ...(auraNight.communityKitchenFoodSaving ? [{day:state.day,type:"RESOURCE" as const,message:`공동 식당 배급 · 식량 ${auraNight.communityKitchenFoodSaving} 절감`}] : []),
+    ...(auraNight.householdWaterSaving ? [{day:state.day,type:"RESOURCE" as const,message:`공동 생활조 배급 · 물 ${auraNight.householdWaterSaving} 절감`}] : []),
     ...(auraNight.tradeBonus.food||auraNight.tradeBonus.parts ? [{day:state.day,type:"RESOURCE" as const,message:`Aura 교역 · 식량 +${auraNight.tradeBonus.food} · 부품 +${auraNight.tradeBonus.parts}`}] : []),
     ...(auraNight.sickGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`객실 질병 발생 · ${auraNight.sickGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
     ...(auraNight.clinicPreventedGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`상설 진료소 예방 · ${auraNight.clinicPreventedGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),

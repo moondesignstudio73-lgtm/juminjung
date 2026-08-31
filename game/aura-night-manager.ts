@@ -4,6 +4,7 @@ import type { AuraMetric, EventFlags, Guest, Room, WorldState } from "./types.ts
 export type AuraNightResolution = {
   guests:Guest[];
   foodDemand:number;
+  waterDemand:number;
   securityDelta:number;
   hotelConditionDelta:number;
   crimeDelta:number;
@@ -16,6 +17,7 @@ export type AuraNightResolution = {
   civilGuardSecurityGain:number;
   civilGuardCrimeReduction:number;
   careTeamGuestIds:string[];
+  householdWaterSaving:number;
 };
 
 const clamp = (value:number,min=0,max=100) => Math.max(min,Math.min(max,value));
@@ -30,6 +32,7 @@ export const CIVIL_GUARD_SECURITY_GAIN = 2;
 export const CIVIL_GUARD_CRIME_REDUCTION = 2;
 export const CARE_TEAM_HEALTH_RECOVERY = 3;
 export const CARE_TEAM_STRESS_RELIEF = 4;
+export const HOUSEHOLD_NETWORK_WATER_SAVING = 1;
 
 export function isCareTeamEligible(guest:Guest):boolean {
   return guest.age<18||guest.age>=65||guest.health<80||guest.infectionState!=="HEALTHY"||guest.baseTraits.includes("Pregnant");
@@ -46,10 +49,17 @@ export function getNightFoodDemand(rooms:Room[], guests:Guest[], flags:EventFlag
   return {demand:demandBeforeKitchen-saving,saving};
 }
 
+export function getNightWaterDemand(guests:Guest[], flags:EventFlags={}):{demand:number;saving:number} {
+  const residentCount = guests.filter((guest)=>guest.status==="STAYING"&&guest.currentRoomNumber!==null).length;
+  const saving = flags.rosa_household_network===true&&residentCount>=2 ? Math.min(HOUSEHOLD_NETWORK_WATER_SAVING,residentCount) : 0;
+  return {demand:residentCount-saving,saving};
+}
+
 export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, worldState:WorldState, baseDiseaseChance=diseaseBaseChance[worldState], flags:EventFlags={}):AuraNightResolution {
   const staying = guests.filter((guest)=>guest.status==="STAYING"&&guest.currentRoomNumber!==null);
   const guestById = new Map(guests.map((guest)=>[guest.id,guest]));
   const food = getNightFoodDemand(rooms,guests,flags);
+  const water = getNightWaterDemand(guests,flags);
   let securityScore = 0;
   let breakdownScore = 0;
   let crimeScore = 0;
@@ -108,6 +118,7 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
   return {
     guests:guests.map((guest)=>updatedById.get(guest.id)??guest),
     foodDemand:food.demand,
+    waterDemand:water.demand,
     securityDelta,
     hotelConditionDelta:clamp(Math.round(-breakdownScore/10),-10,10),
     crimeDelta,
@@ -120,5 +131,6 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
     civilGuardSecurityGain,
     civilGuardCrimeReduction,
     careTeamGuestIds,
+    householdWaterSaving:water.saving,
   };
 }

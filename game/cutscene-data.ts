@@ -2,6 +2,18 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: "rosa_household_network",
+    triggerStoryEventId: "rosa-family",
+    triggerStoryChoiceId: "household",
+    priority: 165,
+    kicker: "JUJU HOTEL · SHARED HOUSEHOLDS",
+    title: "객실 번호 사이에 생긴 가족",
+    body: "Rosa는 사람들을 혈연이 아니라 하루의 일을 나눌 수 있는 작은 생활조로 묶었다. 한 조는 공동 세면대의 물을 받아 객실 주전자에 나눴고, 다른 조는 젖은 옷과 붕대를 한 번에 씻어 난방관 곁에 걸었다. 아이와 노인이 있는 방에는 먼저 따뜻한 물이 돌아갔다. 각자 잠근 객실 문은 그대로였지만, 복도에는 누가 오늘 물을 길었고 누가 내일 늦잠을 자도 되는지 아는 사람들이 생겼다.",
+    quote: "가족은 같은 피가 아니라, 누가 물을 길 차례인지 기억해 주는 사람들이에요.",
+    image: "/juminjung/assets/cutscenes/rosa-household-network-v1.png",
+    imageAlt: "로사 마르티네즈가 JUJU HOTEL 복도 공동 세면대에서 주민들과 물을 주전자에 나누고, 다른 주민들이 젖은 옷과 붕대를 함께 씻어 난방관 곁에 거는 장면.",
+  },
+  {
     id: "ruth_care_team",
     triggerStoryEventId: "ruth-home",
     triggerStoryChoiceId: "care_team",
