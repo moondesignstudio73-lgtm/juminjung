@@ -15,6 +15,7 @@ export type AuraNightResolution = {
   communityKitchenFoodSaving:number;
   civilGuardSecurityGain:number;
   civilGuardCrimeReduction:number;
+  careTeamGuestIds:string[];
 };
 
 const clamp = (value:number,min=0,max=100) => Math.max(min,Math.min(max,value));
@@ -27,6 +28,12 @@ export const PERIMETER_ALARM_THREAT_REDUCTION = 3;
 export const COMMUNITY_KITCHEN_FOOD_SAVING = 1;
 export const CIVIL_GUARD_SECURITY_GAIN = 2;
 export const CIVIL_GUARD_CRIME_REDUCTION = 2;
+export const CARE_TEAM_HEALTH_RECOVERY = 3;
+export const CARE_TEAM_STRESS_RELIEF = 4;
+
+export function isCareTeamEligible(guest:Guest):boolean {
+  return guest.age<18||guest.age>=65||guest.health<80||guest.infectionState!=="HEALTHY"||guest.baseTraits.includes("Pregnant");
+}
 
 export function getNightFoodDemand(rooms:Room[], guests:Guest[], flags:EventFlags={}):{demand:number;saving:number} {
   const staying = guests.filter((guest)=>guest.status==="STAYING"&&guest.currentRoomNumber!==null);
@@ -50,15 +57,23 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
   let tradeScore = 0;
   const sickGuestIds:string[] = [];
   const clinicPreventedGuestIds:string[] = [];
+  const careTeamGuestIds:string[] = [];
   const clinicActive = flags.eleanor_clinic_established === true;
   const perimeterAlarmActive = flags.perimeter_alarm === true;
   const civilGuardActive = flags.samuel_civil_guard === true;
+  const careTeamActive = flags.ruth_care_team === true;
 
   const adjustedStats = new Map(staying.map((guest)=>{
     const room = rooms.find((candidate)=>candidate.roomNumber===guest.currentRoomNumber);
+    const auraStress = clamp(guest.stress+additiveValue(room,"stress"));
+    const careTeamEligible = careTeamActive&&isCareTeamEligible(guest);
+    const stress = careTeamEligible?clamp(auraStress-CARE_TEAM_STRESS_RELIEF):auraStress;
+    const health = careTeamEligible?clamp(guest.health+CARE_TEAM_HEALTH_RECOVERY):guest.health;
+    if (health>guest.health||stress<auraStress) careTeamGuestIds.push(guest.id);
     return [guest.id,{
-      stress:clamp(guest.stress+additiveValue(room,"stress")),
+      stress,
       trust:clamp(guest.trust+additiveValue(room,"trust")),
+      health,
     }] as const;
   }));
 
@@ -70,7 +85,7 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
     tradeScore += additiveValue(room,"trade");
     crimeScore += effectsFor(room,"theftRisk").reduce((sum,effect)=>sum+(((adjustedStats.get(effect.sourceGuestId)?.trust??guestById.get(effect.sourceGuestId)?.trust??100)<50)?effect.value:0),0);
 
-    const {stress,trust} = adjustedStats.get(guest.id)!;
+    const {stress,trust,health} = adjustedStats.get(guest.id)!;
     const unprotectedChance = room ? clamp(getDiseaseChance(room,"NORMAL_DISEASE",baseDiseaseChance)) : clamp(baseDiseaseChance);
     const clinicBaseChance = clinicActive ? clamp(baseDiseaseChance-ELEANOR_CLINIC_DISEASE_REDUCTION) : clamp(baseDiseaseChance);
     const chance = room ? clamp(getDiseaseChance(room,"NORMAL_DISEASE",clinicBaseChance)) : clinicBaseChance;
@@ -79,7 +94,7 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
     const preventedByClinic = guest.infectionState==="HEALTHY"&&clinicActive&&roll>=chance&&roll<unprotectedChance;
     if (becomesSick) sickGuestIds.push(guest.id);
     if (preventedByClinic) clinicPreventedGuestIds.push(guest.id);
-    return [guest.id,{...guest,stress,trust,health:becomesSick?clamp(guest.health-10):guest.health,infectionState:becomesSick?"SICK" as const:guest.infectionState}] as const;
+    return [guest.id,{...guest,stress,trust,health:becomesSick?clamp(health-10):health,infectionState:becomesSick?"SICK" as const:guest.infectionState}] as const;
   }));
 
   const threatWithoutAlarm = clamp(Math.round(threatScore/10),-10,10);
@@ -104,5 +119,6 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
     communityKitchenFoodSaving:food.saving,
     civilGuardSecurityGain,
     civilGuardCrimeReduction,
+    careTeamGuestIds,
   };
 }

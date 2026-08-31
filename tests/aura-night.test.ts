@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { getInjuryRecovery, recalculateRoomEffects } from "../game/aura-effect-manager.ts";
-import { getNightFoodDemand, resolveAuraNight } from "../game/aura-night-manager.ts";
+import { getNightFoodDemand, isCareTeamEligible, resolveAuraNight } from "../game/aura-night-manager.ts";
 import { resolveDay } from "../game/day-manager.ts";
 import { createInitialGameState } from "../game/save-manager.ts";
 import { assignGuest } from "../game/room-manager.ts";
@@ -104,6 +104,33 @@ test("Samuel의 민간 경비대는 본인 체크아웃 뒤에도 야간 치안�
   assert.equal(result.civilGuardCrimeReduction,2);
   assert.equal(result.securityDelta,2);
   assert.equal(result.crimeDelta,-2);
+});
+
+test("공동 돌봄팀 대상은 데이터로 판정하고 건강한 일반 성인에게 무차별 적용하지 않는다", () => {
+  const state=createInitialGameState();
+  const mia=state.guests.find((guest)=>guest.id==="mia")!;
+  const claire=state.guests.find((guest)=>guest.id==="claire")!;
+  const walter=state.guests.find((guest)=>guest.id==="walter")!;
+  assert.equal(isCareTeamEligible(mia),true);
+  assert.equal(isCareTeamEligible(claire),true);
+  assert.equal(isCareTeamEligible({...walter,health:79}),true);
+  assert.equal(isCareTeamEligible({...walter,age:45,health:100,infectionState:"HEALTHY",baseTraits:[]}),false);
+});
+
+test("Ruth가 체크아웃해도 공동 돌봄팀은 취약 투숙객만 실제 회복한다", () => {
+  const state=place([["mia",101],["claire",110],["walter",205]]);
+  state.guests=state.guests.map((guest)=>guest.id==="mia"?{...guest,health:70,stress:20}:guest.id==="claire"?{...guest,health:90,stress:20}:guest.id==="walter"?{...guest,age:45,health:100,stress:10,infectionState:"HEALTHY" as const,baseTraits:[]}:guest);
+  const withoutTeam=resolveAuraNight(state.rooms,state.guests,1,"STABLE",0);
+  const result=resolveAuraNight(state.rooms,state.guests,1,"STABLE",0,{ruth_care_team:true});
+  const mia=result.guests.find((guest)=>guest.id==="mia")!;
+  const claire=result.guests.find((guest)=>guest.id==="claire")!;
+  const walter=result.guests.find((guest)=>guest.id==="walter")!;
+  const miaWithout=withoutTeam.guests.find((guest)=>guest.id==="mia")!;
+  const claireWithout=withoutTeam.guests.find((guest)=>guest.id==="claire")!;
+  assert.deepEqual({health:mia.health-miaWithout.health,stress:miaWithout.stress-mia.stress},{health:3,stress:4});
+  assert.deepEqual({health:claire.health-claireWithout.health,stress:claireWithout.stress-claire.stress},{health:3,stress:4});
+  assert.deepEqual({health:walter.health,stress:walter.stress},{health:100,stress:10});
+  assert.deepEqual(result.careTeamGuestIds,["mia","claire"]);
 });
 
 test("Eleanor의 의료 Aura는 범위 안 질병만 막고 범위 밖 투숙객은 보호하지 않는다", () => {
@@ -295,4 +322,36 @@ test("객실 Aura가 야간 Security 보정 +10에 이미 도달하면 경비대
   const resolved=resolveDay(state);
   assert.equal(resolved.hotelStats.security,60);
   assert.equal(resolved.eventHistory.some((entry)=>entry.message.startsWith("민간 경비대 순찰")),false);
+});
+
+test("DAY 정산은 공동 돌봄팀이 실제 돌본 투숙객만 호텔 기록에 남긴다", () => {
+  const state=place([["mia",101],["walter",110]]);
+  state.phase="night";
+  state.flags.ruth_care_team=true;
+  state.selectedNightEventId="quiet_watch";
+  state.selectedNightChoiceId="rest";
+  state.guests=state.guests.map((guest)=>guest.id==="mia"?{...guest,health:70,stress:20,remainingNights:2}:guest.id==="walter"?{...guest,age:45,health:100,stress:0,infectionState:"HEALTHY" as const,baseTraits:[],remainingNights:2}:guest);
+  const resolved=resolveDay(state);
+  const mia=resolved.guests.find((guest)=>guest.id==="mia")!;
+  const walter=resolved.guests.find((guest)=>guest.id==="walter")!;
+  assert.deepEqual({health:mia.health,stress:mia.stress},{health:73,stress:3});
+  assert.deepEqual({health:walter.health,stress:walter.stress},{health:100,stress:0});
+  assert.ok(resolved.eventHistory.some((entry)=>entry.message==="공동 돌봄팀 돌봄 · 미아 카터"));
+});
+
+test("공동 돌봄 뒤 같은 밤 질병이 발생해도 회복 순서와 돌봄 기록을 보존한다", () => {
+  const state=place([["walter",101]]);
+  state.day=1;
+  state.phase="night";
+  state.worldState="UNREST";
+  state.flags.ruth_care_team=true;
+  state.selectedNightEventId="quiet_watch";
+  state.selectedNightChoiceId="rest";
+  state.guests=state.guests.map((guest)=>guest.id==="walter"?{...guest,health:70,infectionState:"HEALTHY" as const,remainingNights:2}:guest);
+  const resolved=resolveDay(state);
+  const walter=resolved.guests.find((guest)=>guest.id==="walter")!;
+  assert.equal(walter.infectionState,"SICK");
+  assert.equal(walter.health,63);
+  assert.ok(resolved.eventHistory.some((entry)=>entry.message==="공동 돌봄팀 돌봄 · 월터 브릭스"));
+  assert.ok(resolved.eventHistory.some((entry)=>entry.message==="객실 질병 발생 · 월터 브릭스"));
 });

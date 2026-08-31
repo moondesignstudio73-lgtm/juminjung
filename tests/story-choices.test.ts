@@ -416,6 +416,23 @@ test("Samuel의 구조대 경로는 민간 경비대 효과와 전용 컷신을 
   assert.equal(result.activeCutsceneId,null);
 });
 
+test("Ruth의 공동 돌봄팀은 지속 돌봄과 전용 컷신을 열고 저장된다", () => {
+  const result=applyStoryChoice(resolutionState("ruth"),"ruth-home","care_team").state;
+  assert.equal(result.flags.ruth_care_team,true);
+  assert.equal(result.activeCutsceneId,"ruth_care_team");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/ruth-community-care-v1.png");
+  const restored=restoreGameState(serializeGameState(result));
+  assert.equal(restored.flags.ruth_care_team,true);
+  assert.equal(restored.activeCutsceneId,"ruth_care_team");
+});
+
+test("Ruth의 순회 간호대는 호텔 공동 돌봄 효과와 전용 컷신을 열지 않는다", () => {
+  const result=applyStoryChoice(resolutionState("ruth"),"ruth-home","field_nurse").state;
+  assert.equal(result.flags.ruth_field_nurse,true);
+  assert.equal(result.flags.ruth_care_team,undefined);
+  assert.equal(result.activeCutsceneId,null);
+});
+
 test("Hazel의 외곽 경계대는 지속 경보망과 전용 컷신을 열고 저장된다", () => {
   const result = applyStoryChoice(resolutionState("hazel"), "hazel-watch", "ranger").state;
   assert.equal(result.flags.hazel_ranger_watch, true);

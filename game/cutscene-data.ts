@@ -2,6 +2,18 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: "ruth_care_team",
+    triggerStoryEventId: "ruth-home",
+    triggerStoryChoiceId: "care_team",
+    priority: 165,
+    kicker: "JUJU HOTEL · COMMUNITY CARE",
+    title: "병실 밖으로 이어진 돌봄",
+    body: "Ruth는 진료실 문에 걸려 있던 교대표를 복도 벽으로 옮겼다. 아이가 잠들지 못한 시간, 붕대를 바꿔야 할 객실, 혼자 계단을 오르기 힘든 사람의 이름 옆에 투숙객들이 차례로 자신의 시간을 적었다. 약품이 없는 자리에는 따뜻한 물과 깨끗한 천, 함께 앉아 줄 의자가 놓였다. 돌봄은 더는 의료진 두 사람의 밤샘이 아니라 호텔 전체가 지키는 생활 규칙이 되었다.",
+    quote: "살리는 일은 치료가 끝난 뒤에도 계속돼요. 이제 그 시간을 나눠 가질 수 있어요.",
+    image: "/juminjung/assets/cutscenes/ruth-community-care-v1.png",
+    imageAlt: "루스 벨이 낡은 JUJU HOTEL 복도에서 공동 돌봄 교대표를 정리하고, 주민들이 아이와 부상자의 객실에 따뜻한 물과 붕대, 의자를 가져가는 장면.",
+  },
+  {
     id: "samuel_civil_guard",
     triggerStoryEventId: "samuel-duty",
     triggerStoryChoiceId: "watch",
