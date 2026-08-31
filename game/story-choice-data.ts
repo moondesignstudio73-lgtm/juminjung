@@ -54,7 +54,7 @@ export const STORY_CHOICE_EVENTS: StoryChoiceEvent[] = [
     { id: "archive", label: "암호화해 호텔 금고에 보관한다", description: "기록을 해독하고 보존하되 최종 진실이 모일 때까지 공개를 미룹니다.", effect: { trust: 5, hotelStats: { security: 4 }, flags: { lily_documents_decoded: true, lily_truth_archived: true }, discoverTrait: "OriginDocuments" } },
   ] },
   { id: "vale-research", guestId: "vale", stage: "RESOLUTION", title: "괴물의 이름", description: "Vale의 연구는 괴물이 감염체가 아니라 인간의 기억을 모방하는 별개의 생명이라는 결론에 도달합니다.", quote: "‘이 결과를 완성하면, 우리도 이전의 인간으로 돌아갈 수 없습니다.’", choices: [
-    { id: "complete", label: "연구를 완성하고 Lily와 공유한다", description: "안정화한 샘플로 괴물 기원 연구를 완성해 THE TRUTH 경로의 핵심 증거로 남깁니다.", requiredFlags: { vale_sample_stabilized: true }, effect: { trust: 12, fatherStoryProgress: 10, flags: { vale_research_complete: true, lily_vale_research_shared: true }, relationship: { targetId: "lily", delta: 25 }, discoverTrait: "PreOutbreakResearch" } },
+    { id: "complete", label: "연구를 완성하고 Lily와 공유한다", description: "괴물 기원 증거와 반복 이동로를 공유해 THE TRUTH 경로를 열고 매일 밤 Monster Threat를 2 낮춥니다.", requiredFlags: { vale_sample_stabilized: true }, effect: { trust: 12, fatherStoryProgress: 10, flags: { vale_research_complete: true, lily_vale_research_shared: true }, relationship: { targetId: "lily", delta: 25 }, discoverTrait: "PreOutbreakResearch" } },
     { id: "destroy", label: "연구와 샘플을 소각한다", description: "호텔의 안전을 위해 연구를 포기하고 위협을 낮춥니다.", effect: { trust: -10, threat: -12, reputations: { humanitarian: 4 }, flags: { vale_research_destroyed: true } } },
   ] },
   { id: "daniel-proof", guestId: "daniel", stage: "CONFLICT", title: "찢긴 가족사진", description: "Daniel이 내민 사진은 Mia의 것과 닮았지만 날짜 부분이 뜯겨 있습니다.", quote: "‘저 아이가 날 기억하지 못해도, 내가 찾는 걸 멈출 순 없습니다.’", choices: [

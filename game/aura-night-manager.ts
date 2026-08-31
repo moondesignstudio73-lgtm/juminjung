@@ -15,6 +15,7 @@ export type AuraNightResolution = {
   clinicPreventedGuestIds:string[];
   perimeterAlarmThreatReduction:number;
   pathfinderThreatReduction:number;
+  researchPredictionThreatReduction:number;
   communityKitchenFoodSaving:number;
   civilGuardSecurityGain:number;
   civilGuardCrimeReduction:number;
@@ -39,6 +40,7 @@ export const HOUSEHOLD_NETWORK_WATER_SAVING = 1;
 export const PATHFINDER_THREAT_REDUCTION = 1;
 export const NURSERY_STRESS_RELIEF = 3;
 export const MUTUAL_AID_CONDITION_REPAIR = 1;
+export const RESEARCH_PREDICTION_THREAT_REDUCTION = 2;
 
 export function isCareTeamEligible(guest:Guest):boolean {
   return guest.age<18||guest.age>=65||guest.health<80||guest.infectionState!=="HEALTHY"||guest.baseTraits.includes("Pregnant");
@@ -86,6 +88,7 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
   const careTeamActive = flags.ruth_care_team === true;
   const nurseryActive = flags.claire_nursery === true;
   const mutualAidActive = flags.grace_mutual_aid === true;
+  const researchPredictionActive = flags.lily_vale_research_shared === true;
 
   const adjustedStats = new Map(staying.map((guest)=>{
     const room = rooms.find((candidate)=>candidate.roomNumber===guest.currentRoomNumber);
@@ -126,7 +129,8 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
 
   const threatWithoutAlarm = clamp(Math.round(threatScore/10),-10,10);
   const threatAfterAlarm = clamp(threatWithoutAlarm-(perimeterAlarmActive?PERIMETER_ALARM_THREAT_REDUCTION:0),-10,10);
-  const threatDelta = clamp(threatAfterAlarm-(pathfinderActive?PATHFINDER_THREAT_REDUCTION:0),-10,10);
+  const threatAfterPathfinder = clamp(threatAfterAlarm-(pathfinderActive?PATHFINDER_THREAT_REDUCTION:0),-10,10);
+  const threatDelta = clamp(threatAfterPathfinder-(researchPredictionActive?RESEARCH_PREDICTION_THREAT_REDUCTION:0),-10,10);
   const securityWithoutCivilGuard = clamp(Math.round(securityScore/10),-10,10);
   const securityDelta = clamp(securityWithoutCivilGuard+(civilGuardActive?CIVIL_GUARD_SECURITY_GAIN:0),-10,10);
   const civilGuardSecurityGain = securityDelta-securityWithoutCivilGuard;
@@ -148,7 +152,8 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
     sickGuestIds,
     clinicPreventedGuestIds,
     perimeterAlarmThreatReduction:threatWithoutAlarm-threatAfterAlarm,
-    pathfinderThreatReduction:threatAfterAlarm-threatDelta,
+    pathfinderThreatReduction:threatAfterAlarm-threatAfterPathfinder,
+    researchPredictionThreatReduction:threatAfterPathfinder-threatDelta,
     communityKitchenFoodSaving:food.saving,
     civilGuardSecurityGain,
     civilGuardCrimeReduction,

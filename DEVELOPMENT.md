@@ -64,6 +64,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - Eli's pathfinder route opens a dedicated illustrated safe-passage scene and reduces nightly Monster Threat by one through mapped back routes; settlement records only the reduction that survives the global threat floor
 - Claire's safe-nursery route opens a dedicated illustrated hotel-room refuge and gives three nightly Stress relief to assigned children and pregnant residents, independently tracking care when Ruth's broader community team is also active
 - Grace's mutual-aid route opens a dedicated illustrated repair shift and restores one Hotel Condition each night through shared maintenance, logging only repair that fits below the condition cap
+- Vale's completed research with Lily opens a dedicated illustrated behavior-map scene and reduces Monster Threat by two each night through shared prediction notes, logging only reduction that survives the global threat floor
 
 ## Next system priorities
 

@@ -54,9 +54,11 @@ export function resolveDay(state: GameState): GameState {
   const economy = getFacilityEconomy(state, afterGuestConsumption);
   const threatBeforeAuraNight = Math.max(0,Number(state.flags.monster_threat??0));
   const threatAfterAuraNight = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta);
-  const threatWithoutPathfinder = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta+auraNight.pathfinderThreatReduction);
-  const threatWithoutAlarm = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta+auraNight.pathfinderThreatReduction+auraNight.perimeterAlarmThreatReduction);
-  const appliedPathfinderThreatReduction = threatWithoutPathfinder-threatAfterAuraNight;
+  const threatWithoutResearchPrediction = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta+auraNight.researchPredictionThreatReduction);
+  const threatWithoutPathfinder = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta+auraNight.researchPredictionThreatReduction+auraNight.pathfinderThreatReduction);
+  const threatWithoutAlarm = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta+auraNight.researchPredictionThreatReduction+auraNight.pathfinderThreatReduction+auraNight.perimeterAlarmThreatReduction);
+  const appliedResearchPredictionThreatReduction = threatWithoutResearchPrediction-threatAfterAuraNight;
+  const appliedPathfinderThreatReduction = threatWithoutPathfinder-threatWithoutResearchPrediction;
   const appliedAlarmThreatReduction = threatWithoutAlarm-threatWithoutPathfinder;
   const securityWithoutCivilGuard = Math.max(0,Math.min(100,state.hotelStats.security+auraNight.securityDelta-auraNight.civilGuardSecurityGain));
   const securityAfterAuraNight = Math.max(0,Math.min(100,state.hotelStats.security+auraNight.securityDelta));
@@ -80,6 +82,7 @@ export function resolveDay(state: GameState): GameState {
     ...(auraNight.clinicPreventedGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`상설 진료소 예방 · ${auraNight.clinicPreventedGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
     ...(appliedAlarmThreatReduction ? [{day:state.day,type:"EVENT" as const,message:`외곽 조기경보망 가동 · Monster Threat 보정 -${appliedAlarmThreatReduction}`}] : []),
     ...(appliedPathfinderThreatReduction ? [{day:state.day,type:"EVENT" as const,message:`안전 통로 정찰 · Monster Threat 보정 -${appliedPathfinderThreatReduction}`}] : []),
+    ...(appliedResearchPredictionThreatReduction ? [{day:state.day,type:"EVENT" as const,message:`괴물 행동 예측 · Monster Threat 보정 -${appliedResearchPredictionThreatReduction}`}] : []),
     ...(appliedCivilGuardSecurityGain||appliedCivilGuardCrimeReduction ? [{day:state.day,type:"EVENT" as const,message:`민간 경비대 순찰${appliedCivilGuardSecurityGain?` · Security +${appliedCivilGuardSecurityGain}`:""}${appliedCivilGuardCrimeReduction?` · Crime -${appliedCivilGuardCrimeReduction}`:""}`}] : []),
     ...(auraNight.careTeamGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`공동 돌봄팀 돌봄 · ${auraNight.careTeamGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
     ...(auraNight.nurseryGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`안전 육아실 돌봄 · ${auraNight.nurseryGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),

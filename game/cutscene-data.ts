@@ -2,6 +2,18 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: "vale_behavior_map",
+    triggerStoryEventId: "vale-research",
+    triggerStoryChoiceId: "complete",
+    priority: 170,
+    kicker: "BASEMENT LAB · BEHAVIOR MAP",
+    title: "괴물에게도 반복되는 길이 있었다",
+    body: "Vale가 살아 있는 샘플의 반응을 시간대별로 겹치자 불규칙해 보이던 파형이 도시 지도 위의 이동로와 맞물렸다. Lily는 지워진 최초 목격 기록을 복원해 같은 지점에 붉은 핀을 꽂았다. 괴물은 사람의 목소리를 흉내 냈지만, 기억을 고르는 순서와 비를 피하는 경로까지 바꾸지는 못했다. 두 사람은 결론을 금고에 감추지 않고 경비 교대 장부에 옮겼다. 이제 순찰대는 형체를 본 뒤 대응하는 대신, 그것이 나타날 복도를 먼저 비울 수 있었다.",
+    quote: "정체를 다 알지는 못해도, 다음 움직임은 먼저 읽을 수 있어요.",
+    image: "/juminjung/assets/cutscenes/vale-lily-research-v1.png",
+    imageAlt: "닥터 베일과 릴리 첸이 JUJU HOTEL 지하 임시 연구실에서 밀봉된 검은 조직 샘플의 파형과 복원 문서, 도시 이동 지도를 대조해 괴물의 반복 경로를 찾아내는 장면.",
+  },
+  {
     id: "grace_mutual_aid",
     triggerStoryEventId: "grace-faith",
     triggerStoryChoiceId: "mutual_aid",

@@ -260,8 +260,23 @@ test("Vale의 연구 완성은 Lily 관계와 THE TRUTH 핵심 플래그를 기�
   const result = applyStoryChoice(state, "vale-research", "complete");
   const vale = result.state.guests.find((guest) => guest.id === "vale")!;
   assert.equal(result.state.flags.vale_research_complete, true);
+  assert.equal(result.state.flags.lily_vale_research_shared, true);
   assert.equal(vale.relationships.find((relation) => relation.targetId === "lily")?.value, 45);
   assert.ok(vale.discoveredTraits.includes("PreOutbreakResearch"));
+  assert.equal(result.state.activeCutsceneId,"vale_behavior_map");
+  assert.equal(getCutscene(result.state.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/vale-lily-research-v1.png");
+  const restored=restoreGameState(serializeGameState(result.state));
+  assert.equal(restored.flags.lily_vale_research_shared,true);
+  assert.equal(restored.activeCutsceneId,"vale_behavior_map");
+});
+
+test("Vale가 연구를 소각하면 행동 예측과 연구 완성 컷씬이 활성화되지 않는다", () => {
+  const state=resolutionState("vale");
+  state.flags.vale_sample_stabilized=true;
+  const result=applyStoryChoice(state,"vale-research","destroy").state;
+  assert.equal(result.flags.vale_research_complete,undefined);
+  assert.equal(result.flags.lily_vale_research_shared,undefined);
+  assert.equal(result.activeCutsceneId,null);
 });
 
 test("Lily와 Vale의 실제 선택 결과가 THE TRUTH를 해금한다", () => {

@@ -389,6 +389,58 @@ test("Eli의 길잡이 임명만 안전 통로의 지속 위협 감소를 활성
   assert.equal(pathfinder.threatDelta,-1);
 });
 
+test("Vale와 Lily의 공동 연구 완성만 괴물 행동 예측의 지속 위협 감소를 활성화한다", () => {
+  const state=place([["walter",101]]);
+  const researchOnly=resolveAuraNight(state.rooms,state.guests,1,"STABLE",0,{vale_research_complete:true});
+  const shared=resolveAuraNight(state.rooms,state.guests,1,"STABLE",0,{vale_research_complete:true,lily_vale_research_shared:true});
+  assert.equal(researchOnly.researchPredictionThreatReduction,0);
+  assert.equal(researchOnly.threatDelta,0);
+  assert.equal(shared.researchPredictionThreatReduction,2);
+  assert.equal(shared.threatDelta,-2);
+});
+
+test("DAY 정산은 괴물 행동 예측의 실제 위협 감소를 적용하고 기록한다", () => {
+  const state=place([["walter",101]]);
+  state.phase="night";
+  state.flags.lily_vale_research_shared=true;
+  state.flags.monster_threat=10;
+  state.selectedNightEventId="quiet_watch";
+  state.selectedNightChoiceId="rest";
+  state.guests=state.guests.map((guest)=>guest.id==="walter"?{...guest,remainingNights:2}:guest);
+  const resolved=resolveDay(state);
+  assert.equal(resolved.flags.monster_threat,8);
+  assert.ok(resolved.eventHistory.some((entry)=>entry.message==="괴물 행동 예측 · Monster Threat 보정 -2"));
+});
+
+test("경보망·안전 통로·행동 예측 순서로 위협 0 하한의 실제 감소량만 귀속한다", () => {
+  const cases=[
+    {threat:0,final:0,alarm:0,pathfinder:0,research:0},
+    {threat:2,final:0,alarm:2,pathfinder:0,research:0},
+    {threat:4,final:0,alarm:3,pathfinder:1,research:0},
+    {threat:5,final:0,alarm:3,pathfinder:1,research:1},
+    {threat:7,final:1,alarm:3,pathfinder:1,research:2},
+  ];
+  for (const expected of cases) {
+    const state=place([["walter",101]]);
+    state.phase="night";
+    state.flags.perimeter_alarm=true;
+    state.flags.eli_pathfinder=true;
+    state.flags.lily_vale_research_shared=true;
+    state.flags.monster_threat=expected.threat;
+    state.selectedNightEventId="quiet_watch";
+    state.selectedNightChoiceId="rest";
+    state.guests=state.guests.map((guest)=>guest.id==="walter"?{...guest,remainingNights:2}:guest);
+    const resolved=resolveDay(state);
+    const alarmLog=resolved.eventHistory.find((entry)=>entry.message.startsWith("외곽 조기경보망 가동"));
+    const pathfinderLog=resolved.eventHistory.find((entry)=>entry.message.startsWith("안전 통로 정찰"));
+    const researchLog=resolved.eventHistory.find((entry)=>entry.message.startsWith("괴물 행동 예측"));
+    assert.equal(resolved.flags.monster_threat,expected.final);
+    assert.equal(alarmLog?.message,expected.alarm?`외곽 조기경보망 가동 · Monster Threat 보정 -${expected.alarm}`:undefined);
+    assert.equal(pathfinderLog?.message,expected.pathfinder?`안전 통로 정찰 · Monster Threat 보정 -${expected.pathfinder}`:undefined);
+    assert.equal(researchLog?.message,expected.research?`괴물 행동 예측 · Monster Threat 보정 -${expected.research}`:undefined);
+  }
+});
+
 test("DAY 정산은 안전 통로의 실제 위협 감소를 적용하고 기록한다", () => {
   const state=place([["walter",101]]);
   state.phase="night";
