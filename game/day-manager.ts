@@ -8,6 +8,7 @@ import { getFacilityEconomy } from "./hotel-action-manager.ts";
 import { FACILITIES } from "./facility-data.ts";
 import { queueNightEventCutscene } from "./cutscene-manager.ts";
 import { resolveAuraNight } from "./aura-night-manager.ts";
+import { getNextRevisitDay } from "./visitor-manager.ts";
 import type { DaySummary, GameState, HotelLogEntry } from "./types.ts";
 
 const FACILITY_NAMES = Object.fromEntries(FACILITIES.map((facility) => [facility.id, facility.name])) as Record<string, string>;
@@ -35,7 +36,7 @@ export function resolveDay(state: GameState): GameState {
     const remainingNights = Math.max(0, guest.remainingNights - 1);
     if (remainingNights === 0) {
       checkedOutGuestIds.push(guest.id);
-      return { ...guest, health, remainingNights, currentRoomNumber: null, status: "CHECKED_OUT" as const };
+      return { ...guest, health, remainingNights, currentRoomNumber: null, status: "CHECKED_OUT" as const, storyFlags: { ...guest.storyFlags, last_checked_out_day: state.day, next_revisit_day: getNextRevisitDay(state.day) } };
     }
     return { ...guest, health, remainingNights };
   });

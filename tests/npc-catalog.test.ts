@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createGuests } from "../game/guest-data.ts";
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
-import { applyVisitorCheckInBenefits, applyVisitorReaction, collectVisitorOffer, discoverTrait, getEligibleVisitor, getVisitorReaction, getVisitorReactionById, markVisitorRefused } from "../game/visitor-manager.ts";
+import { applyVisitorCheckInBenefits, applyVisitorReaction, collectVisitorOffer, discoverTrait, getEligibleVisitor, getNextRevisitDay, getVisitorReaction, getVisitorReactionById, markVisitorRefused, prepareGuestCheckIn, REVISIT_COOLDOWN_DAYS, REVISIT_REFUSAL_DELAY_DAYS } from "../game/visitor-manager.ts";
 
 test("20명의 메인 NPC가 고유 ID와 완전한 기본 상태로 등록된다", () => {
   const guests = createGuests();
@@ -94,6 +94,91 @@ test("방문 일정은 DAY 범위와 WAITING 상태로 다음 손님을 선택�
   assert.equal(getEligibleVisitor(guests, 1)?.id, "eleanor");
   const refused = markVisitorRefused(guests, "eleanor");
   assert.equal(getEligibleVisitor(refused, 2)?.id, "walter");
+});
+
+test("최초 방문자는 재방문 가능한 체크아웃 손님보다 항상 우선한다", () => {
+  const guests = createGuests().map((guest) => guest.id === "eleanor"
+    ? { ...guest, status: "CHECKED_OUT" as const, checkedInDay: 1 }
+    : guest.id === "walter" ? guest : { ...guest, status: "REFUSED" as const });
+  assert.equal(getEligibleVisitor(guests, 20)?.id, "walter");
+});
+
+test("체크아웃 생존자는 숙박 종료와 5일 도로 대기 뒤 재방문한다", () => {
+  const guests = createGuests().map((guest) => guest.id === "eleanor" ? { ...guest, status: "CHECKED_OUT" as const, checkedInDay: 1 } : { ...guest, status: "REFUSED" as const });
+  const readyDay = 1 + guests[0].stayDuration + REVISIT_COOLDOWN_DAYS;
+  assert.equal(getEligibleVisitor(guests, readyDay - 1), null);
+  assert.equal(getEligibleVisitor(guests, readyDay)?.id, "eleanor");
+});
+
+test("재체크인은 날짜와 숙박기간만 새로 시작하고 기존 스토리·관계·상태를 보존한다", () => {
+  const guests = createGuests().map((guest) => guest.id === "eleanor" ? { ...guest, status: "CHECKED_OUT" as const, checkedInDay: 1, health: 72, trust: 83, discoveredTraits: ["TriageGuilt"], eventChain: guest.eventChain.map((event) => ({ ...event, completed: true })), storyFlags: { ...guest.storyFlags, visit_count: 1 } } : { ...guest, status: "REFUSED" as const });
+  const before = guests[0];
+  const prepared = prepareGuestCheckIn(guests, "eleanor", 305, 28)[0];
+  assert.equal(prepared.status, "STAYING");
+  assert.equal(prepared.currentRoomNumber, 305);
+  assert.equal(prepared.checkedInDay, 28);
+  assert.equal(prepared.remainingNights, prepared.stayDuration);
+  assert.equal(prepared.storyFlags.visit_count, 2);
+  assert.equal(prepared.health, before.health);
+  assert.equal(prepared.trust, before.trust);
+  assert.deepEqual(prepared.discoveredTraits, before.discoveredTraits);
+  assert.deepEqual(prepared.eventChain, before.eventChain);
+  assert.deepEqual(prepared.relationships, before.relationships);
+  assert.deepEqual(prepared.aura, before.aura);
+});
+
+test("방문 제안은 방문 횟수마다 한 번만 지급되고 날짜 변경으로 중복 수령할 수 없다", () => {
+  const state = createInitialGameState();
+  state.guests = state.guests.map((guest) => guest.id === "eleanor" ? guest : { ...guest, status: "REFUSED" as const });
+  const firstStay = prepareGuestCheckIn(state.guests, "eleanor", 301, 1);
+  const first = applyVisitorCheckInBenefits(state.resources, firstStay, "eleanor", false, null);
+  const duplicate = applyVisitorCheckInBenefits(first.resources, first.guests.map((guest) => guest.id === "eleanor" ? { ...guest, checkedInDay: 27 } : guest), "eleanor", false, null);
+  const checkedOut = duplicate.guests.map((guest) => guest.id === "eleanor" ? { ...guest, status: "CHECKED_OUT" as const, currentRoomNumber: null, storyFlags: { ...guest.storyFlags, next_revisit_day: 28 } } : guest);
+  const secondStay = prepareGuestCheckIn(checkedOut, "eleanor", 305, 28);
+  const revisit = applyVisitorCheckInBenefits(duplicate.resources, secondStay, "eleanor", false, null);
+  assert.equal(first.applied, true);
+  assert.equal(duplicate.applied, false);
+  assert.equal(revisit.applied, true);
+  assert.equal(revisit.resources.food, first.resources.food + Number(state.guests[0].offer.food));
+  assert.equal(revisit.resources.fuel, first.resources.fuel + Number(state.guests[0].offer.fuel));
+  assert.equal(revisit.resources.medicine, first.resources.medicine + Number(state.guests[0].offer.medicine));
+});
+
+test("재방문 거절은 영구 추방 대신 3일 뒤 다시 요청할 수 있게 한다", () => {
+  const guests = createGuests().map((guest) => guest.id === "eleanor" ? { ...guest, status: "CHECKED_OUT" as const, checkedInDay: 1 } : { ...guest, status: "REFUSED" as const });
+  const refused = markVisitorRefused(guests, "eleanor", 28);
+  assert.equal(refused[0].status, "CHECKED_OUT");
+  assert.equal(refused[0].storyFlags.revisit_refused_until, 28 + REVISIT_REFUSAL_DELAY_DAYS + 1);
+  assert.equal(getEligibleVisitor(refused, 31), null);
+  assert.equal(getEligibleVisitor(refused, 32)?.id, "eleanor");
+});
+
+test("재방문 횟수와 보상·거절 날짜는 저장 복원 후에도 유지된다", () => {
+  const state = createInitialGameState();
+  state.day = 28;
+  state.guests = state.guests.map((guest) => guest.id === "eleanor" ? guest : { ...guest, status: "REFUSED" as const });
+  const staying = prepareGuestCheckIn(state.guests, "eleanor", 305, 1);
+  state.guests = applyVisitorCheckInBenefits(state.resources, staying, "eleanor", false, null).guests.map((guest) => guest.id === "eleanor" ? { ...guest, status: "CHECKED_OUT" as const, currentRoomNumber: null, storyFlags: { ...guest.storyFlags, last_checked_out_day: 28, next_revisit_day: getNextRevisitDay(28), revisit_refused_until: 31 } } : guest);
+  const restored = restoreGameState(serializeGameState(state));
+  const eleanor = restored.guests.find((guest) => guest.id === "eleanor")!;
+  assert.equal(eleanor.storyFlags.visit_count, 1);
+  assert.equal(eleanor.storyFlags.checkin_benefits_visit_count, 1);
+  assert.equal(eleanor.storyFlags.revisit_refused_until, 31);
+  assert.equal(eleanor.storyFlags.next_revisit_day, 34);
+  assert.equal(getEligibleVisitor(restored.guests, 33), null);
+  assert.equal(getEligibleVisitor(restored.guests, 34)?.id, "eleanor");
+});
+
+test("체크인 준비는 현재 선택된 생존 방문자만 허용하고 쿨다운 우회를 거부한다", () => {
+  const guests = createGuests().map((guest) => guest.id === "eleanor" ? { ...guest, status: "CHECKED_OUT" as const, checkedInDay: 1, storyFlags: { ...guest.storyFlags, next_revisit_day: 20 } } : guest.id === "walter" ? guest : { ...guest, status: "REFUSED" as const });
+  assert.throws(() => prepareGuestCheckIn(guests, "eleanor", 301, 10), /현재 체크인할 수 없는/);
+  assert.throws(() => prepareGuestCheckIn(guests, "eleanor", 301, 20), /현재 체크인할 수 없는/);
+  assert.equal(prepareGuestCheckIn(guests, "walter", 301, 20).find((guest) => guest.id === "walter")?.status, "STAYING");
+});
+
+test("방문 제안은 실제 체크인이 끝나기 전에는 지급되지 않는다", () => {
+  const state = createInitialGameState();
+  assert.throws(() => applyVisitorCheckInBenefits(state.resources, state.guests, "eleanor", false, null), /체크인 완료 전/);
 });
 
 test("Daniel과 Hayes는 선행 NPC가 실제로 등장한 뒤에만 방문 가능하다", () => {
@@ -203,7 +288,8 @@ test("체크인 보상과 세력 반응은 같은 손님에게 한 번만 적용
   state.flags.refugees_sheltered = true;
   const rosa = state.guests.find((guest) => guest.id === "rosa")!;
   const reaction = getVisitorReaction(state, rosa)!;
-  const first = applyVisitorCheckInBenefits(state.resources, state.guests, rosa.id, false, reaction);
+  const stayingGuests = state.guests.map((guest) => guest.id === rosa.id ? { ...guest, status: "STAYING" as const, currentRoomNumber: 301, checkedInDay: 1, storyFlags: { ...guest.storyFlags, visit_count: 1 } } : guest);
+  const first = applyVisitorCheckInBenefits(state.resources, stayingGuests, rosa.id, false, reaction);
   const second = applyVisitorCheckInBenefits(first.resources, first.guests, rosa.id, false, reaction);
   assert.equal(first.applied, true);
   assert.equal(second.applied, false);

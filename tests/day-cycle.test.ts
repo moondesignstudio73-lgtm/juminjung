@@ -38,6 +38,8 @@ test("두 번째 밤이 끝나면 자동 체크아웃하고 Aura를 제거한다
   const day3 = resolveDay({ ...day2, phase: "night" });
   assert.equal(day3.guests[0].status, "CHECKED_OUT");
   assert.equal(day3.guests[0].currentRoomNumber, null);
+  assert.equal(day3.guests[0].storyFlags.last_checked_out_day, 2);
+  assert.equal(day3.guests[0].storyFlags.next_revisit_day, 8);
   assert.equal(day3.rooms.find((room) => room.roomNumber === 301)?.occupied, false);
   assert.equal(day3.rooms.some((room) => room.temporaryEffects.length > 0), false);
 });

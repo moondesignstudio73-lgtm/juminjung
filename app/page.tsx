@@ -24,7 +24,7 @@ import { FACILITIES } from '@/game/facility-data';
 import { buildFacility, canBuildFacility, performHotelAction } from '@/game/hotel-action-manager';
 import { canChooseNightChoice, selectNightEvent } from '@/game/night-event-manager';
 import { getHotelLogEntries } from '@/game/hotel-log-manager';
-import { applyVisitorCheckInBenefits, getEligibleVisitor, getVisitorReaction, getVisitorReactionById, markVisitorRefused } from '@/game/visitor-manager';
+import { applyVisitorCheckInBenefits, getEligibleVisitor, getNextRevisitDay, getVisitorReaction, getVisitorReactionById, markVisitorRefused, prepareGuestCheckIn } from '@/game/visitor-manager';
 import { getGuestVisualState, getNightEventPortraits, getStoryEventExpression } from '@/game/guest-visual-manager';
 import { getCutscene } from '@/game/cutscene-data';
 import { dismissCutscene } from '@/game/cutscene-manager';
@@ -49,8 +49,9 @@ export default function Home() {
   const [muted, setMuted] = useState(false);
   const [managedGuestId, setManagedGuestId] = useState<string | null>(null);
   const eligibleVisitor = getEligibleVisitor(save.guests, save.day, save.flags);
+  const isReturningVisitor = eligibleVisitor?.status === 'CHECKED_OUT';
   const visitor = eligibleVisitor ?? save.guests.find((guest) => guest.status === 'STAYING') ?? save.guests[0];
-  const visitorReaction = eligibleVisitor ? getVisitorReaction(save, eligibleVisitor) : null;
+  const visitorReaction = eligibleVisitor && !isReturningVisitor ? getVisitorReaction(save, eligibleVisitor) : null;
   const stayingGuests = getStayingGuestsForManagement(save.guests);
   const managedGuest = getManagedGuest(save.guests, managedGuestId) ?? visitor;
   const activeCutscene = getCutscene(save.activeCutsceneId);
@@ -66,8 +67,8 @@ export default function Home() {
   }, [save, hydrated]);
 
   useEffect(() => {
-    if (save.phase === 'desk' && eligibleVisitor) setDialogue(visitorReaction?.dialogue ?? `“${eligibleVisitor.introDialogue}”`);
-  }, [save.phase, save.day, eligibleVisitor?.id, visitorReaction?.id]);
+    if (save.phase === 'desk' && eligibleVisitor) setDialogue(isReturningVisitor ? `“길 위에서 다시 돌아왔습니다. 이번에도 ${eligibleVisitor.stayDuration}박을 부탁하죠. 지난번처럼 값을 치르겠습니다.”` : visitorReaction?.dialogue ?? `“${eligibleVisitor.introDialogue}”`);
+  }, [save.phase, save.day, eligibleVisitor?.id, isReturningVisitor, visitorReaction?.id]);
 
   const update = (patch: Partial<UiSave>) => setSave((current) => ({ ...current, ...patch }));
   const reset = () => { clearBrowserGame(); setSave(makeInitial()); setDialogue(''); setSelectedItem(null); setManagedGuestId(null); };
@@ -79,18 +80,17 @@ export default function Home() {
   const inspect = (id: string) => {
     update({ inspected: [...new Set([...save.inspected, id])] }); setSelectedItem(id);
   };
-  const refuse = () => setSave((current) => routeToNight({ ...current, guests: markVisitorRefused(current.guests, visitor.id), eventHistory: [...current.eventHistory, { day: current.day, type: 'EVENT', message: `${visitor.name} · 입실 거절` }], decision: 'refuse', pendingVisitorReactionId: null }));
+  const refuse = () => setSave((current) => routeToNight({ ...current, guests: markVisitorRefused(current.guests, visitor.id, current.day), eventHistory: [...current.eventHistory, { day: current.day, type: 'EVENT', message: `${visitor.name} · ${visitor.status === 'CHECKED_OUT' ? '재입실 거절' : '입실 거절'}` }], decision: 'refuse', pendingVisitorReactionId: null }));
   const openAssignment = (mode: 'checkin' | 'move') => update({ phase: 'assignment', assignmentMode: mode, selectedRoomNumber: null, pendingVisitorReactionId: mode === 'checkin' ? visitorReaction?.id ?? null : null });
   const confirmRoom = () => {
     if (save.selectedRoomNumber === null) return;
     const assignmentGuest = save.assignmentMode === 'move' ? managedGuest : visitor;
     const reaction = save.assignmentMode === 'checkin' ? getVisitorReactionById(assignmentGuest, save.pendingVisitorReactionId) : null;
-    const positionedGuests = save.guests.map((guest) => guest.id === assignmentGuest.id ? {
+    const positionedGuests = save.assignmentMode === 'checkin' ? prepareGuestCheckIn(save.guests, assignmentGuest.id, save.selectedRoomNumber, save.day, save.flags) : save.guests.map((guest) => guest.id === assignmentGuest.id ? {
       ...guest,
       currentRoomNumber: save.selectedRoomNumber,
       status: 'STAYING' as const,
-      checkedInDay: guest.checkedInDay ?? save.day,
-      remainingNights: save.assignmentMode === 'checkin' ? guest.stayDuration : guest.remainingNights,
+      remainingNights: guest.remainingNights,
     } : guest);
     const benefits = save.assignmentMode === 'checkin'
       ? applyVisitorCheckInBenefits(save.resources, positionedGuests, assignmentGuest.id, save.negotiated, reaction)
@@ -108,12 +108,12 @@ export default function Home() {
       rooms: recalculateRoomEffects(positioned, guests),
       flags: reactionApplied ? { ...roomFlags, [`visitor_reaction_${assignmentGuest.id}_${reactionApplied.id}`]: true } : roomFlags,
       resources: benefits.resources,
-      eventHistory: save.assignmentMode === 'checkin' ? [...save.eventHistory, { day: save.day, type: 'CHECK_IN' as const, message: `${visitor.name} · ${save.selectedRoomNumber}호 체크인` }, ...(reactionApplied ? [{ day: save.day, type: 'EVENT' as const, message: `세력 반응 · ${visitor.name} · ${reactionApplied.label}` }] : []), ...(arrival.entry ? [{ ...arrival.entry, day: save.day }] : [])] : save.eventHistory,
+      eventHistory: save.assignmentMode === 'checkin' ? [...save.eventHistory, { day: save.day, type: 'CHECK_IN' as const, message: `${visitor.name} · ${save.selectedRoomNumber}호 ${isReturningVisitor ? '재체크인' : '체크인'}` }, ...(reactionApplied ? [{ day: save.day, type: 'EVENT' as const, message: `세력 반응 · ${visitor.name} · ${reactionApplied.label}` }] : []), ...(arrival.entry ? [{ ...arrival.entry, day: save.day }] : [])] : save.eventHistory,
       decision: 'checkin', phase: 'management', assignmentMode: null, selectedRoomNumber: null, pendingVisitorReactionId: null,
     });
   };
   const checkout = () => {
-    const guests = save.guests.map((guest) => guest.id === managedGuest.id ? { ...guest, currentRoomNumber: null, status: 'CHECKED_OUT' as const, remainingNights: 0 } : guest);
+    const guests = save.guests.map((guest) => guest.id === managedGuest.id ? { ...guest, currentRoomNumber: null, status: 'CHECKED_OUT' as const, remainingNights: 0, storyFlags: { ...guest.storyFlags, last_checked_out_day: save.day, next_revisit_day: getNextRevisitDay(save.day) } } : guest);
     update({ guests, rooms: recalculateRoomEffects(checkoutGuest(save.rooms, managedGuest.id), guests), flags: managedGuest.id === ELEANOR_ID ? setGuestRoomFlags(save.flags, null) : save.flags, eventHistory: [...save.eventHistory, { day: save.day, type: 'CHECK_OUT', message: `${managedGuest.name} · 수동 체크아웃` }], decision: null, phase: 'desk' });
   };
 
