@@ -468,6 +468,25 @@ test("Eli의 창고 책임 경로는 안전 통로 효과와 전용 컷신을 �
   assert.equal(result.activeCutsceneId,null);
 });
 
+test("Claire의 안전 육아실은 지속 안정 효과와 전용 컷신을 열고 저장된다", () => {
+  const result=applyStoryChoice(resolutionState("claire"),"claire-future","nursery").state;
+  assert.equal(result.flags.claire_nursery,true);
+  assert.equal(result.activeCutsceneId,"claire_nursery");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/claire-safe-nursery-v1.png");
+  const restored=restoreGameState(serializeGameState(result));
+  assert.equal(restored.flags.claire_nursery,true);
+  assert.equal(restored.activeCutsceneId,"claire_nursery");
+});
+
+test("Claire의 의료 거점 이동은 호텔 육아실 효과와 전용 컷신을 열지 않는다", () => {
+  const state=resolutionState("claire");
+  state.resources.medicine=2;
+  const result=applyStoryChoice(state,"claire-future","safe_passage").state;
+  assert.equal(result.flags.claire_safe_passage,true);
+  assert.equal(result.flags.claire_nursery,undefined);
+  assert.equal(result.activeCutsceneId,null);
+});
+
 test("Hazel의 외곽 경계대는 지속 경보망과 전용 컷신을 열고 저장된다", () => {
   const result = applyStoryChoice(resolutionState("hazel"), "hazel-watch", "ranger").state;
   assert.equal(result.flags.hazel_ranger_watch, true);

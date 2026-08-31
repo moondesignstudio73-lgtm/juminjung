@@ -2,6 +2,18 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: "claire_nursery",
+    triggerStoryEventId: "claire-future",
+    triggerStoryChoiceId: "nursery",
+    priority: 165,
+    kicker: "JUJU HOTEL · SAFE NURSERY",
+    title: "밤을 낮게 밝히는 방",
+    body: "Claire는 깨진 객실 하나에서 무거운 가구를 문 쪽으로 옮기고, 남은 천으로 침상 사이에 작은 칸막이를 쳤다. 밝은 전등 대신 덮개를 씌운 황동등 하나만 남겼고, 병뚜껑과 오래된 열쇠로 만든 모빌은 바람이 불 때에도 작은 소리만 냈다. 아이와 임신한 주민이 먼저 잠들자 복도의 발걸음도 자연스럽게 느려졌다. 이곳은 세상이 안전하다고 거짓말하는 방이 아니라, 적어도 오늘 밤의 공포를 함께 낮춰 주는 방이 되었다.",
+    quote: "조용한 밤 하나가 사치라면, 그 사치는 우리가 지켜야 해요.",
+    image: "/juminjung/assets/cutscenes/claire-safe-nursery-v1.png",
+    imageAlt: "임신한 클레어 노박이 낡은 JUJU HOTEL 객실의 안전 육아실에서 잠든 아이에게 담요를 덮어 주고, 천 칸막이 뒤 다른 임신한 주민이 쉬는 장면.",
+  },
+  {
     id: "eli_safe_passage",
     triggerStoryEventId: "eli-keyring",
     triggerStoryChoiceId: "pathfinder",

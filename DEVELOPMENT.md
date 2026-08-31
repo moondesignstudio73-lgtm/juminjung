@@ -62,6 +62,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - Ruth's community-care route opens a dedicated illustrated handover and permanently gives assigned children, elders, pregnant residents, injured residents, and sick residents up to three Health recovery and four Stress relief each night, logging only residents who actually receive care
 - Rosa's shared-household route opens a dedicated illustrated corridor routine and saves one water unit whenever at least two assigned residents share washing and ration-preparation work; the same demand drives actual nightly consumption and its hotel log
 - Eli's pathfinder route opens a dedicated illustrated safe-passage scene and reduces nightly Monster Threat by one through mapped back routes; settlement records only the reduction that survives the global threat floor
+- Claire's safe-nursery route opens a dedicated illustrated hotel-room refuge and gives three nightly Stress relief to assigned children and pregnant residents, independently tracking care when Ruth's broader community team is also active
 
 ## Next system priorities
 

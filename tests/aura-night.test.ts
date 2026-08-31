@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { getInjuryRecovery, recalculateRoomEffects } from "../game/aura-effect-manager.ts";
-import { getNightFoodDemand, getNightWaterDemand, isCareTeamEligible, resolveAuraNight } from "../game/aura-night-manager.ts";
+import { getNightFoodDemand, getNightWaterDemand, isCareTeamEligible, isNurseryEligible, resolveAuraNight } from "../game/aura-night-manager.ts";
 import { resolveDay } from "../game/day-manager.ts";
 import { createInitialGameState } from "../game/save-manager.ts";
 import { assignGuest } from "../game/room-manager.ts";
@@ -152,6 +152,46 @@ test("Ruth가 체크아웃해도 공동 돌봄팀은 취약 투숙객만 실제 
   assert.deepEqual({health:claire.health-claireWithout.health,stress:claireWithout.stress-claire.stress},{health:3,stress:4});
   assert.deepEqual({health:walter.health,stress:walter.stress},{health:100,stress:10});
   assert.deepEqual(result.careTeamGuestIds,["mia","claire"]);
+});
+
+test("안전 육아실은 배정된 아이와 임신한 주민만 야간 불안을 낮춘다", () => {
+  const state=place([["mia",101],["claire",110],["walter",205]]);
+  const mia=state.guests.find((guest)=>guest.id==="mia")!;
+  const claire=state.guests.find((guest)=>guest.id==="claire")!;
+  const walter=state.guests.find((guest)=>guest.id==="walter")!;
+  assert.equal(isNurseryEligible(mia),true);
+  assert.equal(isNurseryEligible(claire),true);
+  assert.equal(isNurseryEligible({...walter,health:50}),false);
+  const baseline=resolveAuraNight(state.rooms,state.guests,1,"STABLE",0);
+  const result=resolveAuraNight(state.rooms,state.guests,1,"STABLE",0,{claire_nursery:true});
+  assert.equal(result.guests.find((guest)=>guest.id==="mia")!.stress,baseline.guests.find((guest)=>guest.id==="mia")!.stress-3);
+  assert.equal(result.guests.find((guest)=>guest.id==="claire")!.stress,baseline.guests.find((guest)=>guest.id==="claire")!.stress-3);
+  assert.equal(result.guests.find((guest)=>guest.id==="walter")!.stress,baseline.guests.find((guest)=>guest.id==="walter")!.stress);
+  assert.deepEqual(result.nurseryGuestIds,["mia","claire"]);
+});
+
+test("안전 육아실과 공동 돌봄팀은 같은 주민에게 독립적으로 중첩된다", () => {
+  const state=place([["mia",101],["claire",110]]);
+  const nurseryOnly=resolveAuraNight(state.rooms,state.guests,1,"STABLE",0,{claire_nursery:true});
+  const result=resolveAuraNight(state.rooms,state.guests,1,"STABLE",0,{claire_nursery:true,ruth_care_team:true});
+  assert.equal(result.guests.find((guest)=>guest.id==="mia")!.stress,nurseryOnly.guests.find((guest)=>guest.id==="mia")!.stress-4);
+  assert.deepEqual(result.careTeamGuestIds,["mia","claire"]);
+  assert.deepEqual(result.nurseryGuestIds,["mia","claire"]);
+});
+
+test("Stress가 이미 0인 육아실 대상자는 회복·수혜 기록·호텔 로그를 만들지 않는다", () => {
+  const state=place([["mia",101]]);
+  state.guests=state.guests.map((guest)=>guest.id==="mia"?{...guest,stress:0,health:77,remainingNights:2}:guest);
+  const night=resolveAuraNight(state.rooms,state.guests,1,"STABLE",0,{claire_nursery:true});
+  const mia=night.guests.find((guest)=>guest.id==="mia")!;
+  assert.deepEqual({stress:mia.stress,health:mia.health},{stress:0,health:77});
+  assert.deepEqual(night.nurseryGuestIds,[]);
+  state.phase="night";
+  state.flags.claire_nursery=true;
+  state.selectedNightEventId="quiet_watch";
+  state.selectedNightChoiceId="rest";
+  const resolved=resolveDay(state);
+  assert.equal(resolved.eventHistory.some((entry)=>entry.message.startsWith("안전 육아실 돌봄")),false);
 });
 
 test("Eleanor의 의료 Aura는 범위 안 질병만 막고 범위 밖 투숙객은 보호하지 않는다", () => {
@@ -418,6 +458,18 @@ test("DAY 정산은 공동 돌봄팀이 실제 돌본 투숙객만 호텔 기록
   assert.deepEqual({health:mia.health,stress:mia.stress},{health:73,stress:3});
   assert.deepEqual({health:walter.health,stress:walter.stress},{health:100,stress:0});
   assert.ok(resolved.eventHistory.some((entry)=>entry.message==="공동 돌봄팀 돌봄 · 미아 카터"));
+});
+
+test("DAY 정산은 안전 육아실이 실제 안정시킨 주민만 호텔 기록에 남긴다", () => {
+  const state=place([["mia",101],["claire",110],["walter",205]]);
+  state.phase="night";
+  state.flags.claire_nursery=true;
+  state.selectedNightEventId="quiet_watch";
+  state.selectedNightChoiceId="rest";
+  state.guests=state.guests.map((guest)=>guest.status==="STAYING"?{...guest,remainingNights:2}:guest);
+  const resolved=resolveDay(state);
+  assert.ok(resolved.eventHistory.some((entry)=>entry.message==="안전 육아실 돌봄 · 미아 카터 · 클레어 노박"));
+  assert.equal(resolved.eventHistory.some((entry)=>entry.message.includes("월터 브릭스")&&entry.message.startsWith("안전 육아실")),false);
 });
 
 test("공동 돌봄 뒤 같은 밤 질병이 발생해도 회복 순서와 돌봄 기록을 보존한다", () => {
