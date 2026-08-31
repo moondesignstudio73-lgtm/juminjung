@@ -130,6 +130,12 @@ test("HOME 엔딩은 돌아온 공동체의 긴 식탁 전용 원화와 대체 �
   assert.match(home?.imageAlt ?? "", /첫 비.*Ruth.*약병.*Rosa.*Mia.*조리대.*두 냄비.*돌아온 손님.*긴 식탁.*새 방문자/);
 });
 
+test("MILITARY OCCUPATION 엔딩은 호텔 인계 전용 원화와 대체 텍스트를 데이터에서 제공한다", () => {
+  const occupation = ENDING_NARRATIVES.find((narrative) => narrative.endingId === "MILITARY_OCCUPATION");
+  assert.equal(occupation?.image, "/juminjung/assets/cutscenes/ending-military-occupation-v1.png");
+  assert.match(occupation?.imageAlt ?? "", /Hayes.*인계 명령서.*마스터키.*황동 이름표.*통행 등급표.*군용차.*입장을 거부/);
+});
+
 test("최종 사건을 중단하면 진행을 완료 처리하지 않고 운영 장부로 돌아간다", () => {
   const state = createInitialGameState();
   state.availableEndings = ["THE_TRUTH"];

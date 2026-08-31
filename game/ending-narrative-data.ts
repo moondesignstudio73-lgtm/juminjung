@@ -26,7 +26,7 @@ export const ENDING_NARRATIVES: EndingNarrative[] = [
     { id: "crown", title: "카운터 위의 왕관", body: "당신은 가장 비싼 제안을 거절하지 않는다. 대신 모든 거래에 호텔의 몫을 붙인다. 굶주린 이도 값을 치러야 하고, 힘 있는 이도 줄을 서야 한다.", quote: "왕관은 없었다. 프런트 계산기와 잠긴 창고가 같은 일을 했다." },
     { id: "epilogue", title: "KING OF THE RUINS", body: "JUJU HOTEL은 도시를 움직이는 심장이 되지만 누구도 이곳을 자비롭다고 부르지 않는다. 당신의 장부는 정확했고, 그 정확함이 새로운 질서가 된다.", quote: "방은 있습니다. 값을 치를 수 있다면." },
   ] },
-  { endingId: "MILITARY_OCCUPATION", kicker: "FINAL EVENT · 인계 명령", scenes: [
+  { endingId: "MILITARY_OCCUPATION", kicker: "FINAL EVENT · 인계 명령", image: "/juminjung/assets/cutscenes/ending-military-occupation-v1.png", imageAlt: "비 내리는 새벽, Hayes가 호텔 카운터에 인계 명령서를 누르고 빼앗긴 마스터키가 놓인 뒤편에서 병사들이 황동 이름표를 통행 등급표로 바꾸며, 군용차가 막은 입구 밖의 방문자는 입장을 거부당하는 장면.", scenes: [
     { id: "arrival", title: "새벽의 군용차", body: "군용차가 골목을 봉쇄하고 Hayes가 서명된 인계 명령서를 카운터에 놓는다. 무전기에서는 이미 객실을 막사 번호로 바꾸라는 지시가 흘러나온다.", quote: "‘질서는 선택이 아니다. 오늘부터 이 호텔은 군의 자산이다.’" },
     { id: "handover", title: "빼앗긴 마스터키", body: "저항할 사람도 남아 있지만 첫 총성이 누구를 향할지 당신은 안다. 마스터키를 내려놓는 순간 병사들이 로비의 이름표를 떼고 통행 등급표를 붙인다.", quote: "호텔은 살아남았다. 다만 누구를 위한 생존인지 묻는 사람은 사라졌다." },
     { id: "epilogue", title: "MILITARY OCCUPATION", body: "당신은 계속 프런트에 앉아 있지만 방을 내줄 권한은 없다. 밤마다 문밖에서 노크가 들리고, 승인 목록에 없는 이름들이 비에 젖어 지워진다.", quote: "May I have a room? — 허가 번호를 제시하십시오." },
