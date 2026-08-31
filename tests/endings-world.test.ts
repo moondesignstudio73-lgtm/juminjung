@@ -118,6 +118,12 @@ test("SAFE HAVEN 엔딩은 공동체 로비 전용 원화와 대체 텍스트를
   assert.match(safeHaven?.imageAlt ?? "", /JUJU HOTEL.*공동 장부.*물통.*여행자.*새벽빛/);
 });
 
+test("FORTRESS 엔딩은 공성 종료 전용 원화와 대체 텍스트를 데이터에서 제공한다", () => {
+  const fortress = ENDING_NARRATIVES.find((narrative) => narrative.endingId === "FORTRESS");
+  assert.equal(fortress?.image, "/juminjung/assets/cutscenes/ending-fortress-v1.png");
+  assert.match(fortress?.imageAlt ?? "", /철문.*계단참.*정체 모를 형체.*명부.*빈 탄약 상자.*구조 신호.*두 황동 열쇠/);
+});
+
 test("최종 사건을 중단하면 진행을 완료 처리하지 않고 운영 장부로 돌아간다", () => {
   const state = createInitialGameState();
   state.availableEndings = ["THE_TRUTH"];

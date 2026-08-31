@@ -11,7 +11,7 @@ export const ENDING_NARRATIVES: EndingNarrative[] = [
     { id: "broadcast", title: "진실의 주파수", body: "호텔 안테나가 도시 전역으로 연구 기록과 대응법을 송출한다. 방송이 이어질수록 어둠 속에서 가족의 목소리를 흉내 내던 것들이 하나씩 침묵한다.", quote: "진실은 세상을 되돌리지 못했지만, 거짓 목소리와 싸울 이름을 주었다." },
     { id: "epilogue", title: "THE TRUTH", body: "당신은 아버지를 용서하지도, 완전히 미워하지도 못한다. 대신 모든 기록을 공개 보관하고 다음 세대가 같은 문을 만들지 못하게 지킨다.", quote: "괴물의 이름을 알게 된 날, 우리는 처음으로 그것을 두려움 밖에서 바라보았다." },
   ] },
-  { endingId: "FORTRESS", kicker: "FINAL EVENT · 철문 위의 깃발", scenes: [
+  { endingId: "FORTRESS", kicker: "FINAL EVENT · 철문 위의 깃발", image: "/juminjung/assets/cutscenes/ending-fortress-v1.png", imageAlt: "동틀 무렵 버텨 낸 호텔 철문과 위험한 계단참을 지키는 방위대 뒤로 정체 모를 형체들이 새벽빛 속으로 멀어지고, 생존자들이 명부를 확인하는 로비에 빈 탄약 상자와 구조 신호 라디오, 나란히 걸린 두 황동 열쇠가 보이는 장면.", scenes: [
     { id: "siege", title: "세 번의 경보", body: "외벽 센서가 동시에 울리고 호텔 방위대가 층별 사격 위치로 이동한다. 당신은 가장 두꺼운 철문 뒤가 아니라 가장 위험한 계단참에 선다.", quote: "‘이 선을 넘는 건 손님이 아니다.’" },
     { id: "victory", title: "무너지지 않은 밤", body: "동이 틀 무렵 마지막 그림자가 골목으로 물러난다. 탄약 상자는 비었지만 객실 문은 하나도 뚫리지 않았다. 생존자들은 승리보다 살아남은 사람의 이름을 먼저 센다.", quote: "요새는 벽의 두께가 아니라, 끝까지 자리를 지킨 사람들의 수로 완성되었다." },
     { id: "epilogue", title: "FORTRESS", body: "JUJU HOTEL은 폐허의 방패가 된다. 그러나 당신은 매일 무기고 열쇠와 로비 열쇠를 나란히 걸어 두며, 방패가 감옥이 되지 않도록 감시한다.", quote: "문은 닫혀 있었지만, 도움을 청하는 신호까지 막지는 않았다." },
