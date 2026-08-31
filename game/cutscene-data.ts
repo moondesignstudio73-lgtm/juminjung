@@ -2,6 +2,18 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: "hayes_command_signed",
+    triggerStoryEventId: "hayes-command",
+    triggerStoryChoiceId: "sign_command",
+    priority: 175,
+    kicker: "JUJU HOTEL · EMERGENCY COMMAND",
+    title: "열쇠보다 먼저 넘어간 권한",
+    body: "펜촉이 종이의 마지막 줄을 지나자 Hayes는 승리한 사람처럼 웃지 않았다. 그는 문서를 접지도 않은 채 병사에게 입구 폭을 재게 했고, 프런트 뒤에서 지켜보던 주민들은 황동 열쇠가 아직 지배인의 손에 있다는 사실만 확인했다. 그러나 객실 명단을 누가 보고, 정문을 누가 열며, 보급품을 누가 배분할지는 이미 서명 한 줄로 바뀌었다. 호텔은 그날 밤부터 보호받는 피난처와 점령된 거점 사이의 좁은 문턱에 섰다.",
+    quote: "열쇠는 가지고 계십시오. 이제 그 문을 언제 여는지는 제가 결정합니다.",
+    image: "/juminjung/assets/cutscenes/hayes-command-signed-v1.png",
+    imageAlt: "헤이즈 대령이 비 내리는 JUJU HOTEL 프런트에서 군 지휘권 문서의 서명을 지켜보고, 주민들이 계단에서 불안하게 바라보는 사이 병사가 입구 검문선을 재는 장면.",
+  },
+  {
     id: "owen_defense_force",
     triggerStoryEventId: "owen-future",
     triggerStoryChoiceId: "resistance",

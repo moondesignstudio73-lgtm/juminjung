@@ -598,3 +598,35 @@ test("부엌에서 내보낸 Noah는 공동 식당을 열 수 없지만 보존�
   assert.equal(result.flags.noah_community_kitchen,undefined);
   assert.equal(result.activeCutsceneId,null);
 });
+
+test("Hayes에게 지휘권을 넘기면 군정 점령 경로와 전용 인계 장면이 열린다", () => {
+  const state = resolutionState("hayes");
+  state.reputations.military = 72;
+  state.flags.military_resistance_succeeded = true;
+  state.flags.civilian_command = true;
+  const result = applyStoryChoice(state, "hayes-command", "sign_command").state;
+  assert.equal(result.flags.military_rule_signed, true);
+  assert.equal(result.flags.military_resistance_failed, true);
+  assert.equal(result.flags.military_resistance_succeeded, false);
+  assert.equal(result.flags.civilian_command, false);
+  assert.equal(result.reputations.military, 90);
+  assert.ok(evaluateEndings(result).available.includes("MILITARY_OCCUPATION"));
+  assert.equal(result.activeCutsceneId, "hayes_command_signed");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/hayes-command-signed-v1.png");
+  const restored = restoreGameState(serializeGameState(result));
+  assert.equal(restored.flags.military_resistance_failed, true);
+  assert.equal(restored.activeCutsceneId, "hayes_command_signed");
+});
+
+test("Hayes를 민간 협의체 아래 두면 군정 점령 플래그와 인계 장면이 생기지 않는다", () => {
+  const state = resolutionState("hayes");
+  state.flags.military_resistance_failed = true;
+  state.flags.military_rule_signed = true;
+  const result = applyStoryChoice(state, "hayes-command", "civilian_rule").state;
+  assert.equal(result.flags.civilian_command, true);
+  assert.equal(result.flags.military_resistance_succeeded, true);
+  assert.equal(result.flags.military_resistance_failed, false);
+  assert.equal(result.flags.military_rule_signed, false);
+  assert.ok(!evaluateEndings(result).available.includes("MILITARY_OCCUPATION"));
+  assert.equal(result.activeCutsceneId, null);
+});
