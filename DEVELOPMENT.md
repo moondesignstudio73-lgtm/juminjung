@@ -10,7 +10,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - DAY 1 front-desk guest screening with questions, item inspection, negotiation, hold, check-in, and refusal
 - Explicit choice among 30 rooms, with movement and manual or stay-expiry checkout
 - Data-driven grid Aura calculation; Eleanor's Medical Care Zone affects only `NORMAL_DISEASE`
-- Nightly food, water, and generator-fuel settlement based on actual occupancy
+- Nightly food, water, and generator-fuel settlement based on actual occupancy, selected ration policy, and active power circuits
 - Remaining-stay countdown, automatic checkout, Aura removal, and HOTEL LOG entries
 - Four-stage guest stories that advance from arrival through resolution and persist in the hotel log
 - Relationship event strength based on room distance: adjacent ×2, same floor ×1.5, otherwise ×1, recorded when conflict stages fire
@@ -19,9 +19,12 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - Unbounded DAY progression; DAY records survival time but never triggers an ending by itself
 - Seven data-driven ending routes that unlock optional final events without stopping normal management
 - A soft-pressure World State derived from time, scarcity, threat, and hotel stability
-- Two daily action points for repair, community, patrol, and trade decisions
+- Three daily action points for repair, community, patrol, trade, and facility decisions, restored at each morning report
+- State-derived daily objectives and up to five priority-sorted urgent problems expose resource, power, threat, and hotel-damage pressure in both the morning report and management screen
+- Saved night preparation controls three fuel-limited power circuits for security, clinic, and kitchen operations; disabled circuits create visible, logged penalties instead of hidden failure
+- Saved NORMAL, LIMITED, and SEVERE food-ration policies trade food demand against resident Stress and Health, with the morning ledger showing base demand, actual consumption, powered circuits, and warnings
 - Four buildable facilities with resource costs, passive production, stat changes, and faction reputation effects
-- Save v9 restoration for facilities, reputations, daily actions, night choices, pending NPC story scenes, and one-time cutscene progress
+- Save v10 restoration for facilities, reputations, three daily actions, power allocation, ration policy, night choices, pending NPC story scenes, and one-time cutscene progress; full unused AP in older saves migrates to the new three-point day
 - Conditional night events driven by World State, shortages, Monster Threat, Security, and resources
 - Two-choice night outcomes that alter resources, hotel stats, faction reputation, flags, and guest condition
 - All twenty catalog NPCs have authored conflict and resolution choices with persistent consequences
@@ -73,8 +76,8 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 
 ## Next system priorities
 
-- Build the first daily-survival vertical slice: state-derived objectives and urgent problems, three action points, fuel/power allocation, and food ration decisions, with DAY 1–5 regression coverage
 - Add the data-driven NORMAL + MAIN visitor split, seeded 2–6 visitor queues, story-locked MAIN residency, history, and save restoration without changing a day's queue on reload
+- Extend the survival loop with evidence cases, staff assignments, scavenging, and deeper night-preparation choices after the visitor queue is stable
 - Expand full-screen illustrated cutscenes for the remaining major story and ending beats
 
 ## Main NPC catalog

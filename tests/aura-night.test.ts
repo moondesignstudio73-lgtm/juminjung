@@ -561,7 +561,7 @@ test("DAY 정산은 공동 돌봄팀이 실제 돌본 투숙객만 호텔 기록
   const resolved=resolveDay(state);
   const mia=resolved.guests.find((guest)=>guest.id==="mia")!;
   const walter=resolved.guests.find((guest)=>guest.id==="walter")!;
-  assert.deepEqual({health:mia.health,stress:mia.stress},{health:73,stress:3});
+  assert.deepEqual({health:mia.health,stress:mia.stress},{health:73,stress:0});
   assert.deepEqual({health:walter.health,stress:walter.stress},{health:100,stress:0});
   assert.ok(resolved.eventHistory.some((entry)=>entry.message==="공동 돌봄팀 돌봄 · 미아 카터"));
 });

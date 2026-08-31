@@ -11,7 +11,7 @@ test("시설 건설은 자원과 행동 포인트를 소비하고 효과와 로�
   assert.equal(result.state.facilities.water_purifier, 1);
   assert.equal(result.state.resources.parts, 2);
   assert.equal(result.state.hotelStats.waterSustainability, 1);
-  assert.equal(result.state.actionPoints, 1);
+  assert.equal(result.state.actionPoints, 2);
   assert.ok(result.state.eventHistory.at(-1)?.message.includes("정수 시설"));
 });
 
@@ -126,13 +126,13 @@ test("정수·식량 시설은 야간 생산을 제공하고 다음 날 행동 �
   assert.equal(resolved.actionPoints, resolved.maxActionPoints);
 });
 
-test("Save v9은 시설·평판·행동 포인트를 복원한다", () => {
+test("Save v10은 시설·평판·행동 포인트를 복원한다", () => {
   const built = buildFacility(createInitialGameState(), "water_purifier").state;
   const restored = restoreGameState(serializeGameState(built));
-  assert.equal(restored.version, 9);
+  assert.equal(restored.version, 10);
   assert.equal(restored.facilities.water_purifier, 1);
   assert.equal(restored.reputations.community, 10);
-  assert.equal(restored.actionPoints, 1);
+  assert.equal(restored.actionPoints, 2);
 });
 
 test("LV.2 정수 시설은 매일 유지비를 지불하고 단계 생산량을 제공한다", () => {

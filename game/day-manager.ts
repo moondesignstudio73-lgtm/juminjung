@@ -9,6 +9,7 @@ import { FACILITIES } from "./facility-data.ts";
 import { queueNightEventCutscene } from "./cutscene-manager.ts";
 import { resolveAuraNight } from "./aura-night-manager.ts";
 import { getNextRevisitDay } from "./visitor-manager.ts";
+import { applySurvivalGuestEffects, calculatePowerPlan, getRationPlan, RATION_POLICIES } from "./daily-survival-manager.ts";
 import type { DaySummary, GameState, HotelLogEntry } from "./types.ts";
 
 const FACILITY_NAMES = Object.fromEntries(FACILITIES.map((facility) => [facility.id, facility.name])) as Record<string, string>;
@@ -28,19 +29,23 @@ export function resolveDay(state: GameState): GameState {
   const staying = auraNight.guests.filter((guest) => guest.status === "STAYING" && guest.currentRoomNumber !== null);
   const stayingIds = new Set(staying.map((guest) => guest.id));
   const microgridActive = state.flags.generator_network_stable === true;
-  const demand = { food: auraNight.foodDemand, water: auraNight.waterDemand, fuel: microgridActive ? 0 : BASE_GENERATOR_FUEL_DEMAND };
+  const powerPlan = calculatePowerPlan(state, staying.length);
+  const baseFoodDemand = auraNight.foodDemand + powerPlan.extraFoodDemand;
+  const rationPlan = getRationPlan(baseFoodDemand, state.foodRationPolicy);
+  const demand = { food: rationPlan.foodDemand, water: auraNight.waterDemand, fuel: powerPlan.fuelDemand };
   const consumed = { food: Math.min(state.resources.food, demand.food), water: Math.min(state.resources.water, demand.water), fuel: Math.min(state.resources.fuel, demand.fuel) };
   const checkedOutGuestIds: string[] = [];
   const guests = auraNight.guests.map((guest) => {
     if (!stayingIds.has(guest.id)) return guest;
+    const survivalGuest = applySurvivalGuestEffects(guest, rationPlan, powerPlan.clinicPowered);
     const room = activeRooms.find((candidate) => candidate.roomNumber === guest.currentRoomNumber);
-    const health = Math.min(100, guest.health + (room ? getInjuryRecovery(room) : 0));
+    const health = Math.min(100, survivalGuest.health + (room ? getInjuryRecovery(room) : 0));
     const remainingNights = Math.max(0, guest.remainingNights - 1);
     if (remainingNights === 0) {
       checkedOutGuestIds.push(guest.id);
-      return { ...guest, health, remainingNights, currentRoomNumber: null, status: "CHECKED_OUT" as const, storyFlags: { ...guest.storyFlags, last_checked_out_day: state.day, next_revisit_day: getNextRevisitDay(state.day) } };
+      return { ...survivalGuest, health, remainingNights, currentRoomNumber: null, status: "CHECKED_OUT" as const, storyFlags: { ...guest.storyFlags, last_checked_out_day: state.day, next_revisit_day: getNextRevisitDay(state.day) } };
     }
-    return { ...guest, health, remainingNights };
+    return { ...survivalGuest, health, remainingNights };
   });
   const emptied = checkedOutGuestIds.reduce((rooms, guestId) => checkoutGuest(rooms, guestId), activeRooms);
   const nextDay = advanceDay(state.day);
@@ -53,15 +58,15 @@ export function resolveDay(state: GameState): GameState {
   };
   const economy = getFacilityEconomy(state, afterGuestConsumption);
   const threatBeforeAuraNight = Math.max(0,Number(state.flags.monster_threat??0));
-  const threatAfterAuraNight = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta);
-  const threatWithoutResearchPrediction = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta+auraNight.researchPredictionThreatReduction);
-  const threatWithoutPathfinder = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta+auraNight.researchPredictionThreatReduction+auraNight.pathfinderThreatReduction);
-  const threatWithoutAlarm = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta+auraNight.researchPredictionThreatReduction+auraNight.pathfinderThreatReduction+auraNight.perimeterAlarmThreatReduction);
+  const threatAfterAuraNight = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta+powerPlan.threatDelta);
+  const threatWithoutResearchPrediction = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta+auraNight.researchPredictionThreatReduction+powerPlan.threatDelta);
+  const threatWithoutPathfinder = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta+auraNight.researchPredictionThreatReduction+auraNight.pathfinderThreatReduction+powerPlan.threatDelta);
+  const threatWithoutAlarm = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta+auraNight.researchPredictionThreatReduction+auraNight.pathfinderThreatReduction+auraNight.perimeterAlarmThreatReduction+powerPlan.threatDelta);
   const appliedResearchPredictionThreatReduction = threatWithoutResearchPrediction-threatAfterAuraNight;
   const appliedPathfinderThreatReduction = threatWithoutPathfinder-threatWithoutResearchPrediction;
   const appliedAlarmThreatReduction = threatWithoutAlarm-threatWithoutPathfinder;
-  const securityWithoutCivilGuard = Math.max(0,Math.min(100,state.hotelStats.security+auraNight.securityDelta-auraNight.civilGuardSecurityGain));
-  const securityAfterAuraNight = Math.max(0,Math.min(100,state.hotelStats.security+auraNight.securityDelta));
+  const securityWithoutCivilGuard = Math.max(0,Math.min(100,state.hotelStats.security+auraNight.securityDelta-auraNight.civilGuardSecurityGain+powerPlan.securityDelta));
+  const securityAfterAuraNight = Math.max(0,Math.min(100,state.hotelStats.security+auraNight.securityDelta+powerPlan.securityDelta));
   const appliedCivilGuardSecurityGain = securityAfterAuraNight-securityWithoutCivilGuard;
   const crimeWithoutCivilGuard = Math.max(0,Math.min(100,state.hotelStats.crime+auraNight.crimeDelta+auraNight.civilGuardCrimeReduction));
   const crimeAfterAuraNight = Math.max(0,Math.min(100,state.hotelStats.crime+auraNight.crimeDelta));
@@ -69,11 +74,16 @@ export function resolveDay(state: GameState): GameState {
   const conditionWithoutMutualAid = Math.max(0,Math.min(100,state.hotelStats.hotelCondition+auraNight.hotelConditionDelta-auraNight.mutualAidConditionRepair));
   const conditionAfterAuraNight = Math.max(0,Math.min(100,state.hotelStats.hotelCondition+auraNight.hotelConditionDelta));
   const appliedMutualAidConditionRepair = conditionAfterAuraNight-conditionWithoutMutualAid;
-  const summary: DaySummary = { completedDay: state.day, nextDay, occupiedGuests: staying.length, consumed, facilityProduction: economy.production, facilityUpkeep: economy.upkeep, inactiveFacilities: economy.inactiveFacilities, checkedOutGuestIds };
+  const summary: DaySummary = { completedDay: state.day, nextDay, occupiedGuests: staying.length, consumed, baseFoodDemand, foodRationPolicy: state.foodRationPolicy, poweredCircuits: powerPlan.activeCircuits, powerCapacity: powerPlan.capacity, survivalWarnings: powerPlan.warnings, facilityProduction: economy.production, facilityUpkeep: economy.upkeep, inactiveFacilities: economy.inactiveFacilities, checkedOutGuestIds };
+  const rationName = RATION_POLICIES.find((policy) => policy.id === state.foodRationPolicy)?.name ?? state.foodRationPolicy;
+  const rationSaving = Math.max(0, baseFoodDemand - demand.food);
   const entries: HotelLogEntry[] = [
     night.entry,
     ...story.entries,
     { day: state.day, type: "RESOURCE", message: `식량 ${consumed.food}, 물 ${consumed.water}, 연료 ${consumed.fuel} 소비` },
+    { day: state.day, type: "RESOURCE", message: `${rationName} · 식량 수요 ${baseFoodDemand} → ${demand.food}${rationSaving ? ` · ${rationSaving} 절감` : ""}` },
+    { day: state.day, type: "RESOURCE", message: `전력 배분 · ${powerPlan.activeCircuits.length ? powerPlan.activeCircuits.join(" · ") : "전체 정지"} · ${powerPlan.activeCircuits.length}/${powerPlan.capacity} 회로` },
+    ...powerPlan.warnings.map((message): HotelLogEntry => ({ day: state.day, type: "EVENT", message })),
     ...(microgridActive ? [{day:state.day,type:"RESOURCE" as const,message:`독립 마이크로그리드 · 기본 발전기 연료 ${BASE_GENERATOR_FUEL_DEMAND} 절감`}] : []),
     ...(auraNight.communityKitchenFoodSaving ? [{day:state.day,type:"RESOURCE" as const,message:`공동 식당 배급 · 식량 ${auraNight.communityKitchenFoodSaving} 절감`}] : []),
     ...(auraNight.householdWaterSaving ? [{day:state.day,type:"RESOURCE" as const,message:`공동 생활조 배급 · 물 ${auraNight.householdWaterSaving} 절감`}] : []),

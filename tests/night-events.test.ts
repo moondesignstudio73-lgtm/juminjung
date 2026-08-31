@@ -154,7 +154,7 @@ test("로비 사수는 방어 물자를 소모해 공성을 격퇴하지만 선�
   assert.equal(resolved.hotelStats.security, before.hotelSecurity + 5);
   assert.equal(resolved.flags.monster_threat, before.threat - 18);
   assert.equal(resolved.guests[0].health, before.health - 20);
-  assert.equal(resolved.guests[0].stress, before.stress + 6);
+  assert.equal(resolved.guests[0].stress, before.stress + 1);
   assert.equal(resolved.reputations.military, before.military + 8);
   assert.equal(resolved.reputations.community, before.community + 4);
 });
@@ -804,13 +804,13 @@ test("야간 선택은 정산 로그와 마지막 사건으로 저장되고 임�
   assert.ok(resolved.eventHistory.some((entry) => entry.message.includes("긴 복도, 짧은 밤")));
 });
 
-test("Save v9은 야간 선택과 진행 중인 컷신을 복원한다", () => {
+test("Save v10은 야간 선택과 진행 중인 컷신을 복원한다", () => {
   const state = createInitialGameState();
   state.selectedNightEventId = "quiet_watch";
   state.selectedNightChoiceId = "patrol";
   state.activeCutsceneId = "first_monster_sighting";
   const restored = restoreGameState(serializeGameState(state));
-  assert.equal(restored.version, 9);
+  assert.equal(restored.version, 10);
   assert.equal(restored.selectedNightEventId, "quiet_watch");
   assert.equal(restored.selectedNightChoiceId, "patrol");
   assert.equal(restored.activeCutsceneId, "first_monster_sighting");

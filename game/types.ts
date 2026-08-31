@@ -90,6 +90,17 @@ export type Resources = {
   security: number;
 };
 
+export type FoodRationPolicy = "NORMAL" | "LIMITED" | "SEVERE";
+export type PowerCircuitId = "SECURITY" | "CLINIC" | "KITCHEN";
+export type DailyPriority = "URGENT" | "RECOMMENDED" | "OPTIONAL";
+export type DailyObjective = {
+  id: string;
+  priority: DailyPriority;
+  title: string;
+  description: string;
+  actionHint: string;
+};
+
 export type RelationshipChange = { sourceId: string; targetId: string; delta: number; type?: string };
 export type HotelLogEntry = { day: number; type: "CHECK_IN" | "CHECK_OUT" | "RESOURCE" | "EVENT"; message: string; relationshipChanges?: RelationshipChange[] };
 
@@ -98,6 +109,11 @@ export type DaySummary = {
   nextDay: number;
   occupiedGuests: number;
   consumed: { food: number; water: number; fuel: number };
+  baseFoodDemand?: number;
+  foodRationPolicy?: FoodRationPolicy;
+  poweredCircuits?: PowerCircuitId[];
+  powerCapacity?: number;
+  survivalWarnings?: string[];
   facilityProduction?: Partial<Resources>;
   facilityUpkeep?: Partial<Resources>;
   inactiveFacilities?: FacilityId[];
@@ -159,7 +175,7 @@ export type GamePhase =
   | "ending";
 
 export type GameState = {
-  version: 9;
+  version: 10;
   phase: GamePhase;
   day: number;
   rooms: Room[];
@@ -188,6 +204,8 @@ export type GameState = {
   endingSceneIndex: number;
   actionPoints: number;
   maxActionPoints: number;
+  foodRationPolicy: FoodRationPolicy;
+  powerAllocation: PowerCircuitId[];
   selectedNightEventId: string | null;
   selectedNightChoiceId: string | null;
   lastNightEventId: string | null;
