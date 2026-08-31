@@ -64,6 +64,9 @@ export function resolveDay(state: GameState): GameState {
   const crimeWithoutCivilGuard = Math.max(0,Math.min(100,state.hotelStats.crime+auraNight.crimeDelta+auraNight.civilGuardCrimeReduction));
   const crimeAfterAuraNight = Math.max(0,Math.min(100,state.hotelStats.crime+auraNight.crimeDelta));
   const appliedCivilGuardCrimeReduction = crimeWithoutCivilGuard-crimeAfterAuraNight;
+  const conditionWithoutMutualAid = Math.max(0,Math.min(100,state.hotelStats.hotelCondition+auraNight.hotelConditionDelta-auraNight.mutualAidConditionRepair));
+  const conditionAfterAuraNight = Math.max(0,Math.min(100,state.hotelStats.hotelCondition+auraNight.hotelConditionDelta));
+  const appliedMutualAidConditionRepair = conditionAfterAuraNight-conditionWithoutMutualAid;
   const summary: DaySummary = { completedDay: state.day, nextDay, occupiedGuests: staying.length, consumed, facilityProduction: economy.production, facilityUpkeep: economy.upkeep, inactiveFacilities: economy.inactiveFacilities, checkedOutGuestIds };
   const entries: HotelLogEntry[] = [
     night.entry,
@@ -80,6 +83,7 @@ export function resolveDay(state: GameState): GameState {
     ...(appliedCivilGuardSecurityGain||appliedCivilGuardCrimeReduction ? [{day:state.day,type:"EVENT" as const,message:`민간 경비대 순찰${appliedCivilGuardSecurityGain?` · Security +${appliedCivilGuardSecurityGain}`:""}${appliedCivilGuardCrimeReduction?` · Crime -${appliedCivilGuardCrimeReduction}`:""}`}] : []),
     ...(auraNight.careTeamGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`공동 돌봄팀 돌봄 · ${auraNight.careTeamGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
     ...(auraNight.nurseryGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`안전 육아실 돌봄 · ${auraNight.nurseryGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
+    ...(appliedMutualAidConditionRepair ? [{day:state.day,type:"EVENT" as const,message:`공동 구호조 보수 · Hotel Condition +${appliedMutualAidConditionRepair}`}] : []),
     ...(Object.keys(economy.production).length ? [{ day: state.day, type: "RESOURCE" as const, message: `시설 생산 · ${Object.entries(economy.production).map(([key,value]) => `${key} +${value}`).join(" · ")}` }] : []),
     ...(economy.inactiveFacilities.length ? [{ day: state.day, type: "EVENT" as const, message: `유지비 부족 · ${economy.inactiveFacilities.map((id) => FACILITY_NAMES[id]).join(" · ")} 가동 중단` }] : []),
     ...checkedOutGuestIds.map((guestId): HotelLogEntry => ({ day: nextDay, type: "CHECK_OUT", message: `${state.guests.find((guest) => guest.id === guestId)?.name ?? guestId} · 숙박 종료 자동 체크아웃` })),
@@ -104,7 +108,7 @@ export function resolveDay(state: GameState): GameState {
     lastDaySummary: summary,
     hotelStats: {
       ...state.hotelStats,
-      hotelCondition: Math.max(0,Math.min(100,state.hotelStats.hotelCondition+auraNight.hotelConditionDelta)),
+      hotelCondition: conditionAfterAuraNight,
       security: securityAfterAuraNight,
       crime: crimeAfterAuraNight,
       survivorPopulation: acceptedSurvivors.length,

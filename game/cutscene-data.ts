@@ -2,6 +2,18 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: "grace_mutual_aid",
+    triggerStoryEventId: "grace-faith",
+    triggerStoryChoiceId: "mutual_aid",
+    priority: 165,
+    kicker: "JUJU HOTEL · MUTUAL AID",
+    title: "촛불을 내려놓은 손",
+    body: "Grace는 집회에 쓰던 의자를 계단참에서 치우고, 닫힌 책과 꺼진 촛불 옆에 망치와 못, 석고 통을 놓았다. 사람들은 설교를 듣는 대신 깨진 난간을 붙잡고, 젖은 벽을 긁어 내고, 비가 새는 창을 천과 판자로 막았다. 누구도 믿음을 버리라고 요구하지 않았고, 누구도 믿음을 이유로 일을 지휘하지 않았다. 그날부터 구호조의 규칙은 단순했다. 함께 쓰는 곳은 함께 고치고, 가장 위험한 일은 혼자 하지 않는 것.",
+    quote: "믿음은 제게 남겨 두고, 이 손은 모두가 딛는 계단을 고치게 할게요.",
+    image: "/juminjung/assets/cutscenes/grace-mutual-aid-v1.png",
+    imageAlt: "그레이스 할러웨이가 낡은 JUJU HOTEL 계단참에서 주민들과 난간과 벽, 빗물 새는 창을 함께 보수하는 장면.",
+  },
+  {
     id: "claire_nursery",
     triggerStoryEventId: "claire-future",
     triggerStoryChoiceId: "nursery",

@@ -487,6 +487,25 @@ test("Claire의 의료 거점 이동은 호텔 육아실 효과와 전용 컷신
   assert.equal(result.activeCutsceneId,null);
 });
 
+test("Grace의 공동 구호조는 지속 보수와 전용 컷신을 열고 저장된다", () => {
+  const result=applyStoryChoice(resolutionState("grace"),"grace-faith","mutual_aid").state;
+  assert.equal(result.flags.grace_mutual_aid,true);
+  assert.equal(result.activeCutsceneId,"grace_mutual_aid");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/grace-mutual-aid-v1.png");
+  const restored=restoreGameState(serializeGameState(result));
+  assert.equal(restored.flags.grace_mutual_aid,true);
+  assert.equal(restored.activeCutsceneId,"grace_mutual_aid");
+});
+
+test("Grace의 순례 경로는 호텔 공동 보수와 전용 컷신을 열지 않는다", () => {
+  const state=resolutionState("grace");
+  state.resources.food=2;
+  const result=applyStoryChoice(state,"grace-faith","pilgrimage").state;
+  assert.equal(result.flags.grace_pilgrimage,true);
+  assert.equal(result.flags.grace_mutual_aid,undefined);
+  assert.equal(result.activeCutsceneId,null);
+});
+
 test("Hazel의 외곽 경계대는 지속 경보망과 전용 컷신을 열고 저장된다", () => {
   const result = applyStoryChoice(resolutionState("hazel"), "hazel-watch", "ranger").state;
   assert.equal(result.flags.hazel_ranger_watch, true);

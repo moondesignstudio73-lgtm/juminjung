@@ -7,6 +7,7 @@ export type AuraNightResolution = {
   waterDemand:number;
   securityDelta:number;
   hotelConditionDelta:number;
+  mutualAidConditionRepair:number;
   crimeDelta:number;
   threatDelta:number;
   tradeBonus:{food:number;parts:number};
@@ -37,6 +38,7 @@ export const CARE_TEAM_STRESS_RELIEF = 4;
 export const HOUSEHOLD_NETWORK_WATER_SAVING = 1;
 export const PATHFINDER_THREAT_REDUCTION = 1;
 export const NURSERY_STRESS_RELIEF = 3;
+export const MUTUAL_AID_CONDITION_REPAIR = 1;
 
 export function isCareTeamEligible(guest:Guest):boolean {
   return guest.age<18||guest.age>=65||guest.health<80||guest.infectionState!=="HEALTHY"||guest.baseTraits.includes("Pregnant");
@@ -83,6 +85,7 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
   const civilGuardActive = flags.samuel_civil_guard === true;
   const careTeamActive = flags.ruth_care_team === true;
   const nurseryActive = flags.claire_nursery === true;
+  const mutualAidActive = flags.grace_mutual_aid === true;
 
   const adjustedStats = new Map(staying.map((guest)=>{
     const room = rooms.find((candidate)=>candidate.roomNumber===guest.currentRoomNumber);
@@ -130,12 +133,15 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
   const crimeWithoutCivilGuard = clamp(Math.round(crimeScore/10),0,10);
   const crimeDelta = clamp(crimeWithoutCivilGuard-(civilGuardActive?CIVIL_GUARD_CRIME_REDUCTION:0),-10,10);
   const civilGuardCrimeReduction = crimeWithoutCivilGuard-crimeDelta;
+  const conditionWithoutMutualAid = clamp(Math.round(-breakdownScore/10),-10,10);
+  const hotelConditionDelta = clamp(conditionWithoutMutualAid+(mutualAidActive?MUTUAL_AID_CONDITION_REPAIR:0),-10,10);
   return {
     guests:guests.map((guest)=>updatedById.get(guest.id)??guest),
     foodDemand:food.demand,
     waterDemand:water.demand,
     securityDelta,
-    hotelConditionDelta:clamp(Math.round(-breakdownScore/10),-10,10),
+    hotelConditionDelta,
+    mutualAidConditionRepair:hotelConditionDelta-conditionWithoutMutualAid,
     crimeDelta,
     threatDelta,
     tradeBonus:{food:Math.floor(Math.max(0,tradeScore)/20),parts:Math.floor(Math.max(0,tradeScore)/40)},

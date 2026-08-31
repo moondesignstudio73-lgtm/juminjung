@@ -29,6 +29,15 @@ test("Walter의 정비 Aura가 실제 호텔 상태 보정으로 환산된다", 
   assert.equal(guestResult("walter").hotelConditionDelta, 3);
 });
 
+test("Grace의 공동 구호조는 객실 보수 Aura 뒤 Hotel Condition을 1 더 회복한다", () => {
+  const state=place([["walter",202]]);
+  const withoutAid=resolveAuraNight(state.rooms,state.guests,7,"STABLE",0);
+  const withAid=resolveAuraNight(state.rooms,state.guests,7,"STABLE",0,{grace_mutual_aid:true});
+  assert.equal(withoutAid.hotelConditionDelta,3);
+  assert.equal(withAid.hotelConditionDelta,4);
+  assert.equal(withAid.mutualAidConditionRepair,1);
+});
+
 test("Samuel의 보안 Aura가 실제 치안 보정으로 환산된다", () => {
   assert.equal(guestResult("samuel").securityDelta, 1);
 });
@@ -283,6 +292,51 @@ test("Aura 보정은 실제 DAY 정산의 호텔 상태와 치안에 반영된�
   const samuelWithoutAura = resolveDay(nightlyState("samuel",false));
   assert.equal(walterWithAura.hotelStats.hotelCondition-walterWithoutAura.hotelStats.hotelCondition,3);
   assert.equal(samuelWithAura.hotelStats.security-samuelWithoutAura.hotelStats.security,1);
+});
+
+test("DAY 정산은 공동 구호조의 실제 호텔 보수를 적용하고 기록한다", () => {
+  const state=place([["claire",101]]);
+  state.phase="night";
+  state.hotelStats.hotelCondition=50;
+  state.flags.grace_mutual_aid=true;
+  state.selectedNightEventId="quiet_watch";
+  state.selectedNightChoiceId="rest";
+  state.guests=state.guests.map((guest)=>guest.id==="claire"?{...guest,remainingNights:2}:guest);
+  const resolved=resolveDay(state);
+  assert.equal(resolved.hotelStats.hotelCondition,51);
+  assert.ok(resolved.eventHistory.some((entry)=>entry.message==="공동 구호조 보수 · Hotel Condition +1"));
+});
+
+test("Hotel Condition 100에서는 공동 구호조가 허위 보수 로그를 남기지 않는다", () => {
+  const state=place([["claire",101]]);
+  state.phase="night";
+  state.hotelStats.hotelCondition=100;
+  state.flags.grace_mutual_aid=true;
+  state.selectedNightEventId="quiet_watch";
+  state.selectedNightChoiceId="rest";
+  state.guests=state.guests.map((guest)=>guest.id==="claire"?{...guest,remainingNights:2}:guest);
+  const resolved=resolveDay(state);
+  assert.equal(resolved.hotelStats.hotelCondition,100);
+  assert.equal(resolved.eventHistory.some((entry)=>entry.message.startsWith("공동 구호조 보수")),false);
+});
+
+test("공동 구호조는 Hotel Condition 0 하한에서도 큰 파손을 1 완화한 만큼 기록한다", () => {
+  const state=place([["claire",101]]);
+  state.rooms=state.rooms.map((room)=>room.roomNumber===101?{
+    ...room,
+    permanentEffects:[...room.permanentEffects,{id:"test-heavy-damage",sourceGuestId:"claire",name:"대규모 파손",metric:"breakdownRisk",operation:"ADD",value:100}],
+  }:room);
+  state.phase="night";
+  state.hotelStats.hotelCondition=10;
+  state.flags.grace_mutual_aid=true;
+  state.selectedNightEventId="quiet_watch";
+  state.selectedNightChoiceId="rest";
+  state.guests=state.guests.map((guest)=>guest.id==="claire"?{...guest,remainingNights:2}:guest);
+  const night=resolveAuraNight(state.rooms,state.guests,1,"STABLE",0,state.flags);
+  assert.deepEqual({delta:night.hotelConditionDelta,repair:night.mutualAidConditionRepair},{delta:-9,repair:1});
+  const resolved=resolveDay(state);
+  assert.equal(resolved.hotelStats.hotelCondition,1);
+  assert.ok(resolved.eventHistory.some((entry)=>entry.message==="공동 구호조 보수 · Hotel Condition +1"));
 });
 
 test("DAY 정산은 상설 진료소가 예방한 투숙객을 호텔 로그에 남긴다", () => {
