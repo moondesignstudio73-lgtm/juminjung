@@ -154,6 +154,19 @@ test("Victor의 벙커 계약 갈등과 시장 지배 결말은 사건 문맥에
   assert.equal(getGuestVisualState(guest("victor"), happy).asset, "/juminjung/assets/portraits/victor/happy-v1.png");
 });
 
+test("Rosa의 배급 갈등과 공동체 결말은 사건 문맥에 맞는 전용 표정을 제공한다", () => {
+  const conflict = STORY_CHOICE_EVENTS.find((event) => event.id === "rosa-ration");
+  const resolution = STORY_CHOICE_EVENTS.find((event) => event.id === "rosa-family");
+  const angry = getStoryEventExpression("rosa-ration");
+  const happy = getStoryEventExpression("rosa-family");
+  assert.deepEqual([conflict?.guestId, conflict?.stage], ["rosa", "CONFLICT"]);
+  assert.deepEqual([resolution?.guestId, resolution?.stage], ["rosa", "RESOLUTION"]);
+  assert.equal(angry, "angry");
+  assert.equal(happy, "happy");
+  assert.equal(getGuestVisualState(guest("rosa"), angry).asset, "/juminjung/assets/portraits/rosa/angry-v1.png");
+  assert.equal(getGuestVisualState(guest("rosa"), happy).asset, "/juminjung/assets/portraits/rosa/happy-v1.png");
+});
+
 test("도착 대기 중인 방문자는 젖은 옷 상태로 표시된다", () => {
   const visual = getGuestVisualState(guest("eleanor"));
   assert.ok(visual.modifiers.includes("WET"));
