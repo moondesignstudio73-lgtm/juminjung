@@ -50,6 +50,10 @@ export function resolveDay(state: GameState): GameState {
     parts: state.resources.parts + auraNight.tradeBonus.parts,
   };
   const economy = getFacilityEconomy(state, afterGuestConsumption);
+  const threatBeforeAuraNight = Math.max(0,Number(state.flags.monster_threat??0));
+  const threatAfterAuraNight = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta);
+  const threatWithoutAlarm = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta+auraNight.perimeterAlarmThreatReduction);
+  const appliedAlarmThreatReduction = threatWithoutAlarm-threatAfterAuraNight;
   const summary: DaySummary = { completedDay: state.day, nextDay, occupiedGuests: staying.length, consumed, facilityProduction: economy.production, facilityUpkeep: economy.upkeep, inactiveFacilities: economy.inactiveFacilities, checkedOutGuestIds };
   const entries: HotelLogEntry[] = [
     night.entry,
@@ -58,6 +62,7 @@ export function resolveDay(state: GameState): GameState {
     ...(auraNight.tradeBonus.food||auraNight.tradeBonus.parts ? [{day:state.day,type:"RESOURCE" as const,message:`Aura 교역 · 식량 +${auraNight.tradeBonus.food} · 부품 +${auraNight.tradeBonus.parts}`}] : []),
     ...(auraNight.sickGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`객실 질병 발생 · ${auraNight.sickGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
     ...(auraNight.clinicPreventedGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`상설 진료소 예방 · ${auraNight.clinicPreventedGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
+    ...(appliedAlarmThreatReduction ? [{day:state.day,type:"EVENT" as const,message:`외곽 조기경보망 가동 · Monster Threat 보정 -${appliedAlarmThreatReduction}`}] : []),
     ...(Object.keys(economy.production).length ? [{ day: state.day, type: "RESOURCE" as const, message: `시설 생산 · ${Object.entries(economy.production).map(([key,value]) => `${key} +${value}`).join(" · ")}` }] : []),
     ...(economy.inactiveFacilities.length ? [{ day: state.day, type: "EVENT" as const, message: `유지비 부족 · ${economy.inactiveFacilities.map((id) => FACILITY_NAMES[id]).join(" · ")} 가동 중단` }] : []),
     ...checkedOutGuestIds.map((guestId): HotelLogEntry => ({ day: nextDay, type: "CHECK_OUT", message: `${state.guests.find((guest) => guest.id === guestId)?.name ?? guestId} · 숙박 종료 자동 체크아웃` })),
@@ -74,7 +79,7 @@ export function resolveDay(state: GameState): GameState {
     resources: economy.resources,
     flags: {
       ...state.flags,
-      monster_threat: Math.max(0,Number(state.flags.monster_threat??0)+auraNight.threatDelta),
+      monster_threat: threatAfterAuraNight,
       eleanor_checked_in: eleanor?.status === "STAYING",
       eleanor_room: eleanor?.currentRoomNumber ?? 0,
     },

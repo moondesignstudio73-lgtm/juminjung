@@ -96,6 +96,37 @@ test("객실 Medical Aura가 이미 막은 질병을 상설 진료소 예방으�
   assert.ok(!result.clinicPreventedGuestIds.includes("walter"));
 });
 
+test("Hazel의 외곽 조기경보망은 객실 Aura 계산 뒤 야간 위협을 3 낮춘다", () => {
+  const state = place([["walter",101]]);
+  const withoutAlarm = resolveAuraNight(state.rooms, state.guests, 1, "STABLE", 0);
+  const withAlarm = resolveAuraNight(state.rooms, state.guests, 1, "STABLE", 0, { perimeter_alarm: true });
+  assert.equal(withAlarm.threatDelta, withoutAlarm.threatDelta - 3);
+  assert.equal(withAlarm.perimeterAlarmThreatReduction, 3);
+  assert.equal(withoutAlarm.perimeterAlarmThreatReduction, 0);
+});
+
+test("객실 Aura가 이미 위협 보정 하한에 도달하면 경보망 감소를 중복 기록하지 않는다", () => {
+  const state = place([["walter",101]]);
+  state.rooms = state.rooms.map((room) => room.roomNumber === 101 ? {
+    ...room,
+    permanentEffects: [{ id:"test-perimeter-effect", sourceGuestId:"test", name:"Test Perimeter", metric:"monsterThreat", operation:"ADD", value:-100 }],
+  } : room);
+  const result = resolveAuraNight(state.rooms, state.guests, 1, "STABLE", 0, { perimeter_alarm: true });
+  assert.equal(result.threatDelta, -10);
+  assert.equal(result.perimeterAlarmThreatReduction, 0);
+});
+
+test("객실 Aura가 -9를 만든 경계에서는 경보망의 실제 추가 감소 1만 기록한다", () => {
+  const state = place([["walter",101]]);
+  state.rooms = state.rooms.map((room) => room.roomNumber === 101 ? {
+    ...room,
+    permanentEffects: [{ id:"test-perimeter-effect", sourceGuestId:"test", name:"Test Perimeter", metric:"monsterThreat", operation:"ADD", value:-90 }],
+  } : room);
+  const result = resolveAuraNight(state.rooms, state.guests, 1, "STABLE", 0, { perimeter_alarm: true });
+  assert.equal(result.threatDelta, -10);
+  assert.equal(result.perimeterAlarmThreatReduction, 1);
+});
+
 test("Ruth 단독 치료는 5, Eleanor와 겹친 MEDICAL WARD는 최종 10을 회복한다", () => {
   const ruth = place([["ruth",302]]);
   const ward = place([["eleanor",301],["ruth",302]]);
@@ -137,4 +168,30 @@ test("DAY 정산은 상설 진료소가 예방한 투숙객을 호텔 로그에 
   const resolved = resolveDay(state);
   assert.equal(resolved.guests.find((guest) => guest.id === "walter")?.infectionState, "HEALTHY");
   assert.ok(resolved.eventHistory.some((entry) => entry.message === "상설 진료소 예방 · 월터 브릭스"));
+});
+
+test("DAY 정산은 외곽 조기경보망의 지속 위협 보정을 적용하고 기록한다", () => {
+  const state = place([["walter",101]]);
+  state.phase = "night";
+  state.flags.perimeter_alarm = true;
+  state.flags.monster_threat = 10;
+  state.selectedNightEventId = "quiet_watch";
+  state.selectedNightChoiceId = "rest";
+  state.guests = state.guests.map((guest) => guest.id === "walter" ? { ...guest, remainingNights: 2 } : guest);
+  const resolved = resolveDay(state);
+  assert.equal(resolved.flags.monster_threat, 7);
+  assert.ok(resolved.eventHistory.some((entry) => entry.message === "외곽 조기경보망 가동 · Monster Threat 보정 -3"));
+});
+
+test("DAY 정산 로그는 저장 위협도 0 하한까지 반영한 실제 경보망 감소량만 표시한다", () => {
+  const state = place([["walter",101]]);
+  state.phase = "night";
+  state.flags.perimeter_alarm = true;
+  state.flags.monster_threat = 1;
+  state.selectedNightEventId = "quiet_watch";
+  state.selectedNightChoiceId = "rest";
+  state.guests = state.guests.map((guest) => guest.id === "walter" ? { ...guest, remainingNights: 2 } : guest);
+  const resolved = resolveDay(state);
+  assert.equal(resolved.flags.monster_threat, 0);
+  assert.ok(resolved.eventHistory.some((entry) => entry.message === "외곽 조기경보망 가동 · Monster Threat 보정 -1"));
 });

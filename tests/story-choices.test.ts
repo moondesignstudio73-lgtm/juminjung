@@ -398,3 +398,21 @@ test("남은 NPC 선택도 관계·위협·시설·후속 플래그에 연결된
   assert.equal(thomas.flags.safe_routes_mapped, true);
   assert.equal(thomas.reputations.community, 7);
 });
+
+test("Hazel의 외곽 경계대는 지속 경보망과 전용 컷신을 열고 저장된다", () => {
+  const result = applyStoryChoice(resolutionState("hazel"), "hazel-watch", "ranger").state;
+  assert.equal(result.flags.hazel_ranger_watch, true);
+  assert.equal(result.flags.perimeter_alarm, true);
+  assert.equal(result.activeCutsceneId, "hazel_perimeter_watch");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/hazel-perimeter-watch-v1.png");
+  const restored = restoreGameState(serializeGameState(result));
+  assert.equal(restored.flags.perimeter_alarm, true);
+  assert.equal(restored.activeCutsceneId, "hazel_perimeter_watch");
+});
+
+test("Hazel의 복수 원정은 지속 경보망 효과와 전용 컷신을 열지 않는다", () => {
+  const result = applyStoryChoice(resolutionState("hazel"), "hazel-watch", "vengeance").state;
+  assert.equal(result.flags.hazel_vengeance_complete, true);
+  assert.equal(result.flags.perimeter_alarm, undefined);
+  assert.equal(result.activeCutsceneId, null);
+});

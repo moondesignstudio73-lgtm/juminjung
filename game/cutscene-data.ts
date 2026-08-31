@@ -2,6 +2,18 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: "hazel_perimeter_watch",
+    triggerStoryEventId: "hazel-watch",
+    triggerStoryChoiceId: "ranger",
+    priority: 165,
+    kicker: "JUJU HOTEL · OUTER PERIMETER",
+    title: "괴물보다 먼저 울리는 종",
+    body: "Hazel은 Vale가 표시한 이동로를 따라 철사와 빈 통, 프런트에서 떼어 낸 작은 황동 종을 호텔 외곽에 연결했다. 마지막 매듭을 당기자 동쪽 담장 끝에서 낮은 종소리가 차례로 돌아왔다. 그것은 괴물을 쓰러뜨리는 덫이 아니었다. 어둠이 철문에 닿기 전에 복도의 불을 깨우고, 잠든 사람들이 각자의 자리를 찾게 하는 경보였다.",
+    quote: "이제 저것들이 먼저 우리를 보는 밤은 끝이야.",
+    image: "/juminjung/assets/cutscenes/hazel-perimeter-watch-v1.png",
+    imageAlt: "헤이즐 퀸이 비 내리는 JUJU HOTEL 외곽 담장에서 철사와 황동 종으로 만든 조기경보 장치를 점검하고, 멀리 따뜻한 호텔 창문과 안개 속 형체들이 보이는 장면.",
+  },
+  {
     id: "eleanor_clinic_opened",
     triggerStoryEventId: "eleanor-standard",
     triggerStoryChoiceId: "clinic",

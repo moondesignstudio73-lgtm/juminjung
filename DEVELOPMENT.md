@@ -55,6 +55,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - Major NPC story choices can own data-driven one-time full-screen cutscenes. Mia and Daniel's HOME-route reunion uses dedicated artwork, and a saved cutscene queue prevents unique story scenes from being lost when another scene is already active
 - Walter's decision to use the inherited brass key opens a dedicated basement-archive cutscene, visually linking his story resolution to the later 91.3 MHz signal and THE TRUTH investigation
 - Eleanor's permanent clinic spends scarce medicine to open a dedicated illustrated scene and lowers hotel-wide normal disease risk by five percentage points, logging the residents whose illness it prevents
+- Hazel's ranger-watch resolution opens a dedicated perimeter-network scene and keeps the installed alarm active each night, applying and logging up to three points of Monster Threat reduction after room Aura effects
 
 ## Next system priorities
 

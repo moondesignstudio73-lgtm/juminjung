@@ -11,6 +11,7 @@ export type AuraNightResolution = {
   tradeBonus:{food:number;parts:number};
   sickGuestIds:string[];
   clinicPreventedGuestIds:string[];
+  perimeterAlarmThreatReduction:number;
 };
 
 const clamp = (value:number,min=0,max=100) => Math.max(min,Math.min(max,value));
@@ -19,6 +20,7 @@ const additiveValue = (room:Room|undefined, metric:AuraMetric) => effectsFor(roo
 const diseaseBaseChance:Record<WorldState,number> = {STABLE:2,UNREST:6,COLLAPSE:12,CRITICAL:20,END_STAGE:28};
 const stableGuestSeed = (guestId:string) => [...guestId].reduce((seed,character)=>(seed*31+character.charCodeAt(0))%100,0);
 export const ELEANOR_CLINIC_DISEASE_REDUCTION = 5;
+export const PERIMETER_ALARM_THREAT_REDUCTION = 3;
 
 export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, worldState:WorldState, baseDiseaseChance=diseaseBaseChance[worldState], flags:EventFlags={}):AuraNightResolution {
   const staying = guests.filter((guest)=>guest.status==="STAYING"&&guest.currentRoomNumber!==null);
@@ -32,6 +34,7 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
   const sickGuestIds:string[] = [];
   const clinicPreventedGuestIds:string[] = [];
   const clinicActive = flags.eleanor_clinic_established === true;
+  const perimeterAlarmActive = flags.perimeter_alarm === true;
 
   const adjustedStats = new Map(staying.map((guest)=>{
     const room = rooms.find((candidate)=>candidate.roomNumber===guest.currentRoomNumber);
@@ -63,15 +66,18 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
     return [guest.id,{...guest,stress,trust,health:becomesSick?clamp(guest.health-10):guest.health,infectionState:becomesSick?"SICK" as const:guest.infectionState}] as const;
   }));
 
+  const threatWithoutAlarm = clamp(Math.round(threatScore/10),-10,10);
+  const threatDelta = clamp(threatWithoutAlarm-(perimeterAlarmActive?PERIMETER_ALARM_THREAT_REDUCTION:0),-10,10);
   return {
     guests:guests.map((guest)=>updatedById.get(guest.id)??guest),
     foodDemand:Math.ceil(foodUnits),
     securityDelta:clamp(Math.round(securityScore/10),-10,10),
     hotelConditionDelta:clamp(Math.round(-breakdownScore/10),-10,10),
     crimeDelta:clamp(Math.round(crimeScore/10),0,10),
-    threatDelta:clamp(Math.round(threatScore/10),-10,10),
+    threatDelta,
     tradeBonus:{food:Math.floor(Math.max(0,tradeScore)/20),parts:Math.floor(Math.max(0,tradeScore)/40)},
     sickGuestIds,
     clinicPreventedGuestIds,
+    perimeterAlarmThreatReduction:threatWithoutAlarm-threatDelta,
   };
 }
