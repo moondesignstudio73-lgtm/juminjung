@@ -128,6 +128,19 @@ test("Grace의 위험한 계시와 믿음의 결말은 사건 문맥에 맞는 �
   assert.equal(getGuestVisualState(guest("grace"), happy).asset, "/juminjung/assets/portraits/grace/happy-v1.png");
 });
 
+test("Noah의 중독 갈등과 공동 식탁 결말은 사건 문맥에 맞는 전용 표정을 제공한다", () => {
+  const conflict = STORY_CHOICE_EVENTS.find((event) => event.id === "noah-cellar");
+  const resolution = STORY_CHOICE_EVENTS.find((event) => event.id === "noah-table");
+  const sad = getStoryEventExpression("noah-cellar");
+  const happy = getStoryEventExpression("noah-table");
+  assert.deepEqual([conflict?.guestId, conflict?.stage], ["noah", "CONFLICT"]);
+  assert.deepEqual([resolution?.guestId, resolution?.stage], ["noah", "RESOLUTION"]);
+  assert.equal(sad, "sad");
+  assert.equal(happy, "happy");
+  assert.equal(getGuestVisualState(guest("noah"), sad).asset, "/juminjung/assets/portraits/noah/sad-v1.png");
+  assert.equal(getGuestVisualState(guest("noah"), happy).asset, "/juminjung/assets/portraits/noah/happy-v1.png");
+});
+
 test("도착 대기 중인 방문자는 젖은 옷 상태로 표시된다", () => {
   const visual = getGuestVisualState(guest("eleanor"));
   assert.ok(visual.modifiers.includes("WET"));
@@ -174,10 +187,10 @@ test("Mr. White는 첫 등장부터 위험도에 맞는 의심 초상을 사용�
 });
 
 test("전용 표정 변형이 없는 NPC는 중립 초상으로 안전하게 대체된다", () => {
-  const noah = getGuestVisualState({ ...guest("noah"), status: "STAYING", stress: 75 });
-  assert.equal(noah.expression, "sad");
-  assert.equal(noah.asset, "/juminjung/assets/portraits/noah/neutral-v1.png");
-  assert.ok(noah.modifiers.includes("EXHAUSTED"));
+  const thomas = getGuestVisualState({ ...guest("thomas"), status: "STAYING", stress: 75 });
+  assert.equal(thomas.expression, "sad");
+  assert.equal(thomas.asset, "/juminjung/assets/portraits/thomas/neutral-v1.png");
+  assert.ok(thomas.modifiers.includes("EXHAUSTED"));
 });
 
 test("과거 저장의 오래된 초상화 경로는 최신 카탈로그 자산으로 복원된다", () => {
