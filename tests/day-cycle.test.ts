@@ -25,6 +25,15 @@ test("DAY 종료 시 점유 인원만큼 식량과 물, 기본 연료가 소비�
   assert.equal(result.resources.fuel, 61);
 });
 
+test("Thomas의 독립 마이크로그리드는 기본 발전기 연료를 절감하고 로그에 남긴다", () => {
+  const state = checkedInState();
+  state.flags.generator_network_stable = true;
+  const result = resolveDay(state);
+  assert.deepEqual(result.lastDaySummary?.consumed, { food: 1, water: 1, fuel: 0 });
+  assert.equal(result.resources.fuel, 62);
+  assert.ok(result.eventHistory.some((entry) => entry.message === "독립 마이크로그리드 · 기본 발전기 연료 1 절감"));
+});
+
 test("첫날 종료 후 숙박기간이 1박 남고 객실과 Aura는 유지된다", () => {
   const result = resolveDay(checkedInState());
   assert.equal(result.day, 2);

@@ -109,6 +109,34 @@ test("LV.2 정수 시설은 매일 유지비를 지불하고 단계 생산량을
   assert.deepEqual(resolved.lastDaySummary?.facilityUpkeep, { fuel: 1 });
 });
 
+test("마이크로그리드는 시설 자체의 연료 유지비까지 면제하지 않는다", () => {
+  const state = createInitialGameState();
+  state.flags.generator_network_stable = true;
+  state.facilities.water_purifier = 2;
+  state.resources.fuel = 10;
+  state.phase = "night";
+  const resolved = resolveDay(state);
+  assert.equal(resolved.resources.fuel, 9);
+  assert.deepEqual(resolved.lastDaySummary?.consumed, { food: 0, water: 0, fuel: 0 });
+  assert.deepEqual(resolved.lastDaySummary?.facilityUpkeep, { fuel: 1 });
+  assert.deepEqual(resolved.lastDaySummary?.facilityProduction, { water: 4 });
+});
+
+test("연료 0의 마이크로그리드는 기본망만 절감하고 연료 시설은 안전하게 중단한다", () => {
+  const state = createInitialGameState();
+  state.flags.generator_network_stable = true;
+  state.facilities.water_purifier = 2;
+  state.resources.fuel = 0;
+  state.phase = "night";
+  const resolved = resolveDay(state);
+  assert.equal(resolved.resources.fuel, 0);
+  assert.deepEqual(resolved.lastDaySummary?.consumed, { food: 0, water: 0, fuel: 0 });
+  assert.deepEqual(resolved.lastDaySummary?.facilityProduction, {});
+  assert.deepEqual(resolved.lastDaySummary?.inactiveFacilities, ["water_purifier"]);
+  assert.ok(resolved.eventHistory.some((entry) => entry.message === "독립 마이크로그리드 · 기본 발전기 연료 1 절감"));
+  assert.ok(resolved.eventHistory.some((entry) => entry.message.includes("유지비 부족")));
+});
+
 test("LV.2 교역망은 식량과 물을 부품·연료로 바꿔 장기 회복 경로를 만든다", () => {
   const state = createInitialGameState();
   state.facilities.trade_network = 2;

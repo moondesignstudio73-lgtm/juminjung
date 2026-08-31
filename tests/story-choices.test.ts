@@ -416,3 +416,21 @@ test("Hazel의 복수 원정은 지속 경보망 효과와 전용 컷신을 열�
   assert.equal(result.flags.perimeter_alarm, undefined);
   assert.equal(result.activeCutsceneId, null);
 });
+
+test("Thomas의 마이크로그리드는 안정 전력망과 전용 컷신을 열고 저장된다", () => {
+  const result = applyStoryChoice(resolutionState("thomas"), "thomas-grid", "microgrid").state;
+  assert.equal(result.flags.thomas_microgrid, true);
+  assert.equal(result.flags.generator_network_stable, true);
+  assert.equal(result.activeCutsceneId, "thomas_microgrid_online");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/thomas-microgrid-online-v1.png");
+  const restored = restoreGameState(serializeGameState(result));
+  assert.equal(restored.flags.generator_network_stable, true);
+  assert.equal(restored.activeCutsceneId, "thomas_microgrid_online");
+});
+
+test("Thomas의 라디오 중계망은 마이크로그리드 효과와 전용 컷신을 열지 않는다", () => {
+  const result = applyStoryChoice(resolutionState("thomas"), "thomas-grid", "signal").state;
+  assert.equal(result.flags.thomas_radio_grid, true);
+  assert.equal(result.flags.generator_network_stable, undefined);
+  assert.equal(result.activeCutsceneId, null);
+});

@@ -2,6 +2,18 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: "thomas_microgrid_online",
+    triggerStoryEventId: "thomas-grid",
+    triggerStoryChoiceId: "microgrid",
+    priority: 165,
+    kicker: "JUJU HOTEL · INDEPENDENT POWER",
+    title: "꺼지지 않는 세 개의 불빛",
+    body: "Thomas가 마지막 차단기를 올리자 발전기실의 진동이 낮고 고른 박자로 바뀌었다. 벽을 따라 새로 묶은 배선은 진료 구역, 프런트 라디오, 동쪽 방벽의 표시등으로 갈라졌다. 객실 조명은 여전히 필요한 만큼만 켜졌지만, 어느 한쪽을 살리기 위해 다른 쪽을 완전히 포기할 필요는 없어졌다. 낡은 계기판의 바늘이 안정 구간에 머문 채 첫 밤의 부하를 견뎠다.",
+    quote: "전기가 남은 게 아니에요. 낭비하던 전기를 되찾은 겁니다.",
+    image: "/juminjung/assets/cutscenes/thomas-microgrid-online-v1.png",
+    imageAlt: "토머스 리가 JUJU HOTEL 발전기실의 새 배전반을 올리고, 정돈된 배선이 진료 구역과 프런트 라디오, 동쪽 방벽 표시등으로 이어지는 가운데 계기판이 안정 구간을 가리키는 장면.",
+  },
+  {
     id: "hazel_perimeter_watch",
     triggerStoryEventId: "hazel-watch",
     triggerStoryChoiceId: "ranger",

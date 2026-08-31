@@ -56,6 +56,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - Walter's decision to use the inherited brass key opens a dedicated basement-archive cutscene, visually linking his story resolution to the later 91.3 MHz signal and THE TRUTH investigation
 - Eleanor's permanent clinic spends scarce medicine to open a dedicated illustrated scene and lowers hotel-wide normal disease risk by five percentage points, logging the residents whose illness it prevents
 - Hazel's ranger-watch resolution opens a dedicated perimeter-network scene and keeps the installed alarm active each night, applying and logging up to three points of Monster Threat reduction after room Aura effects
+- Thomas's microgrid resolution opens a dedicated generator-room scene, removes the hotel's one-unit base generator fuel demand, and suppresses the ordinary low-fuel failure event while leaving every facility's own upkeep intact
 
 ## Next system priorities
 

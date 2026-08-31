@@ -32,6 +32,13 @@ test("낮은 연료는 발전기 고장 사건을 발생시킨다", () => {
   assert.equal(selectNightEvent(state).id, "generator_failure");
 });
 
+test("안정화된 마이크로그리드는 일반 저연료 발전기 고장을 억제한다", () => {
+  const state = createInitialGameState();
+  state.resources.fuel = 0;
+  state.flags.generator_network_stable = true;
+  assert.equal(selectNightEvent(state).id, "quiet_watch");
+});
+
 test("보유 자원이 부족한 야간 선택지는 비활성화된다", () => {
   const state = createInitialGameState();
   state.resources.fuel = 1;

@@ -25,7 +25,7 @@ export const NIGHT_EVENTS: NightEventDefinition[] = [
     { id: "ration", label: "배급량을 줄인다", description: "자원은 보존하지만 모두의 Stress가 증가합니다.", effect: { allGuestStress: 8, reputations: { community: -3 } } },
     { id: "share", label: "비상 식량을 연다", description: "식량 3을 더 소비하고 공동체의 신뢰를 지킵니다.", requiredResources: { food: 3 }, effect: { resources: { food: -3 }, allGuestStress: -3, reputations: { humanitarian: 5, community: 3 } } },
   ] },
-  { id: "generator_failure", title: "발전기의 마지막 기침", description: "연료 압력이 떨어지며 호텔 절반이 암흑에 잠깁니다.", quote: "아버지가 남긴 발전기 매뉴얼의 마지막 장이 찢겨 있다.", priority: 80, condition: { maximumResource: { fuel: 10 } }, choices: [
+  { id: "generator_failure", title: "발전기의 마지막 기침", description: "연료 압력이 떨어지며 호텔 절반이 암흑에 잠깁니다.", quote: "아버지가 남긴 발전기 매뉴얼의 마지막 장이 찢겨 있다.", priority: 80, condition: { maximumResource: { fuel: 10 }, forbiddenFlags: ["generator_network_stable"] }, choices: [
     { id: "reserve", label: "예비 연료를 붓는다", description: "연료 2를 더 사용해 조명을 유지합니다.", requiredResources: { fuel: 2 }, effect: { resources: { fuel: -2 }, threat: -1 } },
     { id: "blackout", label: "로비와 객실 한 동의 전력을 끊는다", description: "남은 발전기 출력을 보존하지만 호텔 상태와 안전이 나빠집니다.", effect: { hotelStats: { hotelCondition: -3, security: -3 }, flags: { generator_blackout: true }, threat: 5 } },
   ] },
