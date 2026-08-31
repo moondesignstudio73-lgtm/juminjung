@@ -180,6 +180,19 @@ test("Eli의 절도 갈등과 신뢰 결말은 사건 문맥에 맞는 전용 �
   assert.equal(getGuestVisualState(guest("eli"), happy).asset, "/juminjung/assets/portraits/eli/happy-v1.png");
 });
 
+test("Hazel의 복수 갈등과 경계 결말은 사건 문맥에 맞는 전용 표정을 제공한다", () => {
+  const conflict = STORY_CHOICE_EVENTS.find((event) => event.id === "hazel-hunt");
+  const resolution = STORY_CHOICE_EVENTS.find((event) => event.id === "hazel-watch");
+  const angry = getStoryEventExpression("hazel-hunt");
+  const happy = getStoryEventExpression("hazel-watch");
+  assert.deepEqual([conflict?.guestId, conflict?.stage], ["hazel", "CONFLICT"]);
+  assert.deepEqual([resolution?.guestId, resolution?.stage], ["hazel", "RESOLUTION"]);
+  assert.equal(angry, "angry");
+  assert.equal(happy, "happy");
+  assert.equal(getGuestVisualState(guest("hazel"), angry).asset, "/juminjung/assets/portraits/hazel/angry-v1.png");
+  assert.equal(getGuestVisualState(guest("hazel"), happy).asset, "/juminjung/assets/portraits/hazel/happy-v1.png");
+});
+
 test("도착 대기 중인 방문자는 젖은 옷 상태로 표시된다", () => {
   const visual = getGuestVisualState(guest("eleanor"));
   assert.ok(visual.modifiers.includes("WET"));
