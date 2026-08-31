@@ -38,6 +38,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - HOTEL JOURNAL exposes the complete reverse-chronological record with check-in, checkout, resource, and event filters plus relationship details
 - Every ending route now has a distinct three-scene final event and epilogue; progress saves mid-scene and completion returns to open-ended operation
 - All seven ending routes own distinct full-screen artwork and accessible scene descriptions: SAFE HAVEN, THE TRUTH, FORTRESS, HOME, KING OF THE RUINS, MILITARY OCCUPATION, and the hidden THE DOOR route
+- Aura placement previews stay strongly visible, while the management grid starts clean and exposes the selected guest's subdued range through an accessible Aura 보기/숨기기 toggle
 - All 20 main NPCs now appear as large authored half-body 2D sprites at the front desk and in their story scenes
 - The portrait catalog selects authored assets per expression with a neutral fallback; all 20 main NPCs have at least one authored variant, including afraid and happy variants for Thomas, and save restoration refreshes variant paths from the catalog
 - Relationship night events can stage two character portraits with event-authored expression overrides; Owen and Hayes face off angrily during their military standoff, while Lily's relief contrasts with Vale's suspicion during their investigation breakthrough

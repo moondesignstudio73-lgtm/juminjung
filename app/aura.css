@@ -43,3 +43,38 @@
 
 .aura-card[class*="aura-"] > svg,
 .aura-card[class*="aura-"] strong { color: var(--aura-color); }
+
+.room-board-toolbar {
+  min-width: 740px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+  color: #918f86;
+  font-size: 10px;
+}
+
+.room-board-toolbar button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 112px;
+  border: 1px solid #68604c !important;
+  background: #292a23 !important;
+}
+
+.room-board-toolbar button[aria-pressed="true"] {
+  color: #f1d7a4 !important;
+  border-color: #b4935d !important;
+  background: #3a3325 !important;
+}
+
+.room-board-toolbar button small {
+  color: #a5a297;
+  font-size: 8px;
+}
+
+@media (max-width: 900px) {
+  .room-board-toolbar { min-width: 680px; }
+}
