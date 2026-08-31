@@ -85,5 +85,5 @@ export function resolveDay(state: GameState): GameState {
   };
   nextState.worldState = determineWorldState(nextState);
   const endings = evaluateEndings(nextState);
-  return queueNightEventCutscene({ ...nextState, availableEndings: endings.available, endingProgress: endings.progress }, night.event.id, summary.completedDay);
+  return queueNightEventCutscene({ ...nextState, availableEndings: endings.available, endingProgress: endings.progress }, night.event.id, night.choice.id, summary.completedDay);
 }

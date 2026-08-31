@@ -24,6 +24,32 @@ export const CUTSCENES: CutsceneDefinition[] = [
     image: "/juminjung/assets/cutscenes/first-monster-sighting-v1.png",
     imageAlt: "차가운 빗속에서 비정상적으로 긴 괴물이 JUJU HOTEL의 휘어진 철문 너머에 서 있는 첫 목격 장면.",
   },
+  {
+    id: "refugees_sheltered",
+    triggerEventId: "refugee_wave",
+    triggerChoiceId: "shelter",
+    priority: 80,
+    minimumCompletedDay: 8,
+    kicker: "THE TURNING KEY · EAST GATE",
+    title: "철문을 여는 손",
+    body: "젖은 얼굴들이 철창 너머에서 대답을 기다렸다. 아이의 기침이 다시 들리자 당신은 바리케이드의 빗장을 풀고 황동 열쇠를 돌렸다. 문이 열리는 몇 분 동안 바깥의 그림자도 호텔을 보았지만, 오늘 밤 JUJU HOTEL은 다시 사람이 사는 곳이 될 것이다.",
+    quote: "방은 없어도, 지붕은 나눌 수 있다.",
+    image: "/juminjung/assets/cutscenes/refugees-at-gate-v1.png",
+    imageAlt: "차가운 폭우 속에서 아이를 안은 보호자와 노인 등 피난민들이 JUJU HOTEL 철문 앞에 모여 도움을 청하는 장면.",
+  },
+  {
+    id: "refugees_denied",
+    triggerEventId: "refugee_wave",
+    triggerChoiceId: "deny",
+    priority: 80,
+    minimumCompletedDay: 8,
+    kicker: "THE CLOSED GATE · EAST GATE",
+    title: "철문 밖에 남은 발자국",
+    body: "램프를 끄자 바깥의 얼굴들이 하나씩 어둠에 잠겼다. 아이의 기침 소리는 빗소리에 묻힐 때까지 오래 남았다. 새벽이 왔을 때 철문 앞에는 작은 신발 자국과, 호텔 쪽을 향해 눌린 손바닥 자국만 남아 있었다.",
+    quote: "문을 지켰다. 그러나 무엇을 지킨 것인지는 장부에 적히지 않았다.",
+    image: "/juminjung/assets/cutscenes/refugees-at-gate-v1.png",
+    imageAlt: "차가운 폭우 속에서 아이를 안은 보호자와 노인 등 피난민들이 JUJU HOTEL 철문 앞에 모여 도움을 청하는 장면.",
+  },
 ];
 
 export function getCutscene(id: string | null): CutsceneDefinition | null {

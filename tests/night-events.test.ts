@@ -60,7 +60,7 @@ test("철문 침입 정산은 첫 괴물 목격 컷신을 한 번만 예약한�
   const dismissed = dismissCutscene(resolved);
   assert.equal(dismissed.activeCutsceneId, null);
   assert.deepEqual(dismissed.seenCutsceneIds, ["first_monster_sighting"]);
-  assert.equal(queueNightEventCutscene(dismissed, "perimeter_breach", 12), dismissed);
+  assert.equal(queueNightEventCutscene(dismissed, "perimeter_breach", "barricade", 12), dismissed);
 });
 
 test("DAY 1 정산은 첫날 밤 컷신을 한 번만 예약한다", () => {
@@ -74,17 +74,57 @@ test("DAY 1 정산은 첫날 밤 컷신을 한 번만 예약한다", () => {
   assert.equal(resolved.activeCutsceneId, "first_night");
   const dismissed = dismissCutscene(resolved);
   assert.deepEqual(dismissed.seenCutsceneIds, ["first_night"]);
-  assert.equal(queueNightEventCutscene(dismissed, "quiet_watch", 1), dismissed);
+  assert.equal(queueNightEventCutscene(dismissed, "quiet_watch", "rest", 1), dismissed);
 });
 
 test("첫날 밤 컷신은 quiet_watch가 아닌 사건 뒤에도 날짜로 예약된다", () => {
   const state = createInitialGameState();
-  assert.equal(queueNightEventCutscene(state, "generator_failure", 1).activeCutsceneId, "first_night");
+  assert.equal(queueNightEventCutscene(state, "generator_failure", "blackout", 1).activeCutsceneId, "first_night");
 });
 
-test("DAY 1에 사건 전용 컷신이 겹치면 높은 우선순위 장면이 먼저 선택된다", () => {
+test("DAY 1에 범용 컷신이 겹쳐도 사건 전용 장면이 먼저 선택된다", () => {
   const state = createInitialGameState();
-  assert.equal(queueNightEventCutscene(state, "perimeter_breach", 1).activeCutsceneId, "first_monster_sighting");
+  assert.equal(queueNightEventCutscene(state, "perimeter_breach", "fight", 1).activeCutsceneId, "first_monster_sighting");
+});
+
+test("피난민 수용과 거절은 같은 사건에서 서로 다른 결과 컷신을 예약한다", () => {
+  const state = createInitialGameState();
+  assert.equal(queueNightEventCutscene(state, "refugee_wave", "shelter", 7).activeCutsceneId, null);
+  assert.equal(queueNightEventCutscene(state, "refugee_wave", "shelter", 8).activeCutsceneId, "refugees_sheltered");
+  assert.equal(queueNightEventCutscene(state, "refugee_wave", "shelter", 9).activeCutsceneId, "refugees_sheltered");
+  assert.equal(queueNightEventCutscene(state, "refugee_wave", "deny", 8).activeCutsceneId, "refugees_denied");
+  assert.equal(queueNightEventCutscene(state, "refugee_wave", "unknown", 8).activeCutsceneId, null);
+});
+
+test("피난민 선택 결과 컷신은 실제 DAY 정산의 선택과 플래그를 함께 반영한다", () => {
+  const shelter = createInitialGameState();
+  shelter.day = 8;
+  shelter.phase = "night";
+  shelter.worldState = "UNREST";
+  shelter.selectedNightEventId = "refugee_wave";
+  shelter.selectedNightChoiceId = "shelter";
+  const sheltered = resolveDay(shelter);
+  assert.equal(sheltered.activeCutsceneId, "refugees_sheltered");
+  assert.equal(sheltered.flags.refugees_sheltered, true);
+  assert.equal(sheltered.flags.refugees_denied, false);
+
+  const deny = createInitialGameState();
+  deny.day = 8;
+  deny.phase = "night";
+  deny.worldState = "UNREST";
+  deny.selectedNightEventId = "refugee_wave";
+  deny.selectedNightChoiceId = "deny";
+  const denied = resolveDay(deny);
+  assert.equal(denied.activeCutsceneId, "refugees_denied");
+  assert.equal(denied.flags.refugees_denied, true);
+  assert.equal(denied.flags.refugees_sheltered, false);
+});
+
+test("본 피난민 결과 컷신은 저장 복원 뒤 같은 선택에서 다시 예약되지 않는다", () => {
+  const queued = queueNightEventCutscene(createInitialGameState(), "refugee_wave", "shelter", 8);
+  const restored = restoreGameState(serializeGameState(dismissCutscene(queued)));
+  assert.deepEqual(restored.seenCutsceneIds, ["refugees_sheltered"]);
+  assert.equal(queueNightEventCutscene(restored, "refugee_wave", "shelter", 12), restored);
 });
 
 test("DAY 2 이후에는 첫날 밤 컷신을 뒤늦게 재생하지 않는다", () => {
