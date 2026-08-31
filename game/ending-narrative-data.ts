@@ -31,7 +31,7 @@ export const ENDING_NARRATIVES: EndingNarrative[] = [
     { id: "handover", title: "빼앗긴 마스터키", body: "저항할 사람도 남아 있지만 첫 총성이 누구를 향할지 당신은 안다. 마스터키를 내려놓는 순간 병사들이 로비의 이름표를 떼고 통행 등급표를 붙인다.", quote: "호텔은 살아남았다. 다만 누구를 위한 생존인지 묻는 사람은 사라졌다." },
     { id: "epilogue", title: "MILITARY OCCUPATION", body: "당신은 계속 프런트에 앉아 있지만 방을 내줄 권한은 없다. 밤마다 문밖에서 노크가 들리고, 승인 목록에 없는 이름들이 비에 젖어 지워진다.", quote: "May I have a room? — 허가 번호를 제시하십시오." },
   ] },
-  { endingId: "THE_DOOR", kicker: "HIDDEN FINAL EVENT · 0호실", scenes: [
+  { endingId: "THE_DOOR", kicker: "HIDDEN FINAL EVENT · 0호실", image: "/juminjung/assets/cutscenes/ending-the-door-v2.png", imageAlt: "존재하지 않는 지하 복도의 0호실 앞에서 한 생존자가 문에 손을 뻗고, 동시에 열린 객실 문들 사이 바닥에는 평범한 사람과 길고 마른 비인간적 형체의 그림자가 겹쳐 드리운 장면.", scenes: [
     { id: "knock", title: "안쪽에서 들린 노크", body: "존재하지 않던 지하 복도 끝에 0호실 문이 서 있다. 세 번의 노크 뒤, 문 안쪽에서 오래전 사라진 아버지가 당신의 어린 시절 별명을 부른다.", quote: "똑. 똑. 똑. — ‘문을 열어다오.’" },
     { id: "question", title: "마지막 손님", body: "Mr. White의 그림자와 아버지의 목소리가 문틈에서 겹친다. 그것은 방을 요구하지 않는다. 대신 당신이 지금까지 들인 모든 사람이 정말 인간이었는지 묻는다.", quote: "‘네가 지킨 건 사람인가, 끝까지 인간답게 대하려던 규칙인가?’" },
     { id: "epilogue", title: "THE DOOR", body: "당신이 손잡이를 돌리자 호텔의 모든 객실 문이 동시에 열린다. 아침 장부에는 단 한 줄만 남고, 그날 이후 누구도 0호실의 위치를 같은 곳에서 찾지 못한다.", quote: "마지막 체크인: JUJU HOTEL 자체." },

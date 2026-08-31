@@ -27,6 +27,12 @@ test("THE TRUTH 엔딩은 지하 기록실 전용 원화와 대체 텍스트를 
   assert.match(truth.imageAlt ?? "", /Lily.*Vale.*지하 기록실/);
 });
 
+test("숨겨진 THE DOOR 엔딩은 0호실 전용 원화와 대체 텍스트를 데이터에서 제공한다", () => {
+  const door = ENDING_NARRATIVES.find((narrative) => narrative.endingId === "THE_DOOR")!;
+  assert.equal(door.image, "/juminjung/assets/cutscenes/ending-the-door-v2.png");
+  assert.match(door.imageAlt ?? "", /0호실.*생존자.*비인간적 형체/);
+});
+
 test("조건이 충족된 여러 엔딩은 자동 종료 없이 동시에 AVAILABLE이 된다", () => {
   const state = createInitialGameState();
   Object.assign(state.flags, { military_resistance_failed: true });
