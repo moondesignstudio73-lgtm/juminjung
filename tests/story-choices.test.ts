@@ -398,7 +398,15 @@ test("Jack과 Victor의 독점 선택 결과가 폐허의 왕 엔딩 조건을 �
 });
 
 test("공정 거래 경로만으로는 폐허의 왕 엔딩이 열리지 않는다", () => {
-  let state = applyStoryChoice(resolutionState("jack"), "jack-market", "fair_market").state;
+  const starting = resolutionState("jack");
+  starting.flags.jack_monopoly = true;
+  starting.flags.ruin_market_controlled = true;
+  let state = applyStoryChoice(starting, "jack-market", "fair_market").state;
+  assert.equal(state.flags.jack_monopoly, false);
+  assert.equal(state.flags.ruin_market_controlled, false);
+  assert.equal(state.activeCutsceneId, "jack_fair_exchange");
+  assert.equal(getCutscene(state.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/jack-fair-exchange-v1.png");
+  assert.equal(restoreGameState(serializeGameState(state)).activeCutsceneId, "jack_fair_exchange");
   state.guests = state.guests.map((guest) => guest.id === "victor" ? {
     ...guest,
     status: "STAYING",
@@ -410,8 +418,19 @@ test("공정 거래 경로만으로는 폐허의 왕 엔딩이 열리지 않는�
   state.reputations.merchant = 80;
   state.hotelStats.resources = 85;
   state.facilities.trade_network = 1;
-  assert.equal(state.flags.ruin_market_controlled, undefined);
+  assert.equal(state.flags.ruin_market_controlled, false);
   assert.equal(evaluateEndings(state).available.includes("KING_OF_THE_RUINS"), false);
+});
+
+test("Jack의 독점 거래는 공정 교환 컷신과 연료 절감 계약을 열지 않는다", () => {
+  const starting = resolutionState("jack");
+  starting.flags.jack_fair_market = true;
+  starting.flags.trade_network_active = true;
+  const state = applyStoryChoice(starting, "jack-market", "monopoly").state;
+  assert.equal(state.flags.jack_monopoly, true);
+  assert.equal(state.flags.jack_fair_market, false);
+  assert.equal(state.flags.trade_network_active, false);
+  assert.equal(state.activeCutsceneId, null);
 });
 
 test("남은 NPC 선택도 관계·위협·시설·후속 플래그에 연결된다", () => {

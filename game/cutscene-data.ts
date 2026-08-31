@@ -2,6 +2,18 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: "jack_fair_exchange",
+    triggerStoryEventId: "jack-market",
+    triggerStoryChoiceId: "fair_market",
+    priority: 170,
+    kicker: "JUJU HOTEL · OPEN EXCHANGE",
+    title: "모두가 저울을 볼 수 있는 시장",
+    body: "Jack은 프런트 위에 통조림과 연료병을 올린 뒤 값을 혼자 부르지 않았다. 주민 한 명이 저울을 확인하고, 다른 사람은 들어온 물자와 나간 배급표를 같은 장부에 적었다. 교환 기준은 그림 카드로 벽에 걸렸고, 다음 원정의 연료는 공개 상자에서 한 병씩만 꺼냈다. Jack에게는 이익을 숨길 구석이 줄었지만, 길에서 돌아온 물자가 누구의 몫인지 다투는 시간도 사라졌다. 폐허의 시장은 처음으로 가장 영리한 사람보다 가장 많은 눈이 지키는 곳이 되었다.",
+    quote: "좋아. 내 손만 보지 말고 저울도 봐. 둘이 다르면 장부가 이기는 거야.",
+    image: "/juminjung/assets/cutscenes/jack-fair-exchange-v1.png",
+    imageAlt: "잭 머서가 JUJU HOTEL 프런트의 공개 교환대에 통조림과 연료병을 올리고, 주민들이 황동 저울과 공동 장부, 그림 교환표를 함께 검토하는 장면.",
+  },
+  {
     id: "hayes_command_signed",
     triggerStoryEventId: "hayes-command",
     triggerStoryChoiceId: "sign_command",

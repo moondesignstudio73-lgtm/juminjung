@@ -2,6 +2,7 @@ import { FACILITIES } from "./facility-data.ts";
 import type { FacilityId, GameState, HotelActionId, HotelLogEntry, HotelStats, Reputations, Resources } from "./types.ts";
 
 type ActionResult = { state: GameState; ok: boolean; message: string };
+export type HotelActionDefinition = { name: string; cost: Partial<Resources>; resources?: Partial<Resources>; stats?: Partial<HotelStats>; reputation?: Partial<Reputations>; guestTrust?: number };
 
 function clamp(value: number) { return Math.max(0, Math.min(100, value)); }
 function mergeNumbers<T extends Record<string, number>>(current: T, changes: Partial<T>): T {
@@ -64,15 +65,31 @@ export function getFacilityEconomy(state: GameState, available: Resources): { re
   return { resources, production, upkeep, inactiveFacilities };
 }
 
-const ACTIONS: Record<HotelActionId, { name: string; cost: Partial<Resources>; resources?: Partial<Resources>; stats?: Partial<HotelStats>; reputation?: Partial<Reputations>; guestTrust?: number }> = {
+const ACTIONS: Record<HotelActionId, HotelActionDefinition> = {
   repair_hotel: { name: "호텔 보수", cost: { parts: 2 }, stats: { hotelCondition: 8 } },
   community_outreach: { name: "공동체 회의", cost: {}, reputation: { community: 8, humanitarian: 5 }, guestTrust: 5 },
   security_patrol: { name: "경계 순찰", cost: { fuel: 1 }, resources: { security: 5 }, stats: { security: 5 }, reputation: { military: 5, refugee: -2 } },
   trade_run: { name: "교역 원정", cost: { fuel: 2 }, resources: { food: 4, water: 4, parts: 1 }, stats: { resources: 4 }, reputation: { merchant: 6, humanitarian: -2 } },
 };
 
-export function performHotelAction(state: GameState, actionId: HotelActionId): ActionResult {
+export function getHotelActionDefinition(state: GameState, actionId: HotelActionId): HotelActionDefinition {
   const action = ACTIONS[actionId];
+  if (actionId !== "trade_run" || state.flags.jack_fair_market !== true) return action;
+  return {
+    ...action,
+    name: "공정 교역 원정",
+    cost: { ...action.cost, fuel: 1 },
+    reputation: { ...action.reputation, humanitarian: 0 },
+  };
+}
+
+export function canPerformHotelAction(state: GameState, actionId: HotelActionId): boolean {
+  const action = getHotelActionDefinition(state, actionId);
+  return state.actionPoints > 0 && canAfford(state.resources, action.cost);
+}
+
+export function performHotelAction(state: GameState, actionId: HotelActionId): ActionResult {
+  const action = getHotelActionDefinition(state, actionId);
   if (state.actionPoints < 1) return { state, ok: false, message: "오늘 사용할 행동 포인트가 없습니다." };
   if (!canAfford(state.resources, action.cost)) return { state, ok: false, message: "필요한 자원이 부족합니다." };
   const spent = spend(state.resources, action.cost);

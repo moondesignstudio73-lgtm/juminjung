@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { resolveDay } from "../game/day-manager.ts";
-import { buildFacility, performHotelAction } from "../game/hotel-action-manager.ts";
+import { buildFacility, canPerformHotelAction, getHotelActionDefinition, performHotelAction } from "../game/hotel-action-manager.ts";
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
 
 test("시설 건설은 자원과 행동 포인트를 소비하고 효과와 로그를 남긴다", () => {
@@ -68,10 +68,50 @@ test("호텔 보수는 지하 후퇴 뒤 남은 공성 피해 상태를 실제 �
 
 test("교역 원정은 연료를 자원과 부품으로 교환해 추가 시설 건설을 가능하게 한다", () => {
   const state = createInitialGameState();
+  state.reputations.humanitarian = 5;
   const result = performHotelAction(state, "trade_run");
   assert.equal(result.state.resources.fuel, state.resources.fuel - 2);
   assert.equal(result.state.resources.parts, state.resources.parts + 1);
   assert.equal(result.state.reputations.merchant, 6);
+  assert.equal(result.state.reputations.humanitarian, 3);
+});
+
+test("Jack의 공정 거래소는 표시·감당 가능 여부·정산을 같은 연료 1 계약으로 바꾼다", () => {
+  const state = createInitialGameState();
+  state.flags.jack_fair_market = true;
+  state.resources.fuel = 1;
+  state.reputations.humanitarian = 11;
+  const action = getHotelActionDefinition(state, "trade_run");
+  assert.equal(action.name, "공정 교역 원정");
+  assert.deepEqual(action.cost, { fuel: 1 });
+  assert.equal(action.reputation?.humanitarian, 0);
+  assert.equal(canPerformHotelAction(state, "trade_run"), true);
+  const result = performHotelAction(state, "trade_run");
+  assert.equal(result.ok, true);
+  assert.equal(result.state.resources.fuel, 0);
+  assert.equal(result.state.resources.food, state.resources.food + 4);
+  assert.equal(result.state.reputations.merchant, 6);
+  assert.equal(result.state.reputations.humanitarian, 11);
+  assert.match(result.state.eventHistory.at(-1)?.message ?? "", /공정 교역 원정/);
+});
+
+test("일반 교역은 연료 1에서 실행되지 않고 공정 거래소 효과를 추측 적용하지 않는다", () => {
+  const state = createInitialGameState();
+  state.resources.fuel = 1;
+  assert.equal(getHotelActionDefinition(state, "trade_run").name, "교역 원정");
+  assert.equal(canPerformHotelAction(state, "trade_run"), false);
+  const result = performHotelAction(state, "trade_run");
+  assert.equal(result.ok, false);
+  assert.equal(result.state, state);
+});
+
+test("저장 복원 뒤에도 Jack의 공정 교역 계약이 유지된다", () => {
+  const state = createInitialGameState();
+  state.flags.jack_fair_market = true;
+  state.resources.fuel = 1;
+  const restored = restoreGameState(serializeGameState(state));
+  assert.equal(getHotelActionDefinition(restored, "trade_run").cost.fuel, 1);
+  assert.equal(canPerformHotelAction(restored, "trade_run"), true);
 });
 
 test("정수·식량 시설은 야간 생산을 제공하고 다음 날 행동 포인트가 회복된다", () => {
