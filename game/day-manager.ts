@@ -6,6 +6,7 @@ import { determineWorldState } from "./world-state-manager.ts";
 import { applyNightChoice, canChooseNightChoice, selectNightEvent } from "./night-event-manager.ts";
 import { getFacilityEconomy } from "./hotel-action-manager.ts";
 import { FACILITIES } from "./facility-data.ts";
+import { queueNightEventCutscene } from "./cutscene-manager.ts";
 import type { DaySummary, GameState, HotelLogEntry } from "./types.ts";
 
 const FACILITY_NAMES = Object.fromEntries(FACILITIES.map((facility) => [facility.id, facility.name])) as Record<string, string>;
@@ -84,5 +85,5 @@ export function resolveDay(state: GameState): GameState {
   };
   nextState.worldState = determineWorldState(nextState);
   const endings = evaluateEndings(nextState);
-  return { ...nextState, availableEndings: endings.available, endingProgress: endings.progress };
+  return queueNightEventCutscene({ ...nextState, availableEndings: endings.available, endingProgress: endings.progress }, night.event.id);
 }

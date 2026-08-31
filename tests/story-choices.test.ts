@@ -76,12 +76,12 @@ test("Mr. White에게 문을 열면 숨겨진 특성과 괴물 단서를 발견�
   assert.equal(result.state.flags.monster_threat, 15);
 });
 
-test("Save v8은 진행 대기 중인 NPC 스토리 장면을 복원한다", () => {
+test("Save v9은 진행 대기 중인 NPC 스토리 장면을 복원한다", () => {
   const state = conflictState("walter");
   state.phase = "story";
   state.pendingStoryEventId = "walter-father-lie";
   const restored = restoreGameState(serializeGameState(state));
-  assert.equal(restored.version, 8);
+  assert.equal(restored.version, 9);
   assert.equal(restored.phase, "story");
   assert.equal(restored.pendingStoryEventId, "walter-father-lie");
 });

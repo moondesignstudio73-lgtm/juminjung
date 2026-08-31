@@ -19,7 +19,7 @@ Understood as: grow the published browser game into an open-duration hotel survi
 - A soft-pressure World State derived from time, scarcity, threat, and hotel stability
 - Two daily action points for repair, community, patrol, and trade decisions
 - Four buildable facilities with resource costs, passive production, stat changes, and faction reputation effects
-- Save v8 restoration for facilities, reputations, daily actions, night choices, and pending NPC story scenes
+- Save v9 restoration for facilities, reputations, daily actions, night choices, pending NPC story scenes, and one-time cutscene progress
 - Conditional night events driven by World State, shortages, Monster Threat, Security, and resources
 - Two-choice night outcomes that alter resources, hotel stats, faction reputation, flags, and guest condition
 - All twenty catalog NPCs have authored conflict and resolution choices with persistent consequences
@@ -39,6 +39,7 @@ Understood as: grow the published browser game into an open-duration hotel survi
 - Relationship night events can stage two character portraits with event-authored expression overrides; Owen and Hayes face off angrily during their military standoff, while Lily's relief contrasts with Vale's suspicion during their investigation breakthrough
 - NPC story events can author a scene-specific expression override; the expanded story cast now carries scene-specific emotional arcs from conflict through resolution, with Thomas moving from fear under the generator overload to quiet pride in the completed hotel grid
 - Guest visual state is derived from Health, Stress, infection, and arrival status, exposing wet, exhausted, bandaged, bloodied, and infection-suspected presentation layers
+- The first monster sighting now interrupts the morning report once after the east-gate breach, using a full-screen illustrated scene with rain, lamp flicker, slow camera movement, reduced-motion support, and save restoration
 
 ## Next system priorities
 

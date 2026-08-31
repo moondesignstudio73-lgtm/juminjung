@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { resolveDay } from "../game/day-manager.ts";
 import { applyNightChoice, canChooseNightChoice, selectNightEvent } from "../game/night-event-manager.ts";
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
+import { dismissCutscene, queueNightEventCutscene } from "../game/cutscene-manager.ts";
 
 function withGuest() {
   const state = createInitialGameState();
@@ -46,6 +47,22 @@ test("붕괴 단계의 높은 위협과 낮은 Security는 철문 침입 사건�
   assert.equal(selectNightEvent(state).id, "perimeter_breach");
 });
 
+test("철문 침입 정산은 첫 괴물 목격 컷신을 한 번만 예약한다", () => {
+  const state = withGuest();
+  state.phase = "night";
+  state.worldState = "COLLAPSE";
+  state.flags.monster_threat = 25;
+  state.hotelStats.security = 50;
+  state.selectedNightEventId = "perimeter_breach";
+  state.selectedNightChoiceId = "barricade";
+  const resolved = resolveDay(state);
+  assert.equal(resolved.activeCutsceneId, "first_monster_sighting");
+  const dismissed = dismissCutscene(resolved);
+  assert.equal(dismissed.activeCutsceneId, null);
+  assert.deepEqual(dismissed.seenCutsceneIds, ["first_monster_sighting"]);
+  assert.equal(queueNightEventCutscene(dismissed, "perimeter_breach"), dismissed);
+});
+
 test("피난민을 받아들이면 자원을 소비하고 평판·위협·플래그가 변한다", () => {
   const state = createInitialGameState();
   state.day = 8;
@@ -83,14 +100,25 @@ test("야간 선택은 정산 로그와 마지막 사건으로 저장되고 임�
   assert.ok(resolved.eventHistory.some((entry) => entry.message.includes("긴 복도, 짧은 밤")));
 });
 
-test("Save v8은 선택 중인 야간 사건과 선택지를 복원한다", () => {
+test("Save v9은 야간 선택과 진행 중인 컷신을 복원한다", () => {
   const state = createInitialGameState();
   state.selectedNightEventId = "quiet_watch";
   state.selectedNightChoiceId = "patrol";
+  state.activeCutsceneId = "first_monster_sighting";
   const restored = restoreGameState(serializeGameState(state));
-  assert.equal(restored.version, 8);
+  assert.equal(restored.version, 9);
   assert.equal(restored.selectedNightEventId, "quiet_watch");
   assert.equal(restored.selectedNightChoiceId, "patrol");
+  assert.equal(restored.activeCutsceneId, "first_monster_sighting");
+});
+
+test("손상 저장의 알 수 없는 컷신과 비배열 시청 기록은 안전하게 제거된다", () => {
+  const raw = JSON.parse(serializeGameState(createInitialGameState()));
+  raw.activeCutsceneId = "unknown_scene";
+  raw.seenCutsceneIds = "first_monster_sighting";
+  const restored = restoreGameState(JSON.stringify(raw));
+  assert.equal(restored.activeCutsceneId, null);
+  assert.deepEqual(restored.seenCutsceneIds, []);
 });
 
 test("Lily와 Vale는 같은 층 이상으로 가까울 때만 관계 사건을 만든다", () => {

@@ -23,6 +23,8 @@ import { canChooseNightChoice, selectNightEvent } from '@/game/night-event-manag
 import { getHotelLogEntries } from '@/game/hotel-log-manager';
 import { applyVisitorCheckInBenefits, getEligibleVisitor, getVisitorReaction, getVisitorReactionById, markVisitorRefused } from '@/game/visitor-manager';
 import { getGuestVisualState, getNightEventPortraits, getStoryEventExpression } from '@/game/guest-visual-manager';
+import { getCutscene } from '@/game/cutscene-data';
+import { dismissCutscene } from '@/game/cutscene-manager';
 import type { FacilityId, GameState, Guest, GuestExpression, HotelActionId, Room } from '@/game/types';
 
 type UiSave = GameState & { prologue: number };
@@ -64,6 +66,7 @@ export default function Home() {
   const visitorReaction = eligibleVisitor ? getVisitorReaction(save, eligibleVisitor) : null;
   const stayingGuest = [...save.guests].filter((guest) => guest.status === 'STAYING').sort((a,b) => (b.checkedInDay ?? 0) - (a.checkedInDay ?? 0))[0];
   const managedGuest = stayingGuest ?? visitor;
+  const activeCutscene = getCutscene(save.activeCutsceneId);
 
   useEffect(() => {
     const restored = loadBrowserGame();
@@ -124,6 +127,7 @@ export default function Home() {
     update({ guests, rooms: recalculateRoomEffects(checkoutGuest(save.rooms, managedGuest.id), guests), flags: managedGuest.id === ELEANOR_ID ? setGuestRoomFlags(save.flags, null) : save.flags, eventHistory: [...save.eventHistory, { day: save.day, type: 'CHECK_OUT', message: `${managedGuest.name} · 수동 체크아웃` }], decision: null, phase: 'desk' });
   };
 
+  if (activeCutscene) return <StoryCutscene day={save.day} cutscene={activeCutscene} onContinue={() => setSave((current) => ({ ...dismissCutscene(current), prologue: current.prologue }))} />;
   if (save.phase === 'title') return <TitleScreen onStart={() => update({ phase: 'prologue' })} muted={muted} setMuted={setMuted} />;
   if (save.phase === 'prologue') {
     const beat = prologue[save.prologue];
@@ -270,6 +274,14 @@ function StoryChoiceScene({ state, onChoose }: { state:UiSave; onChoose:(eventId
   const guest = state.guests.find((item)=>item.id===event?.guestId);
   if (!event || !guest) return <main className="event-screen"><section><h1>스토리 기록을 확인할 수 없습니다.</h1></section></main>;
   return <main className="event-screen story-event"><div className="event-light"/><CharacterSprite guest={guest} context="story" expression={getStoryEventExpression(event.id)}/><p className="scene-index">DAY {state.day} · {guest.name} · {event.stage==='CONFLICT'?'갈등':'결말'}</p><section><span>NPC STORY EVENT</span><h1>{event.title}</h1><p>{event.description}</p><blockquote>{event.quote}</blockquote><div className="night-choices">{event.choices.map((choice)=><Button key={choice.id} disabled={!canChooseStoryChoice(state,choice)} onClick={()=>onChoose(event.id,choice.id)}><span>{choice.label}</span><small>{choice.description}</small><ChevronRight/></Button>)}</div></section></main>;
+}
+
+function StoryCutscene({ day, cutscene, onContinue }: { day:number; cutscene:NonNullable<ReturnType<typeof getCutscene>>; onContinue:()=>void }) {
+  return <main className="cinematic-screen story-cutscene">
+    <img src={cutscene.image} alt={cutscene.imageAlt}/><div className="cutscene-rain" aria-hidden="true"/><div className="cinematic-wash"/><div className="cutscene-flicker" aria-hidden="true"/>
+    <p className="scene-index">DAY {Math.max(1,day-1)} · {cutscene.kicker}</p>
+    <section className="cutscene-copy" aria-live="polite"><span>JUJU HOTEL · 사건 기록</span><h1>{cutscene.title}</h1><p>{cutscene.body}</p><blockquote>“{cutscene.quote}”</blockquote><Button className="advance" onClick={onContinue}>아침 장부로 <ChevronRight/></Button></section>
+  </main>;
 }
 
 function MorningReport({ state, onNext, onReset, onStartEnding }: { state:UiSave; onNext:()=>void; onReset:()=>void; onStartEnding:(endingId:GameState['availableEndings'][number])=>void }) {

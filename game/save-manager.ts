@@ -5,6 +5,7 @@ import { createResources } from "./resource-manager.ts";
 import { createRooms } from "./room-manager.ts";
 import { FACILITIES } from "./facility-data.ts";
 import { ENDING_NARRATIVES } from "./ending-narrative-data.ts";
+import { CUTSCENES } from "./cutscene-data.ts";
 import type { FacilityId, GameState } from "./types.ts";
 
 export const SAVE_KEY = "juju-hotel-save-v2";
@@ -30,14 +31,14 @@ function mergeGuest(catalogGuest: ReturnType<typeof createGuests>[number], saved
 }
 
 export function createInitialGameState(): GameState {
-  return { version: 8, phase: "title", day: 0, rooms: createRooms(), guests: createGuests(), resources: createResources(), flags: createEventFlags(), asked: [], inspected: [], negotiated: false, held: false, decision: null, assignmentMode: null, selectedRoomNumber: null, eventHistory: [], lastDaySummary: null, worldState: "STABLE", hotelStats: { hotelCondition: 60, security: 35, foodSustainability: 0, waterSustainability: 0, crime: 0, survivorPopulation: 0, averageTrust: 0, resources: 40 }, reputations: { community: 0, military: 0, refugee: 0, merchant: 0, humanitarian: 0 }, facilities: {}, availableEndings: [], completedEndingFlags: [], endingProgress: {}, fatherStoryProgress: 0, endingRelatedFlags: {}, activeEndingId: null, endingSceneIndex: 0, actionPoints: 2, maxActionPoints: 2, selectedNightEventId: null, selectedNightChoiceId: null, lastNightEventId: null, pendingStoryEventId: null, pendingVisitorReactionId: null };
+  return { version: 9, phase: "title", day: 0, rooms: createRooms(), guests: createGuests(), resources: createResources(), flags: createEventFlags(), asked: [], inspected: [], negotiated: false, held: false, decision: null, assignmentMode: null, selectedRoomNumber: null, eventHistory: [], lastDaySummary: null, worldState: "STABLE", hotelStats: { hotelCondition: 60, security: 35, foodSustainability: 0, waterSustainability: 0, crime: 0, survivorPopulation: 0, averageTrust: 0, resources: 40 }, reputations: { community: 0, military: 0, refugee: 0, merchant: 0, humanitarian: 0 }, facilities: {}, availableEndings: [], completedEndingFlags: [], endingProgress: {}, fatherStoryProgress: 0, endingRelatedFlags: {}, activeEndingId: null, endingSceneIndex: 0, actionPoints: 2, maxActionPoints: 2, selectedNightEventId: null, selectedNightChoiceId: null, lastNightEventId: null, pendingStoryEventId: null, pendingVisitorReactionId: null, activeCutsceneId: null, seenCutsceneIds: [] };
 }
 
 export function restoreGameState(raw: string | null): GameState {
   if (!raw) return createInitialGameState();
   try {
     const decoded = JSON.parse(raw) as { version?: number; rooms?: unknown; guests?: unknown };
-    if (![2, 3, 4, 5, 6, 7, 8].includes(decoded.version ?? 0) || !Array.isArray(decoded.rooms) || !Array.isArray(decoded.guests)) return createInitialGameState();
+    if (![2, 3, 4, 5, 6, 7, 8, 9].includes(decoded.version ?? 0) || !Array.isArray(decoded.rooms) || !Array.isArray(decoded.guests)) return createInitialGameState();
     const parsed = decoded as unknown as Partial<GameState>;
     const base = createInitialGameState();
     const savedGuests = parsed.guests!;
@@ -55,8 +56,12 @@ export function restoreGameState(raw: string | null): GameState {
     const activeNarrative = parsed.activeEndingId ? ENDING_NARRATIVES.find((ending) => ending.endingId === parsed.activeEndingId) : null;
     const activeEndingId = activeNarrative && parsed.activeEndingId && !completedEndingFlags.includes(parsed.activeEndingId) ? parsed.activeEndingId : null;
     const endingSceneIndex = activeEndingId && activeNarrative ? Math.max(0, Math.min(activeNarrative.scenes.length - 1, Math.trunc(Number(parsed.endingSceneIndex) || 0))) : 0;
+    const knownCutsceneIds = new Set(CUTSCENES.map((cutscene) => cutscene.id));
+    const activeCutsceneId = parsed.activeCutsceneId && knownCutsceneIds.has(parsed.activeCutsceneId) ? parsed.activeCutsceneId : null;
+    const savedSeenCutsceneIds = Array.isArray(parsed.seenCutsceneIds) ? parsed.seenCutsceneIds : [];
+    const seenCutsceneIds = [...new Set(savedSeenCutsceneIds)].filter((id) => knownCutsceneIds.has(id));
     const phase = parsed.phase === "ending" && !activeEndingId ? "report" : parsed.phase ?? base.phase;
-    const state = { ...base, ...parsed, version: 8, phase, resources: { ...base.resources, ...parsed.resources }, flags: { ...base.flags, ...parsed.flags }, hotelStats: { ...base.hotelStats, ...parsed.hotelStats }, reputations: { ...base.reputations, ...parsed.reputations }, facilities, endingRelatedFlags: { ...base.endingRelatedFlags, ...parsed.endingRelatedFlags }, rooms: parsed.rooms!, guests, eventHistory: parsed.eventHistory ?? [], lastDaySummary: parsed.lastDaySummary ?? null, availableEndings: parsed.availableEndings ?? [], completedEndingFlags, endingProgress: parsed.endingProgress ?? {}, activeEndingId, endingSceneIndex, actionPoints: parsed.actionPoints ?? base.maxActionPoints, maxActionPoints: parsed.maxActionPoints ?? base.maxActionPoints, selectedNightEventId: parsed.selectedNightEventId ?? null, selectedNightChoiceId: parsed.selectedNightChoiceId ?? null, lastNightEventId: parsed.lastNightEventId ?? null, pendingStoryEventId: parsed.pendingStoryEventId ?? null, pendingVisitorReactionId: parsed.pendingVisitorReactionId ?? null } as GameState;
+    const state = { ...base, ...parsed, version: 9, phase, resources: { ...base.resources, ...parsed.resources }, flags: { ...base.flags, ...parsed.flags }, hotelStats: { ...base.hotelStats, ...parsed.hotelStats }, reputations: { ...base.reputations, ...parsed.reputations }, facilities, endingRelatedFlags: { ...base.endingRelatedFlags, ...parsed.endingRelatedFlags }, rooms: parsed.rooms!, guests, eventHistory: parsed.eventHistory ?? [], lastDaySummary: parsed.lastDaySummary ?? null, availableEndings: parsed.availableEndings ?? [], completedEndingFlags, endingProgress: parsed.endingProgress ?? {}, activeEndingId, endingSceneIndex, actionPoints: parsed.actionPoints ?? base.maxActionPoints, maxActionPoints: parsed.maxActionPoints ?? base.maxActionPoints, selectedNightEventId: parsed.selectedNightEventId ?? null, selectedNightChoiceId: parsed.selectedNightChoiceId ?? null, lastNightEventId: parsed.lastNightEventId ?? null, pendingStoryEventId: parsed.pendingStoryEventId ?? null, pendingVisitorReactionId: parsed.pendingVisitorReactionId ?? null, activeCutsceneId, seenCutsceneIds } as GameState;
     return { ...state, rooms: recalculateRoomEffects(state.rooms, state.guests) };
   } catch { return createInitialGameState(); }
 }
