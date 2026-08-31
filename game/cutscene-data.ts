@@ -2,6 +2,18 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: "walter_archive_opened",
+    triggerStoryEventId: "walter-key",
+    triggerStoryChoiceId: "use_key",
+    priority: 165,
+    kicker: "BASEMENT ARCHIVE · FIRST ENTRY",
+    title: "아버지가 잠가 둔 기록실",
+    body: "황동 열쇠가 돌아가자 녹슨 잠금장치 안쪽에서 오래 붙어 있던 금속이 찢어지는 소리가 났다. Walter는 손전등으로 먼지 쌓인 장부와 릴 테이프, 도시 지도, 인간의 몸을 닮은 도해를 차례로 비췄다. 첫 장부에는 재난 전 발생 구역으로 옮겨진 호텔 발전기 부품과 진정제의 수량이 적혀 있었다. 그는 문턱을 넘지 않은 채 네 아버지 곁에서 이 방을 잠갔던 밤을 기억했다. 전원이 끊긴 라디오의 눈금은 91.3에 멈춰 있었고, 문이 열린 뒤 배관 깊은 곳에서 같은 금속성 마찰음이 한 번 되돌아왔다.",
+    quote: "네 아버지가 감춘 건 비밀이 아니었다. 우리가 열 준비가 되지 않은 문이었다.",
+    image: "/juminjung/assets/cutscenes/walter-basement-archive-v1.png",
+    imageAlt: "월터 브릭스가 황동 열쇠와 손전등을 든 채 처음 열린 JUJU HOTEL 지하 기록실 문에 서 있고, 안쪽에 먼지 쌓인 장부와 릴 테이프, 라디오, 도시 지도와 생체 도해가 드러난 장면.",
+  },
+  {
     id: "mia_daniel_reunion",
     triggerStoryEventId: "mia-family",
     triggerStoryChoiceId: "reunite",

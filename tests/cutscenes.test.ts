@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { CUTSCENES } from "../game/cutscene-data.ts";
 import { ENDING_NARRATIVES } from "../game/ending-narrative-data.ts";
 import { normalizePrologueIndex, PROLOGUE_BEATS } from "../game/prologue-data.ts";
+import { STORY_CHOICE_EVENTS } from "../game/story-choice-data.ts";
 
 function assertLandscapePng(asset: string) {
   const png = readFileSync(asset.replace("/juminjung/", "public/"));
@@ -16,6 +17,15 @@ test("프롤로그와 사건 컷신은 실제 1672×941 와이드 PNG 원화를 
   const endingAssets = ENDING_NARRATIVES.flatMap((narrative) => narrative.image ? [narrative.image] : []);
   const assets = new Set([...PROLOGUE_BEATS.map((beat) => beat.image), ...CUTSCENES.map((cutscene) => cutscene.image), ...endingAssets]);
   for (const asset of assets) assertLandscapePng(asset);
+});
+
+test("컷신 ID와 스토리 선택 트리거는 고유하며 야간·스토리 네임스페이스를 섞지 않는다", () => {
+  assert.equal(new Set(CUTSCENES.map((cutscene) => cutscene.id)).size, CUTSCENES.length);
+  const storyCutscenes = CUTSCENES.filter((cutscene) => cutscene.triggerStoryEventId !== undefined || cutscene.triggerStoryChoiceId !== undefined);
+  assert.ok(storyCutscenes.every((cutscene) => cutscene.triggerStoryEventId && cutscene.triggerStoryChoiceId));
+  assert.ok(storyCutscenes.every((cutscene) => cutscene.triggerEventId === undefined && cutscene.triggerChoiceId === undefined));
+  assert.equal(new Set(storyCutscenes.map((cutscene) => `${cutscene.triggerStoryEventId}:${cutscene.triggerStoryChoiceId}`)).size, storyCutscenes.length);
+  assert.ok(storyCutscenes.every((cutscene) => STORY_CHOICE_EVENTS.some((event) => event.id === cutscene.triggerStoryEventId && event.choices.some((choice) => choice.id === cutscene.triggerStoryChoiceId))));
 });
 
 test("DAY 0 프롤로그는 출발 원화에서 빈 프런트와 첫 노크로 전환된다", () => {

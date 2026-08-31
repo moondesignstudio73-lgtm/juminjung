@@ -53,6 +53,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - From DAY 25, CRITICAL or END STAGE pressure with high Monster Threat and weakened Security can trigger a one-time full-hotel siege; holding the lobby spends scarce defense supplies and inflicts a nonfatal defender injury while supporting military/fortress play, and retreating preserves lives at heavy structural cost that a later hotel-repair action can clear, each with a choice-specific illustrated aftermath
 - Checked-out survivors can return after five complete road days once no first-time arrival is waiting, using the actual checkout day as the next-visit anchor and preserving their trust, health, relationships, story progress, and Aura while restarting their stay; repeat offers are bound once to each visit count, and refusing a returning survivor delays rather than permanently removes them
 - Major NPC story choices can own data-driven one-time full-screen cutscenes. Mia and Daniel's HOME-route reunion uses dedicated artwork, and a saved cutscene queue prevents unique story scenes from being lost when another scene is already active
+- Walter's decision to use the inherited brass key opens a dedicated basement-archive cutscene, visually linking his story resolution to the later 91.3 MHz signal and THE TRUTH investigation
 
 ## Next system priorities
 
