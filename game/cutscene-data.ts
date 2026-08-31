@@ -49,6 +49,17 @@ export const CUTSCENES: CutsceneDefinition[] = [
     imageAlt: "차가운 빗속에서 비정상적으로 긴 괴물이 JUJU HOTEL의 휘어진 철문 너머에 서 있는 첫 목격 장면.",
   },
   {
+    id: "room_body_discovery",
+    triggerEventId: "room_body_discovery",
+    priority: 130,
+    kicker: "ROOM 207 · 05:18 AM",
+    title: "안에서 잠긴 객실",
+    body: "마스터키로 207호를 열자 빗물 냄새보다 먼저 오래된 피와 젖은 석회의 냄새가 밀려왔다. 시신은 침대 시트 아래에 있었고 황동 열쇠는 문 안쪽 바닥에 놓여 있었다. 검은 흔적은 시신 앞에서 시작해 깨진 창문에서 끝났다. 누군가 들어온 흔적은 없었지만, 무언가는 이 방에서 나간 뒤였다.",
+    quote: "문은 밤새 잠겨 있었다. 그렇다면 우리가 잠근 것은 무엇이었을까.",
+    image: "/juminjung/assets/cutscenes/room-207-body-discovery-v1.png",
+    imageAlt: "비 내리는 새벽의 낡은 JUJU HOTEL 207호에서 두 생존자가 시트로 완전히 덮인 시신과 창가에서 이어진 검은 흔적, 바닥의 황동 열쇠를 발견한 장면.",
+  },
+  {
     id: "refugees_sheltered",
     triggerEventId: "refugee_wave",
     triggerChoiceId: "shelter",

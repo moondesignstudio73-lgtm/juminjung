@@ -168,6 +168,17 @@ test("높은 상인 평판은 Jack의 추가 거래 제안을 연다", () => {
   assert.deepEqual(reaction.offerBonus, { food: 2, parts: 1 });
 });
 
+test("207호 조사 단서는 Vale의 후속 방문 대사와 연구 물자를 연다", () => {
+  const state = createInitialGameState();
+  const vale = state.guests.find((guest) => guest.id === "vale")!;
+  assert.equal(getVisitorReaction(state, vale), null);
+  state.flags.monster_room_entry_clue = true;
+  const reaction = getVisitorReaction(state, vale)!;
+  assert.equal(reaction.id, "vale-room-207-evidence");
+  assert.ok(reaction.dialogue.includes("207호"));
+  assert.deepEqual(reaction.offerBonus, { medicine: 1 });
+});
+
 test("군사 저항 기록은 높은 군 평판보다 Hayes의 적대 반응을 우선한다", () => {
   const state = createInitialGameState();
   state.reputations.military = 90;

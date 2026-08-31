@@ -128,6 +128,50 @@ test("피난민 수용과 거절은 같은 사건에서 서로 다른 결과 컷
   assert.equal(queueNightEventCutscene(state, "refugee_wave", "unknown", 8).activeCutsceneId, null);
 });
 
+test("DAY 10 이후 낮은 보안과 위협이 겹치면 207호 시신 발견 사건이 선택된다", () => {
+  const state = withGuest();
+  state.day = 10;
+  state.flags.monster_threat = 12;
+  state.hotelStats.security = 55;
+  assert.equal(selectNightEvent(state).id, "room_body_discovery");
+});
+
+test("207호 조사 선택은 괴물 침입 단서와 전용 컷신을 남긴다", () => {
+  const state = withGuest();
+  state.day = 12;
+  state.phase = "night";
+  state.flags.monster_threat = 12;
+  state.hotelStats.security = 55;
+  state.selectedNightEventId = "room_body_discovery";
+  state.selectedNightChoiceId = "investigate_body";
+  const resolved = resolveDay(state);
+  assert.equal(resolved.activeCutsceneId, "room_body_discovery");
+  assert.equal(resolved.flags.room_body_discovery_resolved, true);
+  assert.equal(resolved.flags.room_207_investigated, true);
+  assert.equal(resolved.flags.monster_room_entry_clue, true);
+  assert.equal(resolved.flags.monster_threat, 15);
+  assert.notEqual(selectNightEvent(resolved).id, "room_body_discovery");
+});
+
+test("207호 봉쇄 선택은 자원을 소비하고 위협을 낮추며 사건 재발을 막는다", () => {
+  const state = withGuest();
+  state.day = 12;
+  state.flags.monster_threat = 12;
+  state.hotelStats.security = 55;
+  const before = { fuel: state.resources.fuel, parts: state.resources.parts };
+  const sealed = applyNightChoice(state, "room_body_discovery", "seal_room").state;
+  assert.equal(sealed.resources.fuel, before.fuel - 2);
+  assert.equal(sealed.resources.parts, before.parts - 1);
+  assert.equal(sealed.flags.room_207_sealed, true);
+  assert.equal(sealed.flags.monster_threat, 8);
+  assert.notEqual(selectNightEvent(sealed).id, "room_body_discovery");
+  assert.equal(queueNightEventCutscene(sealed, "room_body_discovery", "seal_room", 10).activeCutsceneId, "room_body_discovery");
+});
+
+test("207호 컷신은 사건 자체의 DAY 조건을 따르고 완료 날짜 경계에서 누락되지 않는다", () => {
+  assert.equal(queueNightEventCutscene(createInitialGameState(), "room_body_discovery", "investigate_body", 9).activeCutsceneId, "room_body_discovery");
+});
+
 test("발전기 정전 실제 정산은 호텔 상태·치안을 낮추고 전용 컷신과 후속 플래그를 남긴다", () => {
   const state = createInitialGameState();
   state.day = 4;
