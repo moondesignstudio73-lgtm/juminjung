@@ -2,6 +2,18 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: "victor_public_trust",
+    triggerStoryEventId: "victor-crown",
+    triggerStoryChoiceId: "public_trust",
+    priority: 170,
+    kicker: "JUJU HOTEL · PUBLIC BUNKER TRUST",
+    title: "좌석 번호가 사람들의 이름으로 돌아온 날",
+    body: "Victor는 잠긴 가방을 열어 황동 좌석표와 벙커 열쇠를 공동 장부 앞으로 밀었다. 주민들은 그의 계약서를 믿는 대신 물과 식량 상자를 직접 세고, 피난민 명단과 빈 좌석을 같은 줄에 기록했다. 지하 철문은 더 이상 돈을 낸 사람만 아는 출구가 아니었다. Victor의 손에서 소유권은 빠져나갔지만, 그가 만든 은신처는 처음으로 폭우 속 사람들을 호텔 한곳에 몰아넣지 않고 나눠 숨길 수 있는 공공망이 되었다.",
+    quote: "열쇠를 넘긴다고 숫자가 공평해지는 건 아닙니다. 그러니 모두가 직접 세십시오.",
+    image: "/juminjung/assets/cutscenes/victor-public-trust-v1.png",
+    imageAlt: "빅터 헤일이 JUJU HOTEL 지하 기록실에서 황동 벙커 좌석표와 열쇠를 공동 장부 앞으로 내놓고, 주민들이 비축 식량과 물을 세며 피난민을 열린 철문 안으로 안내하는 장면.",
+  },
+  {
     id: "jack_fair_exchange",
     triggerStoryEventId: "jack-market",
     triggerStoryChoiceId: "fair_market",

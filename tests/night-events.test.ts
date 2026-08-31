@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { resolveDay } from "../game/day-manager.ts";
-import { applyNightChoice, canChooseNightChoice, getEffectiveNightChoice, selectNightEvent } from "../game/night-event-manager.ts";
+import { applyNightChoice, canChooseNightChoice, getEffectiveNightChoice, PUBLIC_BUNKER_FOOD_COST, PUBLIC_BUNKER_THREAT_GAIN, PUBLIC_BUNKER_WATER_COST, selectNightEvent } from "../game/night-event-manager.ts";
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
 import { dismissCutscene, queueNightEventCutscene } from "../game/cutscene-manager.ts";
 import { evaluateEndings } from "../game/ending-manager.ts";
@@ -644,6 +644,67 @@ test("피난민을 받아들이면 자원을 소비하고 평판·위협·플래
   assert.equal(result.state.flags.refugees_sheltered, true);
   assert.equal(result.state.flags.refugees_denied, false);
   assert.equal(result.state.flags.monster_threat, 4);
+});
+
+test("Victor의 공개 벙커망은 피난민 수용 UI와 정산의 비용·위협을 함께 낮춘다", () => {
+  const state = createInitialGameState();
+  state.day = 8;
+  state.worldState = "UNREST";
+  state.flags.bunker_network_open = true;
+  state.flags.victor_public_trust = true;
+  state.resources.food = PUBLIC_BUNKER_FOOD_COST;
+  state.resources.water = PUBLIC_BUNKER_WATER_COST;
+  const baseChoice = selectNightEvent(state).choices.find((choice) => choice.id === "shelter")!;
+  const shownChoice = getEffectiveNightChoice(state, baseChoice);
+  assert.deepEqual(shownChoice.requiredResources, { food: 2, water: 2 });
+  assert.match(shownChoice.description, /식량 2·물 2/);
+  assert.match(shownChoice.description, /위협 증가를 1/);
+  assert.equal(canChooseNightChoice(state, baseChoice), true);
+  const result = applyNightChoice(state, "refugee_wave", "shelter");
+  assert.deepEqual(result.choice, shownChoice);
+  assert.equal(result.state.resources.food, 0);
+  assert.equal(result.state.resources.water, 0);
+  assert.equal(result.state.flags.monster_threat, PUBLIC_BUNKER_THREAT_GAIN);
+  assert.equal(result.state.flags.refugees_sheltered, true);
+  assert.equal(result.state.flags.bunker_refugees_sheltered, true);
+});
+
+test("공개 벙커 수용은 실제 완화 비용이 부족하면 막히고 독점 경로에는 적용되지 않는다", () => {
+  const publicState = createInitialGameState();
+  publicState.day = 8;
+  publicState.worldState = "UNREST";
+  publicState.flags.bunker_network_open = true;
+  publicState.flags.victor_public_trust = true;
+  publicState.resources.food = 1;
+  publicState.resources.water = 2;
+  const publicChoice = selectNightEvent(publicState).choices.find((choice) => choice.id === "shelter")!;
+  assert.equal(canChooseNightChoice(publicState, publicChoice), false);
+  assert.throws(() => applyNightChoice(publicState, "refugee_wave", "shelter"), /자원이 부족/);
+
+  const monopolyState = createInitialGameState();
+  monopolyState.day = 8;
+  monopolyState.worldState = "UNREST";
+  monopolyState.flags.victor_monopoly_alliance = true;
+  monopolyState.resources.food = 2;
+  monopolyState.resources.water = 2;
+  const monopolyChoice = selectNightEvent(monopolyState).choices.find((choice) => choice.id === "shelter")!;
+  assert.deepEqual(getEffectiveNightChoice(monopolyState, monopolyChoice).requiredResources, { food: 4, water: 3 });
+  assert.equal(canChooseNightChoice(monopolyState, monopolyChoice), false);
+
+  monopolyState.flags.bunker_network_open = true;
+  monopolyState.flags.victor_public_trust = true;
+  assert.deepEqual(getEffectiveNightChoice(monopolyState, monopolyChoice).requiredResources, { food: 4, water: 3 });
+});
+
+test("저장 복원 뒤에도 공개 벙커 피난민 완화 계약이 유지된다", () => {
+  const state = createInitialGameState();
+  state.day = 8;
+  state.worldState = "UNREST";
+  state.flags.bunker_network_open = true;
+  state.flags.victor_public_trust = true;
+  const restored = restoreGameState(serializeGameState(state));
+  const choice = selectNightEvent(restored).choices.find((item) => item.id === "shelter")!;
+  assert.deepEqual(getEffectiveNightChoice(restored, choice).requiredResources, { food: 2, water: 2 });
 });
 
 test("피난민 거절과 발전기 정전은 후속 방문 장면 플래그를 남긴다", () => {

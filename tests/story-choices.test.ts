@@ -407,6 +407,7 @@ test("공정 거래 경로만으로는 폐허의 왕 엔딩이 열리지 않는�
   assert.equal(state.activeCutsceneId, "jack_fair_exchange");
   assert.equal(getCutscene(state.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/jack-fair-exchange-v1.png");
   assert.equal(restoreGameState(serializeGameState(state)).activeCutsceneId, "jack_fair_exchange");
+  state = dismissCutscene(state);
   state.guests = state.guests.map((guest) => guest.id === "victor" ? {
     ...guest,
     status: "STAYING",
@@ -419,7 +420,26 @@ test("공정 거래 경로만으로는 폐허의 왕 엔딩이 열리지 않는�
   state.hotelStats.resources = 85;
   state.facilities.trade_network = 1;
   assert.equal(state.flags.ruin_market_controlled, false);
+  assert.equal(state.flags.victor_monopoly_alliance, false);
+  assert.equal(state.flags.bunker_network_open, true);
+  assert.equal(state.activeCutsceneId, "victor_public_trust");
+  assert.equal(getCutscene(state.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/victor-public-trust-v1.png");
+  const restored = restoreGameState(serializeGameState(state));
+  assert.equal(restored.flags.bunker_network_open, true);
+  assert.equal(restored.activeCutsceneId, "victor_public_trust");
   assert.equal(evaluateEndings(state).available.includes("KING_OF_THE_RUINS"), false);
+});
+
+test("Victor의 시장 독점 경로는 공개 벙커망과 공동 신탁 컷신을 제거한다", () => {
+  const starting = resolutionState("victor");
+  starting.flags.victor_public_trust = true;
+  starting.flags.bunker_network_open = true;
+  const state = applyStoryChoice(starting, "victor-crown", "rule_market").state;
+  assert.equal(state.flags.victor_monopoly_alliance, true);
+  assert.equal(state.flags.ruin_market_controlled, true);
+  assert.equal(state.flags.victor_public_trust, false);
+  assert.equal(state.flags.bunker_network_open, false);
+  assert.equal(state.activeCutsceneId, null);
 });
 
 test("Jack의 독점 거래는 공정 교환 컷신과 연료 절감 계약을 열지 않는다", () => {
