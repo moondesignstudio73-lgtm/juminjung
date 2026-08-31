@@ -46,9 +46,21 @@ test("Claire의 갈등과 결말 스토리는 사건 문맥에 맞는 전용 표
   assert.deepEqual([future?.guestId, future?.stage], ["claire", "RESOLUTION"]);
   assert.equal(afraid, "afraid");
   assert.equal(happy, "happy");
-  assert.equal(getStoryEventExpression("walter-father-lie"), undefined);
   assert.equal(getGuestVisualState(guest("claire"), afraid).asset, "/juminjung/assets/portraits/claire/afraid-v1.png");
   assert.equal(getGuestVisualState(guest("claire"), happy).asset, "/juminjung/assets/portraits/claire/happy-v1.png");
+});
+
+test("Walter의 아버지 비밀 갈등과 결말은 사건 문맥에 맞는 전용 표정을 제공한다", () => {
+  const conflict = STORY_CHOICE_EVENTS.find((event) => event.id === "walter-father-lie");
+  const resolution = STORY_CHOICE_EVENTS.find((event) => event.id === "walter-key");
+  const suspicious = getStoryEventExpression("walter-father-lie");
+  const happy = getStoryEventExpression("walter-key");
+  assert.deepEqual([conflict?.guestId, conflict?.stage], ["walter", "CONFLICT"]);
+  assert.deepEqual([resolution?.guestId, resolution?.stage], ["walter", "RESOLUTION"]);
+  assert.equal(suspicious, "suspicious");
+  assert.equal(happy, "happy");
+  assert.equal(getGuestVisualState(guest("walter"), suspicious).asset, "/juminjung/assets/portraits/walter/suspicious-v1.png");
+  assert.equal(getGuestVisualState(guest("walter"), happy).asset, "/juminjung/assets/portraits/walter/happy-v1.png");
 });
 
 test("Mia의 가족 갈등과 결말은 사건 문맥에 맞는 전용 표정을 제공한다", () => {

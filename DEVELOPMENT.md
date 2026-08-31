@@ -35,14 +35,14 @@ Understood as: grow the published browser game into an open-duration hotel survi
 - HOTEL JOURNAL exposes the complete reverse-chronological record with check-in, checkout, resource, and event filters plus relationship details
 - Every ending route now has a distinct three-scene final event and epilogue; progress saves mid-scene and completion returns to open-ended operation
 - All 20 main NPCs now appear as large authored half-body 2D sprites at the front desk and in their story scenes
-- The portrait catalog selects authored assets per expression with a neutral fallback; Eleanor and Ruth have afraid and injured variants, Mia and Claire have afraid and happy variants, Mr. White and Vale have suspicious variants, Owen and Hayes have angry variants, Lily has a happy variant, and save restoration refreshes variant paths from the catalog
+- The portrait catalog selects authored assets per expression with a neutral fallback; Eleanor and Ruth have afraid and injured variants, Mia and Claire have afraid and happy variants, Walter has suspicious and happy variants, Mr. White and Vale have suspicious variants, Owen and Hayes have angry variants, Lily has a happy variant, and save restoration refreshes variant paths from the catalog
 - Relationship night events can stage two character portraits with event-authored expression overrides; Owen and Hayes face off angrily during their military standoff, while Lily's relief contrasts with Vale's suspicion during their investigation breakthrough
-- NPC story events can author a scene-specific expression override; Mia and Claire appear afraid during their family-related conflicts and quietly hopeful during their resolutions
+- NPC story events can author a scene-specific expression override; Mia and Claire appear afraid during their family-related conflicts and quietly hopeful during their resolutions, while Walter shifts from guarded suspicion over the father's lie to restrained relief when leaving the key
 - Guest visual state is derived from Health, Stress, infection, and arrival status, exposing wet, exhausted, bandaged, bloodied, and infection-suspected presentation layers
 
 ## Next system priorities
 
-- Expand authored expression and condition variants from the nine completed characters to the remaining 11-character portrait catalog
+- Expand authored expression and condition variants from the ten completed characters to the remaining 10-character portrait catalog
 
 ## Main NPC catalog
 
