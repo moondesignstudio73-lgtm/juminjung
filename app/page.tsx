@@ -25,18 +25,12 @@ import { applyVisitorCheckInBenefits, getEligibleVisitor, getVisitorReaction, ge
 import { getGuestVisualState, getNightEventPortraits, getStoryEventExpression } from '@/game/guest-visual-manager';
 import { getCutscene } from '@/game/cutscene-data';
 import { dismissCutscene } from '@/game/cutscene-manager';
+import { normalizePrologueIndex, PROLOGUE_BEATS } from '@/game/prologue-data';
 import type { FacilityId, GameState, Guest, GuestExpression, HotelActionId, Room } from '@/game/types';
 
 type UiSave = GameState & { prologue: number };
 const makeInitial = (): UiSave => ({ ...createInitialGameState(), prologue: 0 });
 const routeToNight = (state:UiSave):UiSave => { const pending = getPendingStoryChoice(state); return { ...state, phase: pending ? 'story' : 'night', pendingStoryEventId: pending?.id ?? null }; };
-
-const prologue = [
-  { tag: 'DAY 0 · 오후 5:16', speaker: '아버지', line: '“곧 돌아오마. 발전기 연료는 매일 확인하고, 해가 지면 문을 열어두지 마.”' },
-  { tag: 'DAY 0 · 오후 5:19', speaker: '나', line: '“대체 어디 가는 건데?”' },
-  { tag: 'DAY 0 · 오후 5:20', speaker: '아버지', line: '“하나만 기억해. 사람처럼 보인다고 해서 전부 들이지는 마.”' },
-  { tag: 'DAY 0 · 오후 8:47', speaker: '라디오 91.3', line: '…긴급 통행금지는 계속됩니다. 해가 진 뒤 밖에서 들리는 목소리에 응답하지 마십시오…' },
-];
 
 const questions = [
   { id: 'origin', label: '어디서 왔습니까?', answer: '“세인트 머시 병원요. 어제 동관이 무너졌어요. 마지막 10킬로미터는 걸어왔고요.”' },
@@ -70,7 +64,7 @@ export default function Home() {
 
   useEffect(() => {
     const restored = loadBrowserGame();
-    setSave({ ...restored, prologue: Number((restored as GameState & { prologue?: number }).prologue ?? 0) });
+    setSave({ ...restored, prologue: normalizePrologueIndex((restored as GameState & { prologue?: number }).prologue) });
     setHydrated(true);
   }, []);
 
@@ -130,19 +124,20 @@ export default function Home() {
   if (activeCutscene) return <StoryCutscene day={save.day} cutscene={activeCutscene} onContinue={() => setSave((current) => ({ ...dismissCutscene(current), prologue: current.prologue }))} />;
   if (save.phase === 'title') return <TitleScreen onStart={() => update({ phase: 'prologue' })} muted={muted} setMuted={setMuted} />;
   if (save.phase === 'prologue') {
-    const beat = prologue[save.prologue];
+    const beat = PROLOGUE_BEATS[save.prologue];
     return (
-      <main className="cinematic-screen">
-        <img src="/juminjung/assets/front-desk-night.png" alt="아버지가 떠난 밤의 어두운 JUJU HOTEL 로비." />
+      <main className="cinematic-screen prologue-cutscene">
+        <img src={beat.image} alt={beat.imageAlt} />
+        <div className="cutscene-rain" aria-hidden="true" />
         <div className="cinematic-wash" />
         <p className="scene-index">{beat.tag}</p>
         <section className="cutscene-copy" aria-live="polite">
           <span>{beat.speaker}</span><p>{beat.line}</p>
-          <Button className="advance" onClick={() => save.prologue < prologue.length - 1 ? update({ prologue: save.prologue + 1 }) : update({ phase: 'desk', day: 1 })}>
-            {save.prologue < prologue.length - 1 ? '계속' : '문을 연다'} <ChevronRight />
+          <Button className="advance" onClick={() => save.prologue < PROLOGUE_BEATS.length - 1 ? update({ prologue: save.prologue + 1 }) : update({ phase: 'desk', day: 1 })}>
+            {save.prologue < PROLOGUE_BEATS.length - 1 ? '계속' : '문을 연다'} <ChevronRight />
           </Button>
         </section>
-        <div className="knock" aria-hidden="true">똑.<br/>똑.<br/>똑.</div>
+        {save.prologue===PROLOGUE_BEATS.length-1&&<div className="knock" aria-hidden="true">똑.<br/>똑.<br/>똑.</div>}
       </main>
     );
   }

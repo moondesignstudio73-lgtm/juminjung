@@ -4,7 +4,7 @@ Understood as: grow the published browser game into an open-duration hotel survi
 
 ## Current playable contract
 
-- DAY 0 illustrated prologue and title reveal
+- DAY 0 illustrated prologue with a dedicated father-departure scene, timed first knock, and title reveal
 - DAY 1 front-desk guest screening with questions, item inspection, negotiation, hold, check-in, and refusal
 - Explicit choice among 30 rooms, with movement and manual or stay-expiry checkout
 - Data-driven grid Aura calculation; Eleanor's Medical Care Zone affects only `NORMAL_DISEASE`
