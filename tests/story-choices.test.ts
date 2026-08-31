@@ -399,6 +399,23 @@ test("남은 NPC 선택도 관계·위협·시설·후속 플래그에 연결된
   assert.equal(thomas.reputations.community, 7);
 });
 
+test("Samuel의 민간 경비대는 지속 순찰과 전용 컷신을 열고 저장된다", () => {
+  const result=applyStoryChoice(resolutionState("samuel"),"samuel-duty","watch").state;
+  assert.equal(result.flags.samuel_civil_guard,true);
+  assert.equal(result.activeCutsceneId,"samuel_civil_guard");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/samuel-civil-guard-v1.png");
+  const restored=restoreGameState(serializeGameState(result));
+  assert.equal(restored.flags.samuel_civil_guard,true);
+  assert.equal(restored.activeCutsceneId,"samuel_civil_guard");
+});
+
+test("Samuel의 구조대 경로는 민간 경비대 효과와 전용 컷신을 열지 않는다", () => {
+  const result=applyStoryChoice(resolutionState("samuel"),"samuel-duty","search").state;
+  assert.equal(result.flags.samuel_rescue_patrol,true);
+  assert.equal(result.flags.samuel_civil_guard,undefined);
+  assert.equal(result.activeCutsceneId,null);
+});
+
 test("Hazel의 외곽 경계대는 지속 경보망과 전용 컷신을 열고 저장된다", () => {
   const result = applyStoryChoice(resolutionState("hazel"), "hazel-watch", "ranger").state;
   assert.equal(result.flags.hazel_ranger_watch, true);

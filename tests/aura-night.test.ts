@@ -97,6 +97,15 @@ test("공동 식당은 혼자 남은 투숙객의 식량 수요를 0으로 만�
   assert.equal(result.communityKitchenFoodSaving,0);
 });
 
+test("Samuel의 민간 경비대는 본인 체크아웃 뒤에도 야간 치안과 범죄를 보정한다", () => {
+  const state = place([["walter",101]]);
+  const result = resolveAuraNight(state.rooms,state.guests,1,"STABLE",0,{samuel_civil_guard:true});
+  assert.equal(result.civilGuardSecurityGain,2);
+  assert.equal(result.civilGuardCrimeReduction,2);
+  assert.equal(result.securityDelta,2);
+  assert.equal(result.crimeDelta,-2);
+});
+
 test("Eleanor의 의료 Aura는 범위 안 질병만 막고 범위 밖 투숙객은 보호하지 않는다", () => {
   const state = place([["eleanor",201],["walter",210]]);
   const result = resolveAuraNight(state.rooms, state.guests, 7, "STABLE", 100);
@@ -238,4 +247,52 @@ test("DAY 정산은 공동 식당의 실제 식량 절감과 공개 배급 로�
   const resolved=resolveDay(state);
   assert.equal(resolved.lastDaySummary?.consumed.food,1);
   assert.ok(resolved.eventHistory.some((entry)=>entry.message==="공동 식당 배급 · 식량 1 절감"));
+});
+
+test("DAY 정산은 민간 경비대의 지속 치안·범죄 보정과 순찰 로그를 반영한다", () => {
+  const state=place([["walter",101]]);
+  state.phase="night";
+  state.hotelStats.security=50;
+  state.hotelStats.crime=10;
+  state.flags.samuel_civil_guard=true;
+  state.selectedNightEventId="quiet_watch";
+  state.selectedNightChoiceId="rest";
+  state.guests=state.guests.map((guest)=>guest.status==="STAYING"?{...guest,remainingNights:2}:guest);
+  const resolved=resolveDay(state);
+  assert.equal(resolved.hotelStats.security,52);
+  assert.equal(resolved.hotelStats.crime,8);
+  assert.ok(resolved.eventHistory.some((entry)=>entry.message==="민간 경비대 순찰 · Security +2 · Crime -2"));
+});
+
+test("민간 경비대 로그는 Security 100과 Crime 0 경계에서 실제 변화량만 기록한다", () => {
+  const state=place([["walter",101]]);
+  state.phase="night";
+  state.hotelStats.security=99;
+  state.hotelStats.crime=1;
+  state.flags.samuel_civil_guard=true;
+  state.selectedNightEventId="quiet_watch";
+  state.selectedNightChoiceId="rest";
+  state.guests=state.guests.map((guest)=>guest.status==="STAYING"?{...guest,remainingNights:2}:guest);
+  const resolved=resolveDay(state);
+  assert.equal(resolved.hotelStats.security,100);
+  assert.equal(resolved.hotelStats.crime,0);
+  assert.ok(resolved.eventHistory.some((entry)=>entry.message==="민간 경비대 순찰 · Security +1 · Crime -1"));
+});
+
+test("객실 Aura가 야간 Security 보정 +10에 이미 도달하면 경비대 기여를 허위 기록하지 않는다", () => {
+  const state=place([["walter",101]]);
+  state.phase="night";
+  state.hotelStats.security=50;
+  state.hotelStats.crime=0;
+  state.flags.samuel_civil_guard=true;
+  state.selectedNightEventId="quiet_watch";
+  state.selectedNightChoiceId="rest";
+  state.rooms=state.rooms.map((room)=>room.roomNumber===101?{...room,permanentEffects:[...room.permanentEffects,{id:"test-security-cap",sourceGuestId:"walter",name:"포화 경비",metric:"security",operation:"ADD",value:100}]}:room);
+  state.guests=state.guests.map((guest)=>guest.status==="STAYING"?{...guest,remainingNights:2}:guest);
+  const nightly=resolveAuraNight(state.rooms,state.guests,1,"STABLE",0,state.flags);
+  assert.equal(nightly.securityDelta,10);
+  assert.equal(nightly.civilGuardSecurityGain,0);
+  const resolved=resolveDay(state);
+  assert.equal(resolved.hotelStats.security,60);
+  assert.equal(resolved.eventHistory.some((entry)=>entry.message.startsWith("민간 경비대 순찰")),false);
 });

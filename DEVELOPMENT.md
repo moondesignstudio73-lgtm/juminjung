@@ -58,6 +58,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - Hazel's ranger-watch resolution opens a dedicated perimeter-network scene and keeps the installed alarm active each night, applying and logging up to three points of Monster Threat reduction after room Aura effects
 - Thomas's microgrid resolution opens a dedicated generator-room scene, removes the hotel's one-unit base generator fuel demand, and suppresses the ordinary low-fuel failure event while leaving every facility's own upkeep intact
 - Noah's recovery route can open a dedicated illustrated community table that saves one food unit whenever at least two residents share a meal; food-shortage events use the same Aura- and kitchen-adjusted demand as nightly consumption
+- Samuel's accountable civilian-watch route opens a dedicated illustrated handover and permanently adds two Security while removing two Crime each night, with logs limited to the change that actually fits the hotel-stat boundaries
 
 ## Next system priorities
 

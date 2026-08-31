@@ -13,6 +13,8 @@ export type AuraNightResolution = {
   clinicPreventedGuestIds:string[];
   perimeterAlarmThreatReduction:number;
   communityKitchenFoodSaving:number;
+  civilGuardSecurityGain:number;
+  civilGuardCrimeReduction:number;
 };
 
 const clamp = (value:number,min=0,max=100) => Math.max(min,Math.min(max,value));
@@ -23,6 +25,8 @@ const stableGuestSeed = (guestId:string) => [...guestId].reduce((seed,character)
 export const ELEANOR_CLINIC_DISEASE_REDUCTION = 5;
 export const PERIMETER_ALARM_THREAT_REDUCTION = 3;
 export const COMMUNITY_KITCHEN_FOOD_SAVING = 1;
+export const CIVIL_GUARD_SECURITY_GAIN = 2;
+export const CIVIL_GUARD_CRIME_REDUCTION = 2;
 
 export function getNightFoodDemand(rooms:Room[], guests:Guest[], flags:EventFlags={}):{demand:number;saving:number} {
   const staying = guests.filter((guest)=>guest.status==="STAYING"&&guest.currentRoomNumber!==null);
@@ -48,6 +52,7 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
   const clinicPreventedGuestIds:string[] = [];
   const clinicActive = flags.eleanor_clinic_established === true;
   const perimeterAlarmActive = flags.perimeter_alarm === true;
+  const civilGuardActive = flags.samuel_civil_guard === true;
 
   const adjustedStats = new Map(staying.map((guest)=>{
     const room = rooms.find((candidate)=>candidate.roomNumber===guest.currentRoomNumber);
@@ -79,17 +84,25 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
 
   const threatWithoutAlarm = clamp(Math.round(threatScore/10),-10,10);
   const threatDelta = clamp(threatWithoutAlarm-(perimeterAlarmActive?PERIMETER_ALARM_THREAT_REDUCTION:0),-10,10);
+  const securityWithoutCivilGuard = clamp(Math.round(securityScore/10),-10,10);
+  const securityDelta = clamp(securityWithoutCivilGuard+(civilGuardActive?CIVIL_GUARD_SECURITY_GAIN:0),-10,10);
+  const civilGuardSecurityGain = securityDelta-securityWithoutCivilGuard;
+  const crimeWithoutCivilGuard = clamp(Math.round(crimeScore/10),0,10);
+  const crimeDelta = clamp(crimeWithoutCivilGuard-(civilGuardActive?CIVIL_GUARD_CRIME_REDUCTION:0),-10,10);
+  const civilGuardCrimeReduction = crimeWithoutCivilGuard-crimeDelta;
   return {
     guests:guests.map((guest)=>updatedById.get(guest.id)??guest),
     foodDemand:food.demand,
-    securityDelta:clamp(Math.round(securityScore/10),-10,10),
+    securityDelta,
     hotelConditionDelta:clamp(Math.round(-breakdownScore/10),-10,10),
-    crimeDelta:clamp(Math.round(crimeScore/10),0,10),
+    crimeDelta,
     threatDelta,
     tradeBonus:{food:Math.floor(Math.max(0,tradeScore)/20),parts:Math.floor(Math.max(0,tradeScore)/40)},
     sickGuestIds,
     clinicPreventedGuestIds,
     perimeterAlarmThreatReduction:threatWithoutAlarm-threatDelta,
     communityKitchenFoodSaving:food.saving,
+    civilGuardSecurityGain,
+    civilGuardCrimeReduction,
   };
 }

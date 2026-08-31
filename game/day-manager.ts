@@ -56,6 +56,12 @@ export function resolveDay(state: GameState): GameState {
   const threatAfterAuraNight = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta);
   const threatWithoutAlarm = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta+auraNight.perimeterAlarmThreatReduction);
   const appliedAlarmThreatReduction = threatWithoutAlarm-threatAfterAuraNight;
+  const securityWithoutCivilGuard = Math.max(0,Math.min(100,state.hotelStats.security+auraNight.securityDelta-auraNight.civilGuardSecurityGain));
+  const securityAfterAuraNight = Math.max(0,Math.min(100,state.hotelStats.security+auraNight.securityDelta));
+  const appliedCivilGuardSecurityGain = securityAfterAuraNight-securityWithoutCivilGuard;
+  const crimeWithoutCivilGuard = Math.max(0,Math.min(100,state.hotelStats.crime+auraNight.crimeDelta+auraNight.civilGuardCrimeReduction));
+  const crimeAfterAuraNight = Math.max(0,Math.min(100,state.hotelStats.crime+auraNight.crimeDelta));
+  const appliedCivilGuardCrimeReduction = crimeWithoutCivilGuard-crimeAfterAuraNight;
   const summary: DaySummary = { completedDay: state.day, nextDay, occupiedGuests: staying.length, consumed, facilityProduction: economy.production, facilityUpkeep: economy.upkeep, inactiveFacilities: economy.inactiveFacilities, checkedOutGuestIds };
   const entries: HotelLogEntry[] = [
     night.entry,
@@ -67,6 +73,7 @@ export function resolveDay(state: GameState): GameState {
     ...(auraNight.sickGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`객실 질병 발생 · ${auraNight.sickGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
     ...(auraNight.clinicPreventedGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`상설 진료소 예방 · ${auraNight.clinicPreventedGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
     ...(appliedAlarmThreatReduction ? [{day:state.day,type:"EVENT" as const,message:`외곽 조기경보망 가동 · Monster Threat 보정 -${appliedAlarmThreatReduction}`}] : []),
+    ...(appliedCivilGuardSecurityGain||appliedCivilGuardCrimeReduction ? [{day:state.day,type:"EVENT" as const,message:`민간 경비대 순찰${appliedCivilGuardSecurityGain?` · Security +${appliedCivilGuardSecurityGain}`:""}${appliedCivilGuardCrimeReduction?` · Crime -${appliedCivilGuardCrimeReduction}`:""}`}] : []),
     ...(Object.keys(economy.production).length ? [{ day: state.day, type: "RESOURCE" as const, message: `시설 생산 · ${Object.entries(economy.production).map(([key,value]) => `${key} +${value}`).join(" · ")}` }] : []),
     ...(economy.inactiveFacilities.length ? [{ day: state.day, type: "EVENT" as const, message: `유지비 부족 · ${economy.inactiveFacilities.map((id) => FACILITY_NAMES[id]).join(" · ")} 가동 중단` }] : []),
     ...checkedOutGuestIds.map((guestId): HotelLogEntry => ({ day: nextDay, type: "CHECK_OUT", message: `${state.guests.find((guest) => guest.id === guestId)?.name ?? guestId} · 숙박 종료 자동 체크아웃` })),
@@ -92,8 +99,8 @@ export function resolveDay(state: GameState): GameState {
     hotelStats: {
       ...state.hotelStats,
       hotelCondition: Math.max(0,Math.min(100,state.hotelStats.hotelCondition+auraNight.hotelConditionDelta)),
-      security: Math.max(0,Math.min(100,state.hotelStats.security+auraNight.securityDelta)),
-      crime: Math.max(0,Math.min(100,state.hotelStats.crime+auraNight.crimeDelta)),
+      security: securityAfterAuraNight,
+      crime: crimeAfterAuraNight,
       survivorPopulation: acceptedSurvivors.length,
       averageTrust: acceptedSurvivors.length ? Math.round(acceptedSurvivors.reduce((sum, guest) => sum + guest.trust, 0) / acceptedSurvivors.length) : 0,
       resources: Math.min(100, Math.round((economy.resources.food + economy.resources.water + economy.resources.fuel) / 3)),

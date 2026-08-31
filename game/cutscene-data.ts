@@ -2,6 +2,18 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: "samuel_civil_guard",
+    triggerStoryEventId: "samuel-duty",
+    triggerStoryChoiceId: "watch",
+    priority: 165,
+    kicker: "JUJU HOTEL · CIVILIAN NIGHT WATCH",
+    title: "명령 대신 건네받은 열쇠",
+    body: "Samuel은 낡은 경찰 배지를 프런트 서랍 안에 내려놓고, 그 자리에 호텔의 황동 열쇠고리를 받았다. 새 경비대는 계급도 제복도 없이 객실 사람들의 이름과 순찰 시간을 함께 적었다. 손전등과 호루라기, 동쪽 철문부터 계단참까지 이어진 지도가 카운터 위에 놓였다. 그가 다시 선 검문선은 사람을 버리기 위한 경계가 아니라, 누가 돌아오지 않았는지 책임지는 약속이 되었다.",
+    quote: "이번에는 문을 닫으라는 명령이 아니라, 안의 사람들을 지키겠다는 약속입니다.",
+    image: "/juminjung/assets/cutscenes/samuel-civil-guard-v1.png",
+    imageAlt: "새뮤얼 프라이스가 JUJU HOTEL 프런트 서랍에 낡은 경찰 배지를 내려놓고 주민에게서 황동 객실 열쇠고리를 받는 동안, 뒤에서 민간 경비대원들이 손전등과 순찰 지도를 준비하는 장면.",
+  },
+  {
     id: "noah_community_table",
     triggerStoryEventId: "noah-table",
     triggerStoryChoiceId: "community_kitchen",
