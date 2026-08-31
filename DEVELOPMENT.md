@@ -2,6 +2,8 @@
 
 Understood as: grow the published browser game into an open-duration hotel survival loop where story, management, faction, and world-state conditions unlock player-chosen final events.
 
+Aura presentation is understood as data-owned: every Aura defines its own short label, category, and icon, and room UI must never infer presentation from an NPC role.
+
 ## Current playable contract
 
 - DAY 0 illustrated prologue with a dedicated father-departure scene, timed first knock, and title reveal

@@ -1,0 +1,45 @@
+.room-cell.aura {
+  --aura-color: #8fd1b5;
+  --aura-fill: #21352e;
+  background: var(--aura-fill);
+  border-color: color-mix(in srgb, var(--aura-color) 72%, #555143);
+}
+
+.room-cell.aura-preview {
+  box-shadow: inset 0 0 0 2px var(--aura-color), 0 0 16px color-mix(in srgb, var(--aura-color) 30%, transparent);
+}
+
+.room-cell.aura-ambient {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--aura-color) 60%, transparent);
+  background: color-mix(in srgb, var(--aura-fill) 62%, #24251f);
+}
+
+.room-cell.aura i {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  color: var(--aura-color);
+}
+
+.room-cell.aura i svg { flex: 0 0 auto; }
+.room-cell.aura i em { font: inherit; font-style: normal; }
+.room-cell.aura-ambient i { opacity: .72; }
+
+.aura-medical { --aura-color: #8fd1b5; --aura-fill: #17362d; }
+.aura-maintenance { --aura-color: #d4ad67; --aura-fill: #3b3020; }
+.aura-security { --aura-color: #82a9d7; --aura-fill: #1d2d3d; }
+.aura-food { --aura-color: #d49a69; --aura-fill: #3a2920; }
+.aura-mental { --aura-color: #b49ad7; --aura-fill: #30263c; }
+.aura-danger { --aura-color: #df766b; --aura-fill: #3d211f; }
+.aura-unknown { --aura-color: #a6aab0; --aura-fill: #2b2d30; }
+.aura-trade { --aura-color: #d0bf78; --aura-fill: #38351f; }
+.aura-information { --aura-color: #75bec8; --aura-fill: #1e3438; }
+
+.aura-card[class*="aura-"] {
+  background: var(--aura-fill);
+  border-color: color-mix(in srgb, var(--aura-color) 55%, #34352d);
+}
+
+.aura-card[class*="aura-"] > svg,
+.aura-card[class*="aura-"] strong { color: var(--aura-color); }

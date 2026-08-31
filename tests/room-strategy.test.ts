@@ -117,3 +117,9 @@ test("14. 객실 그리드는 하드코딩 이름 대신 실제 점유 NPC 이�
   assert.equal(getRoomOccupantLabel({ ...room, guestId: "missing" }, state.guests), "사용 중");
   assert.equal(getRoomOccupantLabel({ ...room, guestId: null }, state.guests), "사용 중");
 });
+
+test("15. Aura가 없는 NPC는 객실 영향 범위와 잘못된 라벨을 만들지 않는다", () => {
+  const state = createInitialGameState();
+  const guest = { ...state.guests[0], aura:null, currentRoomNumber:203 };
+  assert.deepEqual(getAffectedRoomNumbers(state.rooms, guest), []);
+});

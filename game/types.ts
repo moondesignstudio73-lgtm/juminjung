@@ -5,6 +5,9 @@ export type GuestExpression = "neutral" | "happy" | "sad" | "angry" | "afraid" |
 export type Position = { x: number; y: number };
 
 export type AuraMetric = "diseaseChance" | "injuryRecovery" | "breakdownRisk" | "stress" | "security" | "foodUse" | "trade" | "information" | "monsterThreat" | "theftRisk" | "trust";
+export type AuraCategory = "MEDICAL" | "MAINTENANCE" | "SECURITY" | "FOOD" | "MENTAL" | "DANGER" | "UNKNOWN" | "TRADE" | "INFORMATION";
+export type AuraIcon = "heart-pulse" | "wrench" | "shield" | "utensils" | "brain" | "triangle-alert" | "circle-help" | "handshake" | "search";
+export type AuraId = "medical-care-zone" | "maintenance-zone" | "comfort-presence" | "family-bond" | "security-presence" | "nursing-care" | "trade-network" | "faith" | "combat-readiness" | "military-control" | "information-network" | "kitchen-efficiency" | "resource-optimization" | "community-care" | "theft-risk" | "monster-analysis" | "perimeter-watch" | "power-optimization" | "protective-instinct" | "unknown-presence";
 export type RoomEffect = {
   id: string;
   sourceGuestId: string;
@@ -28,7 +31,10 @@ export type Room = {
 };
 
 export type AuraDefinition = Omit<RoomEffect, "id" | "sourceGuestId"> & {
-  id: string;
+  id: AuraId;
+  shortLabel: string;
+  category: AuraCategory;
+  icon: AuraIcon;
   radius: number;
   distance: "CHEBYSHEV" | "MANHATTAN";
   description: string;

@@ -16,6 +16,44 @@ test("20명의 메인 NPC가 고유 ID와 완전한 기본 상태로 등록된�
   }
 });
 
+test("모든 NPC Aura는 이름·라벨·분류·아이콘·설명·범위·효과를 하나의 데이터로 제공한다", () => {
+  const guests = createGuests();
+  const auras = guests.map((guest) => guest.aura).filter((aura) => aura !== null);
+  assert.equal(auras.length, 20);
+  assert.equal(new Set(auras.map((aura) => aura.id)).size, auras.length);
+  for (const aura of auras) {
+    assert.ok(aura.name.length > 0);
+    assert.ok(aura.shortLabel.length > 0);
+    assert.ok(aura.category.length > 0);
+    assert.ok(aura.icon.length > 0);
+    assert.ok(aura.description.length > 0);
+    assert.ok(aura.radius >= 0);
+    assert.ok(Number.isFinite(aura.value));
+  }
+});
+
+test("Eleanor·Walter·Samuel·Noah·Hazel의 객실 범위 표시는 각 Aura 데이터와 일치한다", () => {
+  const guests = createGuests();
+  const presentation = Object.fromEntries(guests.map((guest) => [guest.id, guest.aura && { name:guest.aura.name, shortLabel:guest.aura.shortLabel, category:guest.aura.category, icon:guest.aura.icon }]));
+  assert.deepEqual(presentation.eleanor, { name:"Medical Care Zone", shortLabel:"의료", category:"MEDICAL", icon:"heart-pulse" });
+  assert.deepEqual(presentation.walter, { name:"Maintenance Zone", shortLabel:"정비", category:"MAINTENANCE", icon:"wrench" });
+  assert.deepEqual(presentation.samuel, { name:"Security Presence", shortLabel:"보안", category:"SECURITY", icon:"shield" });
+  assert.deepEqual(presentation.noah, { name:"Kitchen Efficiency", shortLabel:"식량", category:"FOOD", icon:"utensils" });
+  assert.deepEqual(presentation.hazel, { name:"Perimeter Watch", shortLabel:"경계", category:"SECURITY", icon:"shield" });
+});
+
+test("구버전 저장의 Aura 표시값은 최신 NPC Aura 단일 데이터로 복원된다", () => {
+  const state = createInitialGameState();
+  const walter = state.guests.find((guest) => guest.id === "walter")!;
+  walter.aura = { ...walter.aura!, shortLabel:"의료", category:"MEDICAL", icon:"heart-pulse" };
+  const restored = restoreGameState(JSON.stringify(state));
+  assert.deepEqual(restored.guests.find((guest) => guest.id === "walter")?.aura && {
+    shortLabel:restored.guests.find((guest) => guest.id === "walter")!.aura!.shortLabel,
+    category:restored.guests.find((guest) => guest.id === "walter")!.aura!.category,
+    icon:restored.guests.find((guest) => guest.id === "walter")!.aura!.icon,
+  }, { shortLabel:"정비", category:"MAINTENANCE", icon:"wrench" });
+});
+
 test("방문 일정은 DAY 범위와 WAITING 상태로 다음 손님을 선택한다", () => {
   const guests = createGuests();
   assert.equal(getEligibleVisitor(guests, 1)?.id, "eleanor");

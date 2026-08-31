@@ -7,7 +7,29 @@ type Seed = {
   offer?:Partial<Resources>; items?:Guest["offeredItems"]; risk?:number; condition?:string; intro?:string; portrait?:string; portraitVariants?:Guest["portraitVariants"]; arrivalConditions?:Guest["arrivalConditions"];
 };
 
-const aura = (id:string,name:string,metric:AuraDefinition["metric"],value:number,description:string,diseaseType?:AuraDefinition["diseaseType"]):AuraDefinition => ({ id,name,metric,value,description,diseaseType,operation:metric==="diseaseChance"?"SET":"ADD",radius:1,distance:"CHEBYSHEV" });
+const auraVisuals:Record<AuraDefinition["id"],Pick<AuraDefinition,"shortLabel"|"category"|"icon">> = {
+  "medical-care-zone":{shortLabel:"의료",category:"MEDICAL",icon:"heart-pulse"},
+  "maintenance-zone":{shortLabel:"정비",category:"MAINTENANCE",icon:"wrench"},
+  "comfort-presence":{shortLabel:"안정",category:"MENTAL",icon:"brain"},
+  "family-bond":{shortLabel:"유대",category:"MENTAL",icon:"brain"},
+  "security-presence":{shortLabel:"보안",category:"SECURITY",icon:"shield"},
+  "nursing-care":{shortLabel:"간호",category:"MEDICAL",icon:"heart-pulse"},
+  "trade-network":{shortLabel:"교역",category:"TRADE",icon:"handshake"},
+  "faith":{shortLabel:"안정",category:"MENTAL",icon:"brain"},
+  "combat-readiness":{shortLabel:"방어",category:"SECURITY",icon:"shield"},
+  "military-control":{shortLabel:"통제",category:"SECURITY",icon:"shield"},
+  "information-network":{shortLabel:"정보",category:"INFORMATION",icon:"search"},
+  "kitchen-efficiency":{shortLabel:"식량",category:"FOOD",icon:"utensils"},
+  "resource-optimization":{shortLabel:"교역",category:"TRADE",icon:"handshake"},
+  "community-care":{shortLabel:"돌봄",category:"MENTAL",icon:"brain"},
+  "theft-risk":{shortLabel:"위험",category:"DANGER",icon:"triangle-alert"},
+  "monster-analysis":{shortLabel:"분석",category:"INFORMATION",icon:"search"},
+  "perimeter-watch":{shortLabel:"경계",category:"SECURITY",icon:"shield"},
+  "power-optimization":{shortLabel:"전력",category:"MAINTENANCE",icon:"wrench"},
+  "protective-instinct":{shortLabel:"보호",category:"MENTAL",icon:"brain"},
+  "unknown-presence":{shortLabel:"불명",category:"UNKNOWN",icon:"circle-help"},
+};
+const aura = (id:AuraDefinition["id"],name:string,metric:AuraDefinition["metric"],value:number,description:string,diseaseType?:AuraDefinition["diseaseType"]):AuraDefinition => ({ id,name,...auraVisuals[id],metric,value,description,diseaseType,operation:metric==="diseaseChance"?"SET":"ADD",radius:1,distance:"CHEBYSHEV" });
 const stages:Guest["eventChain"] = ["ARRIVAL","LIFE_AT_HOTEL","CONFLICT","RESOLUTION"].map((stage) => ({ id:stage.toLowerCase(),stage:stage as Guest["eventChain"][number]["stage"],title:stage.replaceAll("_"," "),completed:false }));
 const item=(id:string,type:Guest["offeredItems"][number]["type"],name:string,detail:string):Guest["offeredItems"][number]=>({id,type,name,short:detail,detail});
 
