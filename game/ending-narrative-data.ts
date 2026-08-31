@@ -16,7 +16,7 @@ export const ENDING_NARRATIVES: EndingNarrative[] = [
     { id: "victory", title: "무너지지 않은 밤", body: "동이 틀 무렵 마지막 그림자가 골목으로 물러난다. 탄약 상자는 비었지만 객실 문은 하나도 뚫리지 않았다. 생존자들은 승리보다 살아남은 사람의 이름을 먼저 센다.", quote: "요새는 벽의 두께가 아니라, 끝까지 자리를 지킨 사람들의 수로 완성되었다." },
     { id: "epilogue", title: "FORTRESS", body: "JUJU HOTEL은 폐허의 방패가 된다. 그러나 당신은 매일 무기고 열쇠와 로비 열쇠를 나란히 걸어 두며, 방패가 감옥이 되지 않도록 감시한다.", quote: "문은 닫혀 있었지만, 도움을 청하는 신호까지 막지는 않았다." },
   ] },
-  { endingId: "HOME", kicker: "FINAL EVENT · 긴 식탁", scenes: [
+  { endingId: "HOME", kicker: "FINAL EVENT · 긴 식탁", image: "/juminjung/assets/cutscenes/ending-home-v1.png", imageAlt: "첫 비가 내리는 호텔 로비에서 Ruth가 약병을 내려놓고 Rosa와 Mia가 휴대용 조리대 위의 두 냄비를 돌보는 동안, 돌아온 손님들이 긴 식탁에 모이고 입구의 아이가 비를 맞은 새 방문자를 맞는 장면.", scenes: [
     { id: "return", title: "돌아온 사람들", body: "Ruth가 식탁 끝에 약병을 내려놓고, Rosa와 Mia가 서로 다른 냄비를 한 화구에 올린다. 체크아웃했던 손님들까지 작은 물건 하나씩 들고 로비로 돌아온다.", quote: "‘방을 빌린 줄 알았는데, 돌아올 곳을 얻었네요.’" },
     { id: "names", title: "객실 이름표", body: "당신은 번호만 남아 있던 황동 열쇠표 뒤에 사람들의 이름을 새긴다. 떠난 이들의 이름도 지우지 않는다. 기억할 자리가 있는 한 그들은 공동체 밖으로 밀려나지 않는다.", quote: "호텔은 사람을 머물게 했고, 사람들은 호텔을 집으로 만들었다." },
     { id: "epilogue", title: "HOME", body: "해마다 첫 비가 오는 날이면 모두가 프런트 앞에 모인다. 누군가 문을 두드리면 가장 어린 아이가 당신에게 배운 질문을 건넨다.", quote: "‘혼자 오셨어요? 그래도 혼자 계실 필요는 없어요.’" },

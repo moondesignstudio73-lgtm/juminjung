@@ -124,6 +124,12 @@ test("FORTRESS 엔딩은 공성 종료 전용 원화와 대체 텍스트를 데�
   assert.match(fortress?.imageAlt ?? "", /철문.*계단참.*정체 모를 형체.*명부.*빈 탄약 상자.*구조 신호.*두 황동 열쇠/);
 });
 
+test("HOME 엔딩은 돌아온 공동체의 긴 식탁 전용 원화와 대체 텍스트를 데이터에서 제공한다", () => {
+  const home = ENDING_NARRATIVES.find((narrative) => narrative.endingId === "HOME");
+  assert.equal(home?.image, "/juminjung/assets/cutscenes/ending-home-v1.png");
+  assert.match(home?.imageAlt ?? "", /첫 비.*Ruth.*약병.*Rosa.*Mia.*조리대.*두 냄비.*돌아온 손님.*긴 식탁.*새 방문자/);
+});
+
 test("최종 사건을 중단하면 진행을 완료 처리하지 않고 운영 장부로 돌아간다", () => {
   const state = createInitialGameState();
   state.availableEndings = ["THE_TRUTH"];
