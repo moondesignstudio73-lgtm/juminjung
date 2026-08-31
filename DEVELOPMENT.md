@@ -35,14 +35,14 @@ Understood as: grow the published browser game into an open-duration hotel survi
 - HOTEL JOURNAL exposes the complete reverse-chronological record with check-in, checkout, resource, and event filters plus relationship details
 - Every ending route now has a distinct three-scene final event and epilogue; progress saves mid-scene and completion returns to open-ended operation
 - All 20 main NPCs now appear as large authored half-body 2D sprites at the front desk and in their story scenes
-- The portrait catalog selects authored assets per expression with a neutral fallback; Eleanor and Ruth have afraid and injured variants, Mia and Claire have afraid and happy variants, Walter, Daniel, Jack, Grace, Victor, and Eli have suspicious and happy variants, Samuel and Noah have sad and happy variants, Rosa and Hazel have angry and happy variants, Mr. White and Vale have suspicious variants, Owen and Hayes have angry variants, Lily has a happy variant, and save restoration refreshes variant paths from the catalog
+- The portrait catalog selects authored assets per expression with a neutral fallback; all 20 main NPCs have at least one authored variant, including afraid and happy variants for Thomas, and save restoration refreshes variant paths from the catalog
 - Relationship night events can stage two character portraits with event-authored expression overrides; Owen and Hayes face off angrily during their military standoff, while Lily's relief contrasts with Vale's suspicion during their investigation breakthrough
-- NPC story events can author a scene-specific expression override; Mia and Claire appear afraid during their family-related conflicts and quietly hopeful during their resolutions, Walter shifts from guarded suspicion over the father's lie to restrained relief when leaving the key, Daniel moves from defensiveness over the torn photograph to relief as he puts Mia's choice before his claim, Samuel carries remorse over the refugee ledger before reclaiming a protective purpose, Jack shifts from calculating suspicion over the double ledger to confidence in the hotel market, Grace moves from guarded certainty in her sermon to compassionate acceptance at the threshold of faith, Noah moves from shame over the emptying pantry to quiet pride in the shared dinner, Victor moves from a cold appraisal of limited bunker seats to restrained confidence in his market command, Rosa moves from fierce protection of vulnerable survivors to tired warmth as the hotel becomes a family, Eli moves from defensive wariness after the theft to cautious hope when entrusted with the hotel's keys, and Hazel moves from vengeance against the creature outside to guarded purpose as the hotel's night watch
+- NPC story events can author a scene-specific expression override; the expanded story cast now carries scene-specific emotional arcs from conflict through resolution, with Thomas moving from fear under the generator overload to quiet pride in the completed hotel grid
 - Guest visual state is derived from Health, Stress, infection, and arrival status, exposing wet, exhausted, bandaged, bloodied, and infection-suspected presentation layers
 
 ## Next system priorities
 
-- Complete the final authored expression and condition variants for Thomas, the last character in the portrait catalog
+- Expand full-screen illustrated cutscenes for the remaining major story and ending beats
 
 ## Main NPC catalog
 
