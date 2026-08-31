@@ -136,6 +136,20 @@ test("MILITARY OCCUPATION 엔딩은 호텔 인계 전용 원화와 대체 텍스
   assert.match(occupation?.imageAlt ?? "", /Hayes.*인계 명령서.*마스터키.*황동 이름표.*통행 등급표.*군용차.*입장을 거부/);
 });
 
+test("KING OF THE RUINS 엔딩은 폐허 시장 전용 원화와 대체 텍스트를 데이터에서 제공한다", () => {
+  const king = ENDING_NARRATIVES.find((narrative) => narrative.endingId === "KING_OF_THE_RUINS");
+  assert.equal(king?.image, "/juminjung/assets/cutscenes/ending-king-of-the-ruins-v1.png");
+  assert.match(king?.imageAlt ?? "", /교역 차량.*Jack.*Victor.*장부.*계산기.*저울.*황동 열쇠 토큰.*창고 열쇠.*굶주린 사람/);
+});
+
+test("모든 엔딩 경로는 공용 로비 대체 이미지가 아닌 전용 원화를 제공한다", () => {
+  for (const narrative of ENDING_NARRATIVES) {
+    assert.ok(narrative.image, `${narrative.endingId} 전용 원화가 없습니다.`);
+    assert.ok(narrative.imageAlt, `${narrative.endingId} 대체 텍스트가 없습니다.`);
+  }
+  assert.equal(new Set(ENDING_NARRATIVES.map((narrative) => narrative.image)).size, ENDING_NARRATIVES.length);
+});
+
 test("최종 사건을 중단하면 진행을 완료 처리하지 않고 운영 장부로 돌아간다", () => {
   const state = createInitialGameState();
   state.availableEndings = ["THE_TRUTH"];

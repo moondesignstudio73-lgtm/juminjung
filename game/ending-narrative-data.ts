@@ -21,7 +21,7 @@ export const ENDING_NARRATIVES: EndingNarrative[] = [
     { id: "names", title: "객실 이름표", body: "당신은 번호만 남아 있던 황동 열쇠표 뒤에 사람들의 이름을 새긴다. 떠난 이들의 이름도 지우지 않는다. 기억할 자리가 있는 한 그들은 공동체 밖으로 밀려나지 않는다.", quote: "호텔은 사람을 머물게 했고, 사람들은 호텔을 집으로 만들었다." },
     { id: "epilogue", title: "HOME", body: "해마다 첫 비가 오는 날이면 모두가 프런트 앞에 모인다. 누군가 문을 두드리면 가장 어린 아이가 당신에게 배운 질문을 건넨다.", quote: "‘혼자 오셨어요? 그래도 혼자 계실 필요는 없어요.’" },
   ] },
-  { endingId: "KING_OF_THE_RUINS", kicker: "FINAL EVENT · 폐허의 시장", scenes: [
+  { endingId: "KING_OF_THE_RUINS", kicker: "FINAL EVENT · 폐허의 시장", image: "/juminjung/assets/cutscenes/ending-king-of-the-ruins-v1.png", imageAlt: "교역 차량이 늘어선 호텔 시장에서 Jack과 Victor가 거래 명세와 장부를 내미는 가운데, 지배인 앞 카운터의 계산기·저울·황동 열쇠 토큰·창고 열쇠 너머로 각 세력 대표와 토큰이 부족한 굶주린 사람이 같은 줄에 선 장면.", scenes: [
     { id: "auction", title: "모든 길의 가격", body: "교역 차량들이 호텔 앞 세 블록을 채운다. 연료, 약, 탄약, 정보가 황동 열쇠표 아래에서 거래되고 각 세력의 대표가 당신의 결정을 기다린다.", quote: "‘오늘 시세는 당신이 정합니다, 지배인.’" },
     { id: "crown", title: "카운터 위의 왕관", body: "당신은 가장 비싼 제안을 거절하지 않는다. 대신 모든 거래에 호텔의 몫을 붙인다. 굶주린 이도 값을 치러야 하고, 힘 있는 이도 줄을 서야 한다.", quote: "왕관은 없었다. 프런트 계산기와 잠긴 창고가 같은 일을 했다." },
     { id: "epilogue", title: "KING OF THE RUINS", body: "JUJU HOTEL은 도시를 움직이는 심장이 되지만 누구도 이곳을 자비롭다고 부르지 않는다. 당신의 장부는 정확했고, 그 정확함이 새로운 질서가 된다.", quote: "방은 있습니다. 값을 치를 수 있다면." },

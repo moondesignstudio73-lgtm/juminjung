@@ -37,7 +37,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - The trade network creates a renewable parts/fuel route; a deterministic 30-day regression covers four continuously occupied rooms at maximum infrastructure
 - HOTEL JOURNAL exposes the complete reverse-chronological record with check-in, checkout, resource, and event filters plus relationship details
 - Every ending route now has a distinct three-scene final event and epilogue; progress saves mid-scene and completion returns to open-ended operation
-- Ending narratives can own dedicated full-screen artwork with a safe hotel-lobby fallback; SAFE HAVEN shows the living community, THE TRUTH reveals the archive, FORTRESS defends the hotel, HOME reunites its people, MILITARY OCCUPATION surrenders its master key to Hayes, and THE DOOR confronts Room 0
+- All seven ending routes own distinct full-screen artwork and accessible scene descriptions: SAFE HAVEN, THE TRUTH, FORTRESS, HOME, KING OF THE RUINS, MILITARY OCCUPATION, and the hidden THE DOOR route
 - All 20 main NPCs now appear as large authored half-body 2D sprites at the front desk and in their story scenes
 - The portrait catalog selects authored assets per expression with a neutral fallback; all 20 main NPCs have at least one authored variant, including afraid and happy variants for Thomas, and save restoration refreshes variant paths from the catalog
 - Relationship night events can stage two character portraits with event-authored expression overrides; Owen and Hayes face off angrily during their military standoff, while Lily's relief contrasts with Vale's suspicion during their investigation breakthrough
