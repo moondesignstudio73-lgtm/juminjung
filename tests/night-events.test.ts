@@ -271,6 +271,108 @@ test("아버지 신호 조건이 충족되면 일반 발전기 위기보다 먼�
   assert.equal(selectNightEvent(state).id, "father_radio_signal");
 });
 
+test("철문 귀환 사건은 무전에 응답한 플레이만 DAY 24부터 만난다", () => {
+  const state = withGuest();
+  state.day = 23;
+  state.flags.father_return_route = true;
+  assert.notEqual(selectNightEvent(state).id, "father_at_gate");
+  state.day = 24;
+  assert.equal(selectNightEvent(state).id, "father_at_gate");
+  state.flags.father_return_route = false;
+  state.flags.father_signal_traced = true;
+  assert.notEqual(selectNightEvent(state).id, "father_at_gate");
+});
+
+test("철문 밖 격리 검증은 물자를 소모하고 생체 증거와 전용 컷신을 남긴다", () => {
+  const state = withGuest();
+  state.day = 24;
+  state.phase = "night";
+  Object.assign(state.flags, { father_return_route: true, father_secret_discovered: true, monster_origin_clue_1: true, vale_research_complete: true, lily_documents_decoded: true });
+  const before = { medicine: state.resources.medicine, securitySupply: state.resources.security, hotelSecurity: state.hotelStats.security, threat: Number(state.flags.monster_threat ?? 0), progress: state.fatherStoryProgress };
+  state.selectedNightEventId = "father_at_gate";
+  state.selectedNightChoiceId = "quarantine_verify";
+  const resolved = resolveDay(state);
+  assert.equal(resolved.activeCutsceneId, "father_at_gate_quarantine");
+  assert.equal(resolved.flags.father_return_quarantined, true);
+  assert.equal(resolved.flags.father_memory_test_passed, true);
+  assert.equal(resolved.flags.father_sample_anomalous, true);
+  assert.equal(resolved.flags.monster_origin_clue_2, true);
+  assert.equal(resolved.resources.medicine, before.medicine - 1);
+  assert.equal(resolved.resources.security, before.securitySupply - 2);
+  assert.equal(resolved.hotelStats.security, before.hotelSecurity + 2);
+  assert.equal(resolved.flags.monster_threat, Math.max(0, before.threat - 2));
+  assert.equal(resolved.fatherStoryProgress, before.progress + 15);
+  assert.ok(evaluateEndings(resolved).available.includes("THE_TRUTH"));
+});
+
+test("철문 밖 검증은 의약품 1·보안 물자 2의 정확한 경계에서만 가능하다", () => {
+  const state = withGuest();
+  state.day = 24;
+  state.flags.father_return_route = true;
+  state.resources.medicine = 1;
+  state.resources.security = 2;
+  const choice = selectNightEvent(state).choices.find((candidate) => candidate.id === "quarantine_verify")!;
+  assert.equal(canChooseNightChoice(state, choice), true);
+  state.resources.medicine = 0;
+  assert.equal(canChooseNightChoice(state, choice), false);
+  assert.throws(() => applyNightChoice(state, "father_at_gate", "quarantine_verify"), /필요한 자원이 부족/);
+  state.resources.medicine = 1;
+  state.resources.security = 1;
+  assert.equal(canChooseNightChoice(state, choice), false);
+});
+
+test("철문을 즉시 열면 재회 가능성과 큰 호텔 위험이 함께 기록된다", () => {
+  const state = withGuest();
+  state.day = 24;
+  state.flags.father_return_route = true;
+  const before = { fuel: state.resources.fuel, parts: state.resources.parts, threat: Number(state.flags.monster_threat ?? 0), security: state.hotelStats.security, stress: state.guests[0].stress, progress: state.fatherStoryProgress };
+  const opened = applyNightChoice(state, "father_at_gate", "open_gate").state;
+  assert.equal(opened.flags.father_return_admitted, true);
+  assert.equal(opened.flags.father_reunion_possible, true);
+  assert.notEqual(opened.flags.monster_origin_clue_2, true);
+  assert.equal(opened.resources.fuel, before.fuel + 4);
+  assert.equal(opened.resources.parts, before.parts + 3);
+  assert.equal(opened.flags.monster_threat, before.threat + 15);
+  assert.equal(opened.hotelStats.security, before.security - 5);
+  assert.equal(opened.guests[0].stress, before.stress + 10);
+  assert.equal(opened.fatherStoryProgress, before.progress + 25);
+  assert.notEqual(selectNightEvent(opened).id, "father_at_gate");
+});
+
+test("철문 귀환 결과와 컷신은 저장 복원 후에도 유지된다", () => {
+  const state = withGuest();
+  state.day = 24;
+  state.flags.father_return_route = true;
+  const chosen = applyNightChoice(state, "father_at_gate", "quarantine_verify").state;
+  const queued = queueNightEventCutscene(chosen, "father_at_gate", "quarantine_verify", 24);
+  const restored = restoreGameState(serializeGameState(queued));
+  assert.equal(restored.flags.father_return_encounter_resolved, true);
+  assert.equal(restored.flags.father_return_quarantined, true);
+  assert.equal(restored.flags.father_memory_test_passed, true);
+  assert.equal(restored.flags.father_sample_anomalous, true);
+  assert.equal(restored.activeCutsceneId, "father_at_gate_quarantine");
+});
+
+test("철문 귀환 컷신은 선택 결과별로 한 번만 재생된다", () => {
+  const state = withGuest();
+  state.day = 24;
+  state.flags.father_return_route = true;
+  const opened = applyNightChoice(state, "father_at_gate", "open_gate").state;
+  const queued = queueNightEventCutscene(opened, "father_at_gate", "open_gate", 24);
+  assert.equal(queued.activeCutsceneId, "father_at_gate_opened");
+  const dismissed = dismissCutscene(queued);
+  assert.equal(queueNightEventCutscene(dismissed, "father_at_gate", "open_gate", 24).activeCutsceneId, null);
+});
+
+test("실제 철문 침입 위기는 아버지 귀환 후보보다 먼저 처리된다", () => {
+  const state = withGuest();
+  state.day = 24;
+  state.worldState = "COLLAPSE";
+  state.hotelStats.security = 50;
+  Object.assign(state.flags, { father_return_route: true, monster_threat: 20 });
+  assert.equal(selectNightEvent(state).id, "perimeter_breach");
+});
+
 test("발전기 정전 실제 정산은 호텔 상태·치안을 낮추고 전용 컷신과 후속 플래그를 남긴다", () => {
   const state = createInitialGameState();
   state.day = 4;

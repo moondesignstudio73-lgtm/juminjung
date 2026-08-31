@@ -49,6 +49,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - The refugee-wave decision now branches into distinct shelter and denial aftermath cutscenes, preserving the selected moral consequence alongside resources, reputation, threat, and follow-up flags
 - From DAY 10, low Security and rising monster threat can reveal an unknown death in empty Room 207; sealing or investigating it changes resources, stress, threat, evidence flags, the room's usable state, and opens a dedicated illustrated aftermath, while hotel repair can later restore the room
 - From DAY 20, discovering the father's archive can wake the dead 91.3 MHz frequency; tracing it creates an alternate monster-origin clue for THE TRUTH, while answering opens a dangerous conditional return route, both with a dedicated illustrated signal scene
+- From DAY 24, only players who answered that signal can meet the father's likeness at the locked gate; quarantine verification trades medical and security supplies for an anomalous biological clue, while opening the gate gains carried generator supplies and a riskier reunion route, with choice-specific illustrated aftermaths
 
 ## Next system priorities
 
