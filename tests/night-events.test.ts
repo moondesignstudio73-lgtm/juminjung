@@ -63,6 +63,21 @@ test("철문 침입 정산은 첫 괴물 목격 컷신을 한 번만 예약한�
   assert.equal(queueNightEventCutscene(dismissed, "perimeter_breach", "barricade", 12), dismissed);
 });
 
+test("철문 침입에 맞서 싸운 실제 정산은 투숙객을 다치게 하고 피습 컷신을 예약한다", () => {
+  const state = withGuest();
+  state.phase = "night";
+  state.worldState = "COLLAPSE";
+  state.flags.monster_threat = 25;
+  state.hotelStats.security = 50;
+  state.selectedNightEventId = "perimeter_breach";
+  state.selectedNightChoiceId = "fight";
+  const beforeHealth = state.guests[0].health;
+  const resolved = resolveDay(state);
+  assert.equal(resolved.activeCutsceneId, "guest_attacked");
+  assert.equal(resolved.guests[0].health, beforeHealth - 15);
+  assert.ok(resolved.eventHistory.some((entry) => entry.message.includes("무장 인원을 내보낸다")));
+});
+
 test("DAY 1 정산은 첫날 밤 컷신을 한 번만 예약한다", () => {
   const state = createInitialGameState();
   state.day = 1;
@@ -84,7 +99,15 @@ test("첫날 밤 컷신은 quiet_watch가 아닌 사건 뒤에도 날짜로 예�
 
 test("DAY 1에 범용 컷신이 겹쳐도 사건 전용 장면이 먼저 선택된다", () => {
   const state = createInitialGameState();
-  assert.equal(queueNightEventCutscene(state, "perimeter_breach", "fight", 1).activeCutsceneId, "first_monster_sighting");
+  assert.equal(queueNightEventCutscene(state, "perimeter_breach", "fight", 1).activeCutsceneId, "guest_attacked");
+});
+
+test("철문 침입에 맞서 싸우면 전용 피습 컷신이 우선되고 이후 첫 목격 장면도 남는다", () => {
+  const state = createInitialGameState();
+  const attacked = queueNightEventCutscene(state, "perimeter_breach", "fight", 12);
+  assert.equal(attacked.activeCutsceneId, "guest_attacked");
+  const dismissed = dismissCutscene(attacked);
+  assert.equal(queueNightEventCutscene(dismissed, "perimeter_breach", "barricade", 13).activeCutsceneId, "first_monster_sighting");
 });
 
 test("피난민 수용과 거절은 같은 사건에서 서로 다른 결과 컷신을 예약한다", () => {

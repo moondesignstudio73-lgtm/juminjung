@@ -14,6 +14,18 @@ export const CUTSCENES: CutsceneDefinition[] = [
     imageAlt: "낡은 JUJU HOTEL 프런트 장부와 라디오 너머로 비어 있는 어두운 복도가 길게 이어지는 첫날 밤.",
   },
   {
+    id: "guest_attacked",
+    triggerEventId: "perimeter_breach",
+    triggerChoiceId: "fight",
+    priority: 150,
+    kicker: "BREACH · FRONT LOBBY",
+    title: "쓰러진 사람, 남겨진 열쇠",
+    body: "철문이 안쪽으로 꺾이자 투숙객 한 명이 무너진 현관 쪽으로 뛰어들었다. 한 번의 충돌 뒤 그는 피와 빗물을 끌며 프런트 뒤로 돌아왔고, 다른 생존자가 그의 어깨를 붙잡아 카운터 아래로 끌어내렸다. 깨진 유리 너머의 형체는 쓰러진 사람을 쫓지 않았다. 기울어진 고개는 카운터의 황동 열쇠들을 향하고 있었다.",
+    quote: "문을 막은 건 사람이었지만, 저것이 찾은 건 사람이 아니었다.",
+    image: "/juminjung/assets/cutscenes/hotel-breach-guest-attack-v1.png",
+    imageAlt: "파손된 호텔 로비에서 한 생존자가 프런트 카운터 뒤의 부상자를 끌어내고, 폭우 속 괴물 형체가 무너진 바리케이드 너머에 서 있는 장면.",
+  },
+  {
     id: "first_monster_sighting",
     triggerEventId: "perimeter_breach",
     priority: 100,
