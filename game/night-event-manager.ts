@@ -13,6 +13,7 @@ function meetsCondition(state: GameState, event: NightEventDefinition): boolean 
   if (condition.minimumThreat !== undefined && Number(state.flags.monster_threat ?? 0) < condition.minimumThreat) return false;
   if (condition.maximumSecurity !== undefined && state.hotelStats.security > condition.maximumSecurity) return false;
   if (condition.requiresGuests && staying.length === 0) return false;
+  if (condition.requiredEmptyRoomNumber !== undefined && !state.rooms.some((room) => room.roomNumber === condition.requiredEmptyRoomNumber && room.status === "EMPTY" && !room.occupied && room.guestId === null)) return false;
   if (condition.maximumResource && !Object.entries(condition.maximumResource).every(([key, value]) => state.resources[key as keyof GameState["resources"]] <= Number(value))) return false;
   if (condition.shortage && state.resources[condition.shortage] >= staying.length) return false;
   if (condition.requiredFlags && !Object.entries(condition.requiredFlags).every(([key, value]) => state.flags[key] === value || state.endingRelatedFlags[key] === value)) return false;
@@ -71,6 +72,7 @@ export function applyNightChoice(state: GameState, eventId: string, choiceId: st
     return { ...guest, relationships, trust: clamp(guest.trust + Number(guestEffect?.trust ?? 0)), stress: clamp(guest.stress + Number(effect.allGuestStress ?? 0) + Number(guestEffect?.stress ?? 0)), health: clamp(guest.health + (guest.id === targetId ? Number(effect.targetGuestHealth ?? 0) : 0) + Number(guestEffect?.health ?? 0)) };
   });
   const threat = clamp(Number(state.flags.monster_threat ?? 0) + Number(effect.threat ?? 0));
-  const next = { ...state, guests, resources: addRecord(state.resources, effect.resources), hotelStats: addRecord(state.hotelStats, effect.hotelStats), reputations: addRecord(state.reputations, effect.reputations), flags: { ...state.flags, ...effect.flags, monster_threat: threat }, selectedNightEventId: event.id, selectedNightChoiceId: choice.id };
+  const rooms = effect.roomChange ? state.rooms.map((room) => room.roomNumber === effect.roomChange!.roomNumber ? { ...room, occupied: false, guestId: null, status: effect.roomChange!.status, roomCondition: clamp(effect.roomChange!.roomCondition), temporaryEffects: [] } : room) : state.rooms;
+  const next = { ...state, guests, rooms, resources: addRecord(state.resources, effect.resources), hotelStats: addRecord(state.hotelStats, effect.hotelStats), reputations: addRecord(state.reputations, effect.reputations), flags: { ...state.flags, ...effect.flags, monster_threat: threat }, selectedNightEventId: event.id, selectedNightChoiceId: choice.id };
   return { state: next, event, choice, entry: { day: state.day, type: "EVENT", message: `야간 사건 · ${event.title} · ${choice.label}`, relationshipChanges: effectiveRelationshipChanges } };
 }

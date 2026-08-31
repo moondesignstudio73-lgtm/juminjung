@@ -5,6 +5,18 @@
   border-color: color-mix(in srgb, var(--aura-color) 72%, #555143);
 }
 
+.room-cell.damaged {
+  color: #d7a27c;
+  background: repeating-linear-gradient(135deg, #39251f 0 7px, #251d1a 7px 14px);
+  border-color: #9a5a42;
+}
+
+.room-cell.locked {
+  color: #c0aa82;
+  background: repeating-linear-gradient(135deg, #302c24 0 7px, #201f1b 7px 14px);
+  border-color: #75684f;
+}
+
 .room-cell.aura-preview {
   box-shadow: inset 0 0 0 2px var(--aura-color), 0 0 16px color-mix(in srgb, var(--aura-color) 30%, transparent);
 }

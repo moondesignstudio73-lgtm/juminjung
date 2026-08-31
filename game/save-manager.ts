@@ -35,6 +35,12 @@ function mergeGuest(catalogGuest: ReturnType<typeof createGuests>[number], saved
   };
 }
 
+function normalizeRoomCondition(value: unknown, fallback: number): number {
+  if (value === null || value === undefined || value === "") return fallback;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? Math.max(0, Math.min(100, numeric)) : fallback;
+}
+
 function normalizeOccupancy(savedRooms: Room[], guests: Guest[]): { rooms: Room[]; guests: Guest[] } {
   const canonicalRooms = createRooms();
   const roomNumbers = new Set(canonicalRooms.map((room) => room.roomNumber));
@@ -88,7 +94,7 @@ function normalizeOccupancy(savedRooms: Room[], guests: Guest[]): { rooms: Room[
     const guestId = occupiedByRoom.get(room.roomNumber) ?? null;
     return {
       ...room,
-      ...(saved ? { roomCondition: saved.roomCondition, permanentEffects: saved.permanentEffects ?? [] } : {}),
+      ...(saved ? { roomCondition: normalizeRoomCondition(saved.roomCondition, room.roomCondition), permanentEffects: saved.permanentEffects ?? [] } : {}),
       occupied: Boolean(guestId),
       guestId,
       status: guestId ? "OCCUPIED" as const : saved?.status === "DAMAGED" || saved?.status === "LOCKED" ? saved.status : "EMPTY" as const,

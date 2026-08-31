@@ -77,5 +77,8 @@ export function performHotelAction(state: GameState, actionId: HotelActionId): A
   if (!canAfford(state.resources, action.cost)) return { state, ok: false, message: "필요한 자원이 부족합니다." };
   const spent = spend(state.resources, action.cost);
   const guests = action.guestTrust ? state.guests.map((guest) => guest.checkedInDay !== null && guest.alive ? { ...guest, trust: clamp(guest.trust + action.guestTrust!) } : guest) : state.guests;
-  return { ok: true, message: `${action.name} 완료`, state: { ...state, actionPoints: state.actionPoints - 1, guests, resources: mergeNumbers<Resources>(spent, action.resources ?? {}), hotelStats: mergeNumbers<HotelStats>(state.hotelStats, action.stats ?? {}), reputations: mergeNumbers<Reputations>(state.reputations, action.reputation ?? {}), eventHistory: log(state, `낮 행동 · ${action.name}`) } };
+  const unavailableRoom = actionId === "repair_hotel" ? [...state.rooms].filter((room) => room.status === "DAMAGED" || room.status === "LOCKED").sort((a, b) => a.roomCondition - b.roomCondition || a.roomNumber - b.roomNumber)[0] : null;
+  const rooms = unavailableRoom ? state.rooms.map((room) => room.roomNumber === unavailableRoom.roomNumber ? { ...room, status: "EMPTY" as const, roomCondition: 100, occupied: false, guestId: null, temporaryEffects: [] } : room) : state.rooms;
+  const repairDetail = unavailableRoom ? ` · ${unavailableRoom.roomNumber}호 복구` : "";
+  return { ok: true, message: `${action.name}${repairDetail} 완료`, state: { ...state, actionPoints: state.actionPoints - 1, guests, rooms, resources: mergeNumbers<Resources>(spent, action.resources ?? {}), hotelStats: mergeNumbers<HotelStats>(state.hotelStats, action.stats ?? {}), reputations: mergeNumbers<Reputations>(state.reputations, action.reputation ?? {}), eventHistory: log(state, `낮 행동 · ${action.name}${repairDetail}`) } };
 }

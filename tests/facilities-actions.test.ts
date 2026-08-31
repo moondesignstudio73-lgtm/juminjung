@@ -40,6 +40,20 @@ test("공동체 회의는 수용한 생존자의 Trust와 공동체 평판을 �
   assert.equal(result.state.reputations.humanitarian, 5);
 });
 
+test("호텔 보수는 가장 심하게 손상되거나 봉쇄된 객실 하나를 실제 복구한다", () => {
+  const state = createInitialGameState();
+  state.rooms = state.rooms.map((room) => room.roomNumber === 207 ? { ...room, status: "LOCKED" as const, roomCondition: 55 } : room.roomNumber === 305 ? { ...room, status: "DAMAGED" as const, roomCondition: 30 } : room);
+  const first = performHotelAction(state, "repair_hotel");
+  assert.equal(first.ok, true);
+  assert.equal(first.state.rooms.find((room) => room.roomNumber === 305)?.status, "EMPTY");
+  assert.equal(first.state.rooms.find((room) => room.roomNumber === 305)?.roomCondition, 100);
+  assert.equal(first.state.rooms.find((room) => room.roomNumber === 207)?.status, "LOCKED");
+  assert.ok(first.state.eventHistory.at(-1)?.message.includes("305호 복구"));
+  first.state.actionPoints = 1;
+  const second = performHotelAction(first.state, "repair_hotel");
+  assert.equal(second.state.rooms.find((room) => room.roomNumber === 207)?.status, "EMPTY");
+});
+
 test("교역 원정은 연료를 자원과 부품으로 교환해 추가 시설 건설을 가능하게 한다", () => {
   const state = createInitialGameState();
   const result = performHotelAction(state, "trade_run");

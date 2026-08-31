@@ -1,5 +1,12 @@
 import type { Guest, Room } from "./types.ts";
 
+const ROOM_STATUS_LABELS: Record<Room["status"], string> = {
+  EMPTY: "비어 있음",
+  OCCUPIED: "사용 중",
+  DAMAGED: "파손",
+  LOCKED: "봉쇄",
+};
+
 export function createRooms(): Room[] {
   return [1, 2, 3].flatMap((floor) =>
     Array.from({ length: 10 }, (_, x) => ({
@@ -21,7 +28,7 @@ export function isRoomSelectable(room: Room): boolean {
 }
 
 export function getRoomOccupantLabel(room: Room, guests: Guest[]): string {
-  if (!room.occupied) return room.status;
+  if (!room.occupied) return ROOM_STATUS_LABELS[room.status];
   if (!room.guestId) return "사용 중";
   const guest = guests.find((candidate) => candidate.id === room.guestId);
   return guest?.name.trim().split(/\s+/)[0] || "사용 중";

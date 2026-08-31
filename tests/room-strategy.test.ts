@@ -123,3 +123,22 @@ test("15. Aura가 없는 NPC는 객실 영향 범위와 잘못된 라벨을 만�
   const guest = { ...state.guests[0], aura:null, currentRoomNumber:203 };
   assert.deepEqual(getAffectedRoomNumbers(state.rooms, guest), []);
 });
+
+test("16. 빈 객실·파손·봉쇄 상태는 객실 화면에 한국어로 표시된다", () => {
+  const state = createInitialGameState();
+  const [empty, damaged, locked] = state.rooms.slice(0, 3);
+  assert.equal(getRoomOccupantLabel(empty, state.guests), "비어 있음");
+  assert.equal(getRoomOccupantLabel({ ...damaged, status: "DAMAGED" }, state.guests), "파손");
+  assert.equal(getRoomOccupantLabel({ ...locked, status: "LOCKED" }, state.guests), "봉쇄");
+});
+
+test("17. 손상 저장의 객실 상태 수치는 0~100 범위의 유효한 값으로 복구된다", () => {
+  const state = createInitialGameState();
+  state.rooms[0].roomCondition = Number.NaN;
+  state.rooms[1].roomCondition = 500;
+  state.rooms[2].roomCondition = -20;
+  const restored = restoreGameState(JSON.stringify(state));
+  assert.equal(restored.rooms[0].roomCondition, 100);
+  assert.equal(restored.rooms[1].roomCondition, 100);
+  assert.equal(restored.rooms[2].roomCondition, 0);
+});

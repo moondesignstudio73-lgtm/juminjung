@@ -136,6 +136,25 @@ test("DAY 10 이후 낮은 보안과 위협이 겹치면 207호 시신 발견 �
   assert.equal(selectNightEvent(state).id, "room_body_discovery");
 });
 
+test("207호가 투숙객에게 배정된 상태에서는 시신 발견 사건이 발생하지 않는다", () => {
+  const state = withGuest();
+  state.day = 10;
+  state.flags.monster_threat = 12;
+  state.hotelStats.security = 55;
+  state.guests[0] = { ...state.guests[0], currentRoomNumber: 207 };
+  state.rooms = state.rooms.map((room) => room.roomNumber === 207 ? { ...room, status: "OCCUPIED" as const, occupied: true, guestId: state.guests[0].id } : room);
+  assert.notEqual(selectNightEvent(state).id, "room_body_discovery");
+});
+
+test("207호에 깨진 guestId 흔적이 남아 있으면 빈 객실 사건으로 오인하지 않는다", () => {
+  const state = withGuest();
+  state.day = 10;
+  state.flags.monster_threat = 12;
+  state.hotelStats.security = 55;
+  state.rooms = state.rooms.map((room) => room.roomNumber === 207 ? { ...room, guestId: "stale-guest" } : room);
+  assert.notEqual(selectNightEvent(state).id, "room_body_discovery");
+});
+
 test("207호 조사 선택은 괴물 침입 단서와 전용 컷신을 남긴다", () => {
   const state = withGuest();
   state.day = 12;
@@ -150,6 +169,8 @@ test("207호 조사 선택은 괴물 침입 단서와 전용 컷신을 남긴다
   assert.equal(resolved.flags.room_207_investigated, true);
   assert.equal(resolved.flags.monster_room_entry_clue, true);
   assert.equal(resolved.flags.monster_threat, 15);
+  assert.equal(resolved.rooms.find((room) => room.roomNumber === 207)?.status, "DAMAGED");
+  assert.equal(resolved.rooms.find((room) => room.roomNumber === 207)?.roomCondition, 35);
   assert.notEqual(selectNightEvent(resolved).id, "room_body_discovery");
 });
 
@@ -164,8 +185,22 @@ test("207호 봉쇄 선택은 자원을 소비하고 위협을 낮추며 사건 
   assert.equal(sealed.resources.parts, before.parts - 1);
   assert.equal(sealed.flags.room_207_sealed, true);
   assert.equal(sealed.flags.monster_threat, 8);
+  assert.equal(sealed.rooms.find((room) => room.roomNumber === 207)?.status, "LOCKED");
+  assert.equal(sealed.rooms.find((room) => room.roomNumber === 207)?.roomCondition, 55);
   assert.notEqual(selectNightEvent(sealed).id, "room_body_discovery");
   assert.equal(queueNightEventCutscene(sealed, "room_body_discovery", "seal_room", 10).activeCutsceneId, "room_body_discovery");
+});
+
+test("207호 사건으로 사용할 수 없어진 객실 상태는 저장 복원 후에도 유지된다", () => {
+  const state = withGuest();
+  state.day = 12;
+  state.flags.monster_threat = 12;
+  state.hotelStats.security = 55;
+  const sealed = applyNightChoice(state, "room_body_discovery", "seal_room").state;
+  const restored = restoreGameState(serializeGameState(sealed));
+  const room = restored.rooms.find((candidate) => candidate.roomNumber === 207)!;
+  assert.equal(room.status, "LOCKED");
+  assert.equal(room.roomCondition, 55);
 });
 
 test("207호 컷신은 사건 자체의 DAY 조건을 따르고 완료 날짜 경계에서 누락되지 않는다", () => {
