@@ -94,7 +94,16 @@ test("DAY 1 정산은 첫날 밤 컷신을 한 번만 예약한다", () => {
 
 test("첫날 밤 컷신은 quiet_watch가 아닌 사건 뒤에도 날짜로 예약된다", () => {
   const state = createInitialGameState();
-  assert.equal(queueNightEventCutscene(state, "generator_failure", "blackout", 1).activeCutsceneId, "first_night");
+  assert.equal(queueNightEventCutscene(state, "generator_failure", "reserve", 1).activeCutsceneId, "first_night");
+});
+
+test("발전기를 포기한 선택은 첫날에도 전용 정전 컷신을 우선한다", () => {
+  const state = createInitialGameState();
+  const blackout = queueNightEventCutscene(state, "generator_failure", "blackout", 1);
+  assert.equal(blackout.activeCutsceneId, "generator_blackout");
+  const dismissed = dismissCutscene(blackout);
+  assert.equal(queueNightEventCutscene(dismissed, "generator_failure", "blackout", 2), dismissed);
+  assert.equal(queueNightEventCutscene(state, "generator_failure", "reserve", 2).activeCutsceneId, null);
 });
 
 test("DAY 1에 범용 컷신이 겹쳐도 사건 전용 장면이 먼저 선택된다", () => {
@@ -117,6 +126,20 @@ test("피난민 수용과 거절은 같은 사건에서 서로 다른 결과 컷
   assert.equal(queueNightEventCutscene(state, "refugee_wave", "shelter", 9).activeCutsceneId, "refugees_sheltered");
   assert.equal(queueNightEventCutscene(state, "refugee_wave", "deny", 8).activeCutsceneId, "refugees_denied");
   assert.equal(queueNightEventCutscene(state, "refugee_wave", "unknown", 8).activeCutsceneId, null);
+});
+
+test("발전기 정전 실제 정산은 호텔 상태·치안을 낮추고 전용 컷신과 후속 플래그를 남긴다", () => {
+  const state = createInitialGameState();
+  state.day = 4;
+  state.phase = "night";
+  state.resources.fuel = 10;
+  state.selectedNightEventId = "generator_failure";
+  state.selectedNightChoiceId = "blackout";
+  const resolved = resolveDay(state);
+  assert.equal(resolved.activeCutsceneId, "generator_blackout");
+  assert.equal(resolved.flags.generator_blackout, true);
+  assert.equal(resolved.hotelStats.hotelCondition, state.hotelStats.hotelCondition - 3);
+  assert.equal(resolved.hotelStats.security, state.hotelStats.security - 3);
 });
 
 test("피난민 선택 결과 컷신은 실제 DAY 정산의 선택과 플래그를 함께 반영한다", () => {

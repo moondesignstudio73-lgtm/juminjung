@@ -14,6 +14,18 @@ export const CUTSCENES: CutsceneDefinition[] = [
     imageAlt: "낡은 JUJU HOTEL 프런트 장부와 라디오 너머로 비어 있는 어두운 복도가 길게 이어지는 첫날 밤.",
   },
   {
+    id: "generator_blackout",
+    triggerEventId: "generator_failure",
+    triggerChoiceId: "blackout",
+    priority: 140,
+    kicker: "BLACKOUT · 02:41 AM",
+    title: "호텔이 반쪽으로 어두워진 순간",
+    body: "발전기가 마지막 기침을 토해내자 당신은 로비와 객실 한 동의 차단기를 내렸다. 황동 램프와 라디오가 동시에 죽었고, 붉은 비상등 몇 개만 복도 끝을 간신히 붙잡았다. 프런트의 손전등으로도 객실 열쇠 번호는 읽히지 않았다. 번개가 창을 가른 짧은 순간, 빗속의 그림자들이 창 바로 밖에 몰려든 모습이 드러났다.",
+    quote: "어둠은 빈 공간이 아니었다. 우리가 보지 못하는 동안에도 무언가는 움직였다.",
+    image: "/juminjung/assets/cutscenes/generator-blackout-v1.png",
+    imageAlt: "발전기 출력이 부족해 전력을 차단한 낡은 호텔 로비에서 생존자들이 손전등과 붉은 비상등에 의지하고, 폭우가 치는 창 바로 밖에 여러 인영이 몰려든 장면.",
+  },
+  {
     id: "guest_attacked",
     triggerEventId: "perimeter_breach",
     triggerChoiceId: "fight",

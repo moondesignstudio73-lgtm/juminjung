@@ -15,7 +15,7 @@ export const NIGHT_EVENTS: NightEventDefinition[] = [
   ] },
   { id: "generator_failure", title: "발전기의 마지막 기침", description: "연료 압력이 떨어지며 호텔 절반이 암흑에 잠깁니다.", quote: "아버지가 남긴 발전기 매뉴얼의 마지막 장이 찢겨 있다.", priority: 80, condition: { maximumResource: { fuel: 10 } }, choices: [
     { id: "reserve", label: "예비 연료를 붓는다", description: "연료 2를 더 사용해 조명을 유지합니다.", requiredResources: { fuel: 2 }, effect: { resources: { fuel: -2 }, threat: -1 } },
-    { id: "blackout", label: "객실 한 동을 폐쇄한다", description: "연료를 아끼지만 호텔 상태와 안전이 나빠집니다.", effect: { hotelStats: { hotelCondition: -3, security: -3 }, flags: { generator_blackout: true }, threat: 5 } },
+    { id: "blackout", label: "로비와 객실 한 동의 전력을 끊는다", description: "남은 발전기 출력을 보존하지만 호텔 상태와 안전이 나빠집니다.", effect: { hotelStats: { hotelCondition: -3, security: -3 }, flags: { generator_blackout: true }, threat: 5 } },
   ] },
   { id: "lily_vale_breakthrough", title: "두 방 사이의 증거", description: "가까이 배치된 Lily와 Vale가 밤새 기록과 조직 샘플을 대조해 공통 패턴을 찾아냅니다.", quote: "‘문서의 날짜와 세포 분열 주기가 정확히 일치해요.’", priority: 75, condition: { forbiddenFlags: ["lily_vale_relationship_event"], relationship: { sourceId: "lily", targetId: "vale", minimumWeightedValue: 30 } }, choices: [
     { id: "shared_lab", label: "공동 조사실을 허가한다", description: "부품 1을 사용해 두 사람의 협업과 정보망을 강화합니다.", requiredResources: { parts: 1 }, effect: { resources: { parts: -1 }, reputations: { community: 3 }, flags: { lily_vale_relationship_event: true, investigation_network_active: true }, guestEffects: [{ guestId: "lily", trust: 6 }, { guestId: "vale", trust: 6 }], relationshipChanges: [{ sourceId: "lily", targetId: "vale", delta: 15, type: "INVESTIGATION" }, { sourceId: "vale", targetId: "lily", delta: 15, type: "INVESTIGATION" }] } },
