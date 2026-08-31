@@ -39,7 +39,7 @@ Understood as: grow the published browser game into an open-duration hotel survi
 - Relationship night events can stage two character portraits with event-authored expression overrides; Owen and Hayes face off angrily during their military standoff, while Lily's relief contrasts with Vale's suspicion during their investigation breakthrough
 - NPC story events can author a scene-specific expression override; the expanded story cast now carries scene-specific emotional arcs from conflict through resolution, with Thomas moving from fear under the generator overload to quiet pride in the completed hotel grid
 - Guest visual state is derived from Health, Stress, infection, and arrival status, exposing wet, exhausted, bandaged, bloodied, and infection-suspected presentation layers
-- The first monster sighting now interrupts the morning report once after the east-gate breach, using a full-screen illustrated scene with rain, lamp flicker, slow camera movement, reduced-motion support, and save restoration
+- The first night and first monster sighting now interrupt their morning reports once, using full-screen illustrated scenes with rain, lamp flicker, slow camera movement, reduced-motion support, date-aware triggers, and save restoration
 
 ## Next system priorities
 

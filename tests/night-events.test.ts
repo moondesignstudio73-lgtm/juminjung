@@ -60,7 +60,40 @@ test("철문 침입 정산은 첫 괴물 목격 컷신을 한 번만 예약한�
   const dismissed = dismissCutscene(resolved);
   assert.equal(dismissed.activeCutsceneId, null);
   assert.deepEqual(dismissed.seenCutsceneIds, ["first_monster_sighting"]);
-  assert.equal(queueNightEventCutscene(dismissed, "perimeter_breach"), dismissed);
+  assert.equal(queueNightEventCutscene(dismissed, "perimeter_breach", 12), dismissed);
+});
+
+test("DAY 1 정산은 첫날 밤 컷신을 한 번만 예약한다", () => {
+  const state = createInitialGameState();
+  state.day = 1;
+  state.phase = "night";
+  state.selectedNightEventId = "quiet_watch";
+  state.selectedNightChoiceId = "rest";
+  const resolved = resolveDay(state);
+  assert.equal(resolved.lastDaySummary?.completedDay, 1);
+  assert.equal(resolved.activeCutsceneId, "first_night");
+  const dismissed = dismissCutscene(resolved);
+  assert.deepEqual(dismissed.seenCutsceneIds, ["first_night"]);
+  assert.equal(queueNightEventCutscene(dismissed, "quiet_watch", 1), dismissed);
+});
+
+test("첫날 밤 컷신은 quiet_watch가 아닌 사건 뒤에도 날짜로 예약된다", () => {
+  const state = createInitialGameState();
+  assert.equal(queueNightEventCutscene(state, "generator_failure", 1).activeCutsceneId, "first_night");
+});
+
+test("DAY 1에 사건 전용 컷신이 겹치면 높은 우선순위 장면이 먼저 선택된다", () => {
+  const state = createInitialGameState();
+  assert.equal(queueNightEventCutscene(state, "perimeter_breach", 1).activeCutsceneId, "first_monster_sighting");
+});
+
+test("DAY 2 이후에는 첫날 밤 컷신을 뒤늦게 재생하지 않는다", () => {
+  const state = createInitialGameState();
+  state.day = 5;
+  state.phase = "night";
+  state.selectedNightEventId = "quiet_watch";
+  state.selectedNightChoiceId = "rest";
+  assert.equal(resolveDay(state).activeCutsceneId, null);
 });
 
 test("피난민을 받아들이면 자원을 소비하고 평판·위협·플래그가 변한다", () => {
