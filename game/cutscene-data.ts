@@ -2,6 +2,18 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: "eleanor_clinic_opened",
+    triggerStoryEventId: "eleanor-standard",
+    triggerStoryChoiceId: "clinic",
+    priority: 165,
+    kicker: "JUJU HOTEL · MEDICAL CARE ZONE",
+    title: "객실 하나가 진료소가 된 아침",
+    body: "객실 문에서 황동 번호표를 떼어낸 자리에 흰 천 조각이 걸렸다. Eleanor는 남은 약품을 증상별로 나누고, 침대 두 개 사이에 진료 장부와 소독 도구를 놓았다. 복도에서 기다리던 사람들은 더는 아픈 몸을 숨긴 채 방을 구하지 않아도 되었다. JUJU HOTEL의 객실 하나가 잠자리 대신 매일 밤 사람을 살피는 상설 진료 구역이 되었다.",
+    quote: "치료할 방이 생겼으니, 이제 늦기 전에 찾아낼 수 있어요.",
+    image: "/juminjung/assets/cutscenes/eleanor-hotel-clinic-v1.png",
+    imageAlt: "엘리너 리드가 낡은 JUJU HOTEL 객실을 개조한 작은 상설 진료소에서 약품과 진료 장부를 정리하고, 따뜻한 황동 램프 아래 붕대를 감은 환자를 살피는 장면.",
+  },
+  {
     id: "walter_archive_opened",
     triggerStoryEventId: "walter-key",
     triggerStoryChoiceId: "use_key",

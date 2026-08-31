@@ -104,8 +104,22 @@ test("Eleanor의 상설 진료 선택은 약품과 의료 엔딩 조건을 연�
   const eleanor = result.state.guests.find((guest) => guest.id === "eleanor")!;
   assert.equal(result.state.resources.medicine, state.resources.medicine - 3);
   assert.equal(result.state.flags.eleanor_clinic_established, true);
+  assert.equal(result.state.flags.medical_network_active, true);
+  assert.equal(result.state.activeCutsceneId, "eleanor_clinic_opened");
+  assert.equal(getCutscene(result.state.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/eleanor-hotel-clinic-v1.png");
   assert.equal(eleanor.storyFlags.choice_resolution, "clinic");
   assert.equal(eleanor.eventChain.find((event) => event.stage === "RESOLUTION")?.completed, true);
+  const restored = restoreGameState(serializeGameState(result.state));
+  assert.equal(restored.flags.eleanor_clinic_established, true);
+  assert.equal(restored.activeCutsceneId, "eleanor_clinic_opened");
+});
+
+test("Eleanor의 순회 진료 선택은 상설 진료 효과와 전용 컷신을 열지 않는다", () => {
+  const result = applyStoryChoice(resolutionState("eleanor"), "eleanor-standard", "mobile");
+  assert.equal(result.state.flags.eleanor_mobile_medic, true);
+  assert.equal(result.state.flags.eleanor_clinic_established, undefined);
+  assert.equal(result.state.flags.medical_network_active, undefined);
+  assert.equal(result.state.activeCutsceneId, null);
 });
 
 test("Walter의 열쇠 사용은 아버지 비밀과 괴물 기원 단서를 연다", () => {

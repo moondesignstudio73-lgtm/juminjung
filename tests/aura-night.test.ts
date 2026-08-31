@@ -72,6 +72,30 @@ test("Eleanor의 의료 Aura는 범위 안 질병만 막고 범위 밖 투숙객
   assert.equal(result.guests.find((guest) => guest.id === "walter")?.infectionState, "SICK");
 });
 
+test("Eleanor의 상설 진료소는 호텔 전체 질병 확률을 5%p 낮추고 예방 대상을 기록한다", () => {
+  const state = place([["walter",101]]);
+  const withoutClinic = resolveAuraNight(state.rooms, state.guests, 1, "STABLE", 10);
+  const withClinic = resolveAuraNight(state.rooms, state.guests, 1, "STABLE", 10, { eleanor_clinic_established: true });
+  assert.equal(withoutClinic.guests.find((guest) => guest.id === "walter")?.infectionState, "SICK");
+  assert.equal(withClinic.guests.find((guest) => guest.id === "walter")?.infectionState, "HEALTHY");
+  assert.deepEqual(withClinic.clinicPreventedGuestIds, ["walter"]);
+  assert.deepEqual(withoutClinic.clinicPreventedGuestIds, []);
+});
+
+test("일반 의료망이나 순회 진료 플래그는 상설 진료소 효과를 대신하지 않는다", () => {
+  const state = place([["walter",101]]);
+  const result = resolveAuraNight(state.rooms, state.guests, 1, "STABLE", 10, { medical_network_active: true, eleanor_mobile_medic: true });
+  assert.equal(result.guests.find((guest) => guest.id === "walter")?.infectionState, "SICK");
+  assert.deepEqual(result.clinicPreventedGuestIds, []);
+});
+
+test("객실 Medical Aura가 이미 막은 질병을 상설 진료소 예방으로 중복 기록하지 않는다", () => {
+  const state = place([["eleanor",102],["walter",101]]);
+  const result = resolveAuraNight(state.rooms, state.guests, 1, "STABLE", 10, { eleanor_clinic_established: true });
+  assert.equal(result.guests.find((guest) => guest.id === "walter")?.infectionState, "HEALTHY");
+  assert.ok(!result.clinicPreventedGuestIds.includes("walter"));
+});
+
 test("Ruth 단독 치료는 5, Eleanor와 겹친 MEDICAL WARD는 최종 10을 회복한다", () => {
   const ruth = place([["ruth",302]]);
   const ward = place([["eleanor",301],["ruth",302]]);
@@ -99,4 +123,18 @@ test("Aura 보정은 실제 DAY 정산의 호텔 상태와 치안에 반영된�
   const samuelWithoutAura = resolveDay(nightlyState("samuel",false));
   assert.equal(walterWithAura.hotelStats.hotelCondition-walterWithoutAura.hotelStats.hotelCondition,3);
   assert.equal(samuelWithAura.hotelStats.security-samuelWithoutAura.hotelStats.security,1);
+});
+
+test("DAY 정산은 상설 진료소가 예방한 투숙객을 호텔 로그에 남긴다", () => {
+  const state = place([["walter",101]]);
+  state.day = 1;
+  state.phase = "night";
+  state.worldState = "UNREST";
+  state.flags.eleanor_clinic_established = true;
+  state.selectedNightEventId = "quiet_watch";
+  state.selectedNightChoiceId = "rest";
+  state.guests = state.guests.map((guest) => guest.id === "walter" ? { ...guest, remainingNights: 2 } : guest);
+  const resolved = resolveDay(state);
+  assert.equal(resolved.guests.find((guest) => guest.id === "walter")?.infectionState, "HEALTHY");
+  assert.ok(resolved.eventHistory.some((entry) => entry.message === "상설 진료소 예방 · 월터 브릭스"));
 });

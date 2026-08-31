@@ -54,6 +54,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - Checked-out survivors can return after five complete road days once no first-time arrival is waiting, using the actual checkout day as the next-visit anchor and preserving their trust, health, relationships, story progress, and Aura while restarting their stay; repeat offers are bound once to each visit count, and refusing a returning survivor delays rather than permanently removes them
 - Major NPC story choices can own data-driven one-time full-screen cutscenes. Mia and Daniel's HOME-route reunion uses dedicated artwork, and a saved cutscene queue prevents unique story scenes from being lost when another scene is already active
 - Walter's decision to use the inherited brass key opens a dedicated basement-archive cutscene, visually linking his story resolution to the later 91.3 MHz signal and THE TRUTH investigation
+- Eleanor's permanent clinic spends scarce medicine to open a dedicated illustrated scene and lowers hotel-wide normal disease risk by five percentage points, logging the residents whose illness it prevents
 
 ## Next system priorities
 

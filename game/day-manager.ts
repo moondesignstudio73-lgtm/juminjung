@@ -23,7 +23,7 @@ export function resolveDay(state: GameState): GameState {
   state = night.state;
   const story = advanceHotelStories(state.guests, state.day, state.rooms);
   const activeRooms = recalculateRoomEffects(state.rooms, story.guests);
-  const auraNight = resolveAuraNight(activeRooms, story.guests, state.day, state.worldState);
+  const auraNight = resolveAuraNight(activeRooms, story.guests, state.day, state.worldState, undefined, state.flags);
   const staying = auraNight.guests.filter((guest) => guest.status === "STAYING" && guest.currentRoomNumber !== null);
   const stayingIds = new Set(staying.map((guest) => guest.id));
   const demand = { food: auraNight.foodDemand, water: staying.length, fuel: 1 };
@@ -57,6 +57,7 @@ export function resolveDay(state: GameState): GameState {
     { day: state.day, type: "RESOURCE", message: `식량 ${consumed.food}, 물 ${consumed.water}, 연료 ${consumed.fuel} 소비` },
     ...(auraNight.tradeBonus.food||auraNight.tradeBonus.parts ? [{day:state.day,type:"RESOURCE" as const,message:`Aura 교역 · 식량 +${auraNight.tradeBonus.food} · 부품 +${auraNight.tradeBonus.parts}`}] : []),
     ...(auraNight.sickGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`객실 질병 발생 · ${auraNight.sickGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
+    ...(auraNight.clinicPreventedGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`상설 진료소 예방 · ${auraNight.clinicPreventedGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
     ...(Object.keys(economy.production).length ? [{ day: state.day, type: "RESOURCE" as const, message: `시설 생산 · ${Object.entries(economy.production).map(([key,value]) => `${key} +${value}`).join(" · ")}` }] : []),
     ...(economy.inactiveFacilities.length ? [{ day: state.day, type: "EVENT" as const, message: `유지비 부족 · ${economy.inactiveFacilities.map((id) => FACILITY_NAMES[id]).join(" · ")} 가동 중단` }] : []),
     ...checkedOutGuestIds.map((guestId): HotelLogEntry => ({ day: nextDay, type: "CHECK_OUT", message: `${state.guests.find((guest) => guest.id === guestId)?.name ?? guestId} · 숙박 종료 자동 체크아웃` })),
