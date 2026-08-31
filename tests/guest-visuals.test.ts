@@ -115,6 +115,19 @@ test("Jack의 이중 거래 갈등과 시장 결말은 사건 문맥에 맞는 �
   assert.equal(getGuestVisualState(guest("jack"), happy).asset, "/juminjung/assets/portraits/jack/happy-v1.png");
 });
 
+test("Grace의 위험한 계시와 믿음의 결말은 사건 문맥에 맞는 전용 표정을 제공한다", () => {
+  const conflict = STORY_CHOICE_EVENTS.find((event) => event.id === "grace-sermon");
+  const resolution = STORY_CHOICE_EVENTS.find((event) => event.id === "grace-faith");
+  const suspicious = getStoryEventExpression("grace-sermon");
+  const happy = getStoryEventExpression("grace-faith");
+  assert.deepEqual([conflict?.guestId, conflict?.stage], ["grace", "CONFLICT"]);
+  assert.deepEqual([resolution?.guestId, resolution?.stage], ["grace", "RESOLUTION"]);
+  assert.equal(suspicious, "suspicious");
+  assert.equal(happy, "happy");
+  assert.equal(getGuestVisualState(guest("grace"), suspicious).asset, "/juminjung/assets/portraits/grace/suspicious-v1.png");
+  assert.equal(getGuestVisualState(guest("grace"), happy).asset, "/juminjung/assets/portraits/grace/happy-v1.png");
+});
+
 test("도착 대기 중인 방문자는 젖은 옷 상태로 표시된다", () => {
   const visual = getGuestVisualState(guest("eleanor"));
   assert.ok(visual.modifiers.includes("WET"));

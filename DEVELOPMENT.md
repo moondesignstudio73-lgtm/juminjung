@@ -35,14 +35,14 @@ Understood as: grow the published browser game into an open-duration hotel survi
 - HOTEL JOURNAL exposes the complete reverse-chronological record with check-in, checkout, resource, and event filters plus relationship details
 - Every ending route now has a distinct three-scene final event and epilogue; progress saves mid-scene and completion returns to open-ended operation
 - All 20 main NPCs now appear as large authored half-body 2D sprites at the front desk and in their story scenes
-- The portrait catalog selects authored assets per expression with a neutral fallback; Eleanor and Ruth have afraid and injured variants, Mia and Claire have afraid and happy variants, Walter, Daniel, and Jack have suspicious and happy variants, Samuel has sad and happy variants, Mr. White and Vale have suspicious variants, Owen and Hayes have angry variants, Lily has a happy variant, and save restoration refreshes variant paths from the catalog
+- The portrait catalog selects authored assets per expression with a neutral fallback; Eleanor and Ruth have afraid and injured variants, Mia and Claire have afraid and happy variants, Walter, Daniel, Jack, and Grace have suspicious and happy variants, Samuel has sad and happy variants, Mr. White and Vale have suspicious variants, Owen and Hayes have angry variants, Lily has a happy variant, and save restoration refreshes variant paths from the catalog
 - Relationship night events can stage two character portraits with event-authored expression overrides; Owen and Hayes face off angrily during their military standoff, while Lily's relief contrasts with Vale's suspicion during their investigation breakthrough
-- NPC story events can author a scene-specific expression override; Mia and Claire appear afraid during their family-related conflicts and quietly hopeful during their resolutions, Walter shifts from guarded suspicion over the father's lie to restrained relief when leaving the key, Daniel moves from defensiveness over the torn photograph to relief as he puts Mia's choice before his claim, Samuel carries remorse over the refugee ledger before reclaiming a protective purpose, and Jack shifts from calculating suspicion over the double ledger to confidence in the hotel market
+- NPC story events can author a scene-specific expression override; Mia and Claire appear afraid during their family-related conflicts and quietly hopeful during their resolutions, Walter shifts from guarded suspicion over the father's lie to restrained relief when leaving the key, Daniel moves from defensiveness over the torn photograph to relief as he puts Mia's choice before his claim, Samuel carries remorse over the refugee ledger before reclaiming a protective purpose, Jack shifts from calculating suspicion over the double ledger to confidence in the hotel market, and Grace moves from guarded certainty in her sermon to compassionate acceptance at the threshold of faith
 - Guest visual state is derived from Health, Stress, infection, and arrival status, exposing wet, exhausted, bandaged, bloodied, and infection-suspected presentation layers
 
 ## Next system priorities
 
-- Expand authored expression and condition variants from the 13 completed characters to the remaining seven-character portrait catalog
+- Expand authored expression and condition variants from the 14 completed characters to the remaining six-character portrait catalog
 
 ## Main NPC catalog
 
