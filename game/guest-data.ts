@@ -1,4 +1,5 @@
 import type { AuraDefinition, Guest, Resources } from "./types.ts";
+import { FRONT_DESK_PROFILES } from "./front-desk-dialogue-data.ts";
 
 export const ELEANOR_ID = "eleanor";
 type Seed = {
@@ -84,11 +85,15 @@ const featuredTitles:Record<string,string[]> = {
 };
 
 export function createGuests():Guest[] {
-  return seeds.map((s) => ({
+  return seeds.map((s) => {
+    const desk = FRONT_DESK_PROFILES[s.id];
+    if (!desk) throw new Error(`프런트 대화 데이터가 없습니다: ${s.id}`);
+    return ({
     id:s.id,name:s.name,age:s.age,gender:s.gender,role:s.role,description:s.description,portrait:s.portrait??"",portraitVariants:s.portraitVariants??{},expressions:["neutral","happy","sad","angry","afraid","suspicious","injured"],
-    arrivalDay:s.days[0],arrivalDayRange:s.days,arrivalConditions:s.arrivalConditions??conditionalArrivals[s.id]??[],conditionLabel:s.condition??"피로 · 안정",introDialogue:s.intro??`${s.name}입니다. 오늘 밤 머물 방을 부탁합니다.`,negotiationDialogue:"제가 가진 것을 조금 더 내놓겠습니다. 안전한 방을 부탁합니다.",
-    questions:[{id:"origin",label:"어디서 왔습니까?",answer:s.description},{id:"purpose",label:"왜 이 호텔입니까?",answer:"불이 켜진 곳이 여기뿐이었습니다."}],offeredItems:s.items??[],offer:s.offer??{},negotiatedOffer:{},
+    arrivalDay:s.days[0],arrivalDayRange:s.days,arrivalConditions:s.arrivalConditions??conditionalArrivals[s.id]??[],conditionLabel:s.condition??"피로 · 안정",introDialogue:s.intro??desk.introDialogue,negotiationDialogue:desk.negotiationDialogue,
+    questions:desk.questions,offeredItems:s.items??[],offer:s.offer??{},negotiatedOffer:desk.negotiatedOffer,
     baseTraits:s.traits,hiddenTraits:s.hidden,discoveredTraits:[],health:80,stress:45,trust:25,riskLevel:s.risk??35,relationships:s.relations??[],storyFlags:{},eventChain:stages.map((e,index)=>({...e,id:`${s.id}-${e.id}`,title:featuredTitles[s.id]?.[index]??e.title})),infectionState:"HEALTHY",alive:true,endingState:null,
     currentRoomNumber:null,stayDuration:s.stay,remainingNights:s.stay,checkedInDay:null,status:"WAITING",aura:s.aura,
-  }));
+  });
+  });
 }

@@ -35,26 +35,12 @@ type UiSave = GameState & { prologue: number };
 const makeInitial = (): UiSave => ({ ...createInitialGameState(), prologue: 0 });
 const routeToNight = (state:UiSave):UiSave => { const pending = getPendingStoryChoice(state); return { ...state, phase: pending ? 'story' : 'night', pendingStoryEventId: pending?.id ?? null }; };
 
-const questions = [
-  { id: 'origin', label: '어디서 왔습니까?', answer: '“세인트 머시 병원요. 어제 동관이 무너졌어요. 마지막 10킬로미터는 걸어왔고요.”' },
-  { id: 'wound', label: '그 팔은 어떻게 다쳤죠?', answer: '“이빨 자국이 아니라 유리 파편이에요. 붕대도 깨끗합니다. 직접 보셔도 돼요.”' },
-  { id: 'proof', label: '의사라는 걸 증명해 보세요.', answer: '그녀는 응급환자 분류 절차를 막힘없이 읊고, 약장 속 유효기간 지난 약을 냄새만으로 맞힌다.' },
-];
-
-const items = [
-  { id: 'food', icon: Soup, name: '통조림 ×3', short: '미개봉. 두 캔은 상표가 뜯겨 있다.', detail: '공장 봉인은 멀쩡하다. 투숙객 한 명이 사흘을 버틸 양이다.' },
-  { id: 'fuel', icon: Fuel, name: '휘발유 · 8L', short: '탁한 붉은 연료통. 냄새는 신선하다.', detail: '물이 섞인 흔적은 없다. 발전기를 하룻밤 정도 더 돌릴 수 있다.' },
-  { id: 'photo', icon: Inspect, name: '낡은 사진', short: '세인트 머시 병원 앞에 선 가족사진.', detail: '뒷면에는 “불이 꺼지면 42마일 지점으로.” 하루도 안 된 잉크다.' },
-  { id: 'medicine', icon: HeartPulse, name: '밀봉된 항생제', short: '협상했을 때만 내놓은 물건.', detail: '광범위 항생제. 진품이며, 방 하나보다 훨씬 귀하다.' },
-];
-
-const defaultDialogue = '“방값만큼 일할게요. 이틀이면 됩니다. 그 이상은 바라지 않아요.”';
 const itemIcons = { FOOD: Soup, FUEL: Fuel, MEDICINE: HeartPulse, VALUABLE: PackageSearch, INFORMATION: Inspect } as const;
 
 export default function Home() {
   const [save, setSave] = useState<UiSave>(makeInitial);
   const [hydrated, setHydrated] = useState(false);
-  const [dialogue, setDialogue] = useState(defaultDialogue);
+  const [dialogue, setDialogue] = useState('');
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [showQuestions, setShowQuestions] = useState(false);
   const [muted, setMuted] = useState(false);
@@ -80,7 +66,7 @@ export default function Home() {
   }, [save.phase, save.day, eligibleVisitor?.id, visitorReaction?.id]);
 
   const update = (patch: Partial<UiSave>) => setSave((current) => ({ ...current, ...patch }));
-  const reset = () => { clearBrowserGame(); setSave(makeInitial()); setDialogue(defaultDialogue); setSelectedItem(null); };
+  const reset = () => { clearBrowserGame(); setSave(makeInitial()); setDialogue(''); setSelectedItem(null); };
   const ask = (id: string, answer: string) => {
     update({ asked: [...new Set([...save.asked, id])] }); setDialogue(answer); setShowQuestions(false);
   };

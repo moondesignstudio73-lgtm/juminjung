@@ -16,6 +16,41 @@ test("20명의 메인 NPC가 고유 ID와 완전한 기본 상태로 등록된�
   }
 });
 
+test("20명 전원의 프런트 심문과 협상 대사는 NPC별 고유 데이터다", () => {
+  const guests = createGuests();
+  assert.equal(new Set(guests.map((guest) => guest.introDialogue)).size, guests.length);
+  assert.equal(new Set(guests.map((guest) => guest.negotiationDialogue)).size, guests.length);
+  for (const guest of guests) {
+    assert.equal(guest.questions.length, 3);
+    assert.equal(new Set(guest.questions.map((question) => question.id)).size, 3);
+    assert.ok(guest.questions.every((question) => question.id.startsWith(`${guest.id}-`)));
+    assert.ok(guest.questions.every((question) => question.label.length >= 6 && question.answer.length >= 12));
+  }
+  assert.equal(new Set(guests.flatMap((guest) => guest.questions.map((question) => question.id))).size, guests.length * 3);
+});
+
+test("협상은 모든 방문자에게 실제 추가 자원을 제공한다", () => {
+  const guests = createGuests();
+  for (const guest of guests) {
+    const bonus = Object.values(guest.negotiatedOffer).reduce((sum, value) => sum + Number(value ?? 0), 0);
+    assert.ok(bonus > 0, `${guest.id} negotiated offer`);
+  }
+});
+
+test("구버전 저장의 공통 대사는 최신 NPC별 프런트 데이터로 복원된다", () => {
+  const state = createInitialGameState();
+  const walter = state.guests.find((guest) => guest.id === "walter")!;
+  walter.introDialogue = "공통 소개";
+  walter.negotiationDialogue = "공통 협상";
+  walter.questions = [{ id:"origin",label:"어디서 왔습니까?",answer:"공통 답변" }];
+  walter.negotiatedOffer = {};
+  const restored = restoreGameState(serializeGameState(state)).guests.find((guest) => guest.id === "walter")!;
+  assert.notEqual(restored.introDialogue, "공통 소개");
+  assert.notEqual(restored.negotiationDialogue, "공통 협상");
+  assert.equal(restored.questions.length, 3);
+  assert.deepEqual(restored.negotiatedOffer, { parts:1 });
+});
+
 test("모든 NPC Aura는 이름·라벨·분류·아이콘·설명·범위·효과를 하나의 데이터로 제공한다", () => {
   const guests = createGuests();
   const auras = guests.map((guest) => guest.aura).filter((aura) => aura !== null);
