@@ -1,6 +1,6 @@
 # May I Have a Room? — Development Notes
 
-Understood as: grow the published browser game into an open-duration hotel survival loop where story, management, faction, and world-state conditions unlock player-chosen final events.
+Understood as: grow the published browser game into an open-duration hotel survival loop where story, management, faction, and world-state conditions unlock player-chosen final events; extend it with a saved, data-driven NORMAL + MAIN visitor queue and a daily survival loop built around visible objectives, three action points, urgent problems, power allocation, and ration trade-offs.
 
 Aura presentation is understood as data-owned: every Aura defines its own short label, category, and icon, and room UI must never infer presentation from an NPC role.
 
@@ -69,9 +69,12 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - Hayes's signed-command route records the military-resistance failure required by MILITARY OCCUPATION and opens a dedicated illustrated handover scene before the final occupation event; signing and civilian rule explicitly replace one another's military outcome flags so the latest command decision remains authoritative
 - Jack's fair-market route opens a dedicated illustrated public exchange and changes the daytime trade run at its data source: the UI, affordability check, settlement, and log all use one fuel instead of two and remove the humanitarian reputation loss; fair and monopoly choices replace one another's market flags
 - Victor's public-bunker trust opens a dedicated illustrated handover and changes the refugee-wave shelter choice at its data source: the UI, affordability check, and settlement use food 2, water 2, and Monster Threat +1 instead of food 4, water 3, and threat +4; public-trust and monopoly outcomes replace one another's bunker flags
+- Lily's public truth route opens a dedicated illustrated radio-room broadcast and, from DAY 16, a one-time response event in which the player can spend fuel to verify survivor testimony as a second monster-origin clue or close the frequency to reduce exposure; broadcast and encrypted-archive outcomes replace one another's publication flags
 
 ## Next system priorities
 
+- Build the first daily-survival vertical slice: state-derived objectives and urgent problems, three action points, fuel/power allocation, and food ration decisions, with DAY 1–5 regression coverage
+- Add the data-driven NORMAL + MAIN visitor split, seeded 2–6 visitor queues, story-locked MAIN residency, history, and save restoration without changing a day's queue on reload
 - Expand full-screen illustrated cutscenes for the remaining major story and ending beats
 
 ## Main NPC catalog

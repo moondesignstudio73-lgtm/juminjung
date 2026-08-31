@@ -25,6 +25,10 @@ export const NIGHT_EVENTS: NightEventDefinition[] = [
     { id: "ration", label: "배급량을 줄인다", description: "자원은 보존하지만 모두의 Stress가 증가합니다.", effect: { allGuestStress: 8, reputations: { community: -3 } } },
     { id: "share", label: "비상 식량을 연다", description: "식량 3을 더 소비하고 공동체의 신뢰를 지킵니다.", requiredResources: { food: 3 }, effect: { resources: { food: -3 }, allGuestStress: -3, reputations: { humanitarian: 5, community: 3 } } },
   ] },
+  { id: "truth_responses", title: "증언이 돌아오는 주파수", description: "Lily가 공개한 기록을 들은 생존자들이 서로 다른 지역에서 같은 형체와 실종 패턴을 송신해 옵니다.", quote: "잡음 사이의 목소리들은 서로 만난 적이 없었지만, 모두 같은 문을 기억하고 있었다.", priority: 84, condition: { minimumDay: 16, requiredFlags: { lily_documents_decoded: true, lily_truth_broadcast: true }, forbiddenFlags: ["lily_truth_archived", "truth_responses_resolved"] }, choices: [
+    { id: "receive_testimonies", label: "발전기를 더 돌려 증언을 대조한다", description: "연료 1을 사용해 원격 증언과 좌표를 검증합니다. 괴물 기원의 보강 증거를 얻지만 호텔 위치가 더 넓게 노출됩니다.", requiredResources: { fuel: 1 }, effect: { resources: { fuel: -1, parts: 1 }, reputations: { community: 4, humanitarian: 5 }, flags: { truth_responses_resolved: true, survivor_testimonies_verified: true, monster_origin_clue_2: true }, fatherStoryProgress: 10, threat: 5 } },
+    { id: "close_frequency", label: "주파수를 닫고 수신 기록만 봉인한다", description: "추가 송신을 중단해 위치 노출을 줄이지만, 바깥 생존자들의 증언을 검증할 기회를 포기합니다.", effect: { hotelStats: { security: 3 }, reputations: { humanitarian: -3 }, flags: { truth_responses_resolved: true, truth_frequency_closed: true }, threat: -5 } },
+  ] },
   { id: "generator_failure", title: "발전기의 마지막 기침", description: "연료 압력이 떨어지며 호텔 절반이 암흑에 잠깁니다.", quote: "아버지가 남긴 발전기 매뉴얼의 마지막 장이 찢겨 있다.", priority: 80, condition: { maximumResource: { fuel: 10 }, forbiddenFlags: ["generator_network_stable"] }, choices: [
     { id: "reserve", label: "예비 연료를 붓는다", description: "연료 2를 더 사용해 조명을 유지합니다.", requiredResources: { fuel: 2 }, effect: { resources: { fuel: -2 }, threat: -1 } },
     { id: "blackout", label: "로비와 객실 한 동의 전력을 끊는다", description: "남은 발전기 출력을 보존하지만 호텔 상태와 안전이 나빠집니다.", effect: { hotelStats: { hotelCondition: -3, security: -3 }, flags: { generator_blackout: true }, threat: 5 } },

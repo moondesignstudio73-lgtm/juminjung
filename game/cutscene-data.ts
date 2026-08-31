@@ -2,6 +2,18 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: "lily_truth_broadcast",
+    triggerStoryEventId: "lily-truth",
+    triggerStoryChoiceId: "broadcast",
+    priority: 180,
+    kicker: "JUJU HOTEL · OPEN FREQUENCY",
+    title: "침묵보다 위험한 첫 문장",
+    body: "Lily는 복원한 문서와 실종 좌표를 낡은 송신기 앞에 펼쳤다. 호텔의 위치를 감추던 마지막 침묵이 마이크 스위치와 함께 끊겼다. 그녀가 괴물의 모방 행동과 지하 기록의 날짜를 읽어 내려가자 처음에는 빗소리뿐이었다. 송신을 마친 순간, 멀리 떨어진 수신 표시등 하나가 짧게 깜빡였다. 목소리는 아직 없었지만 누군가 이 주파수를 듣고 있었다.",
+    quote: "여기는 JUJU HOTEL. 이 기록을 들은 사람이 있다면, 믿지 말고 대조해 주세요. 그리고 살아서 답해 주세요.",
+    image: "/juminjung/assets/cutscenes/lily-truth-broadcast-v1.png",
+    imageAlt: "릴리 박이 비 내리는 JUJU HOTEL 라디오실에서 해독 문서를 펼치고 낡은 마이크로 진실을 방송하며, 아날로그 수신기의 미확인 신호등이 켜지는 장면.",
+  },
+  {
     id: "victor_public_trust",
     triggerStoryEventId: "victor-crown",
     triggerStoryChoiceId: "public_trust",

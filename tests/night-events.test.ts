@@ -425,6 +425,79 @@ test("아버지 기록실 단서를 얻은 플레이만 DAY 20부터 91.3MHz 신
   assert.notEqual(selectNightEvent(state).id, "father_radio_signal");
 });
 
+test("Lily의 공개 방송은 DAY 16부터 한 번만 생존자 응답 사건을 연다", () => {
+  const state = createInitialGameState();
+  state.flags.lily_documents_decoded = true;
+  state.flags.lily_truth_broadcast = true;
+  state.day = 15;
+  assert.notEqual(selectNightEvent(state).id, "truth_responses");
+  state.day = 16;
+  assert.equal(selectNightEvent(state).id, "truth_responses");
+  state.flags.lily_truth_archived = true;
+  assert.notEqual(selectNightEvent(state).id, "truth_responses");
+  state.flags.lily_truth_archived = false;
+  state.flags.truth_responses_resolved = true;
+  assert.notEqual(selectNightEvent(state).id, "truth_responses");
+});
+
+test("아버지의 91.3MHz 신호가 겹치면 공개 방송 응답보다 먼저 처리된다", () => {
+  const state = createInitialGameState();
+  state.day = 20;
+  state.flags.lily_documents_decoded = true;
+  state.flags.lily_truth_broadcast = true;
+  state.flags.father_secret_discovered = true;
+  assert.equal(selectNightEvent(state).id, "father_radio_signal");
+  state.flags.father_radio_signal_resolved = true;
+  assert.equal(selectNightEvent(state).id, "truth_responses");
+});
+
+test("되돌아온 증언을 검증하면 연료를 쓰고 보강 단서·위협·진행도를 함께 남긴다", () => {
+  const state = createInitialGameState();
+  state.day = 16;
+  state.flags.lily_documents_decoded = true;
+  state.flags.lily_truth_broadcast = true;
+  state.fatherStoryProgress = 35;
+  state.resources.fuel = 1;
+  const event = selectNightEvent(state);
+  const choice = event.choices.find((item) => item.id === "receive_testimonies")!;
+  assert.equal(canChooseNightChoice(state, choice), true);
+  const result = applyNightChoice(state, "truth_responses", "receive_testimonies");
+  assert.equal(result.state.resources.fuel, 0);
+  assert.equal(result.state.resources.parts, state.resources.parts + 1);
+  assert.equal(result.state.flags.truth_responses_resolved, true);
+  assert.equal(result.state.flags.survivor_testimonies_verified, true);
+  assert.equal(result.state.flags.monster_origin_clue_2, true);
+  assert.equal(result.state.flags.monster_threat, 5);
+  assert.equal(result.state.fatherStoryProgress, 45);
+  assert.match(result.entry.message, /증언이 돌아오는 주파수/);
+  const restored = restoreGameState(serializeGameState(result.state));
+  assert.equal(restored.flags.survivor_testimonies_verified, true);
+  assert.equal(restored.flags.monster_origin_clue_2, true);
+  assert.equal(restored.fatherStoryProgress, 45);
+  assert.notEqual(selectNightEvent(restored).id, "truth_responses");
+});
+
+test("연료가 없으면 증언 검증은 막히지만 주파수 폐쇄는 위협을 낮추고 저장된다", () => {
+  const state = createInitialGameState();
+  state.day = 16;
+  state.flags.lily_documents_decoded = true;
+  state.flags.lily_truth_broadcast = true;
+  state.flags.monster_threat = 9;
+  state.resources.fuel = 0;
+  const event = selectNightEvent(state);
+  const receive = event.choices.find((item) => item.id === "receive_testimonies")!;
+  assert.equal(canChooseNightChoice(state, receive), false);
+  assert.throws(() => applyNightChoice(state, "truth_responses", "receive_testimonies"), /자원이 부족/);
+  const closed = applyNightChoice(state, "truth_responses", "close_frequency").state;
+  assert.equal(closed.flags.truth_frequency_closed, true);
+  assert.equal(closed.flags.truth_responses_resolved, true);
+  assert.equal(closed.flags.monster_threat, 4);
+  assert.equal(closed.hotelStats.security, state.hotelStats.security + 3);
+  const restored = restoreGameState(serializeGameState(closed));
+  assert.equal(restored.flags.truth_frequency_closed, true);
+  assert.notEqual(selectNightEvent(restored).id, "truth_responses");
+});
+
 test("아버지 신호 역추적은 자원과 위험을 감수해 THE TRUTH 대체 단서를 만든다", () => {
   const state = withGuest();
   state.day = 20;

@@ -261,11 +261,29 @@ test("Lily와 Dr. Vale의 조사 갈등은 자동 진행 대신 선택 장면으
 });
 
 test("Lily의 결말 선택은 문서 해독과 숨겨진 특성을 기록한다", () => {
-  const result = applyStoryChoice(resolutionState("lily"), "lily-truth", "archive");
+  const starting = resolutionState("lily");
+  starting.flags.lily_truth_broadcast = true;
+  const result = applyStoryChoice(starting, "lily-truth", "archive");
   const lily = result.state.guests.find((guest) => guest.id === "lily")!;
   assert.equal(result.state.flags.lily_documents_decoded, true);
   assert.equal(result.state.flags.lily_truth_archived, true);
+  assert.equal(result.state.flags.lily_truth_broadcast, false);
+  assert.equal(result.state.activeCutsceneId, null);
   assert.ok(lily.discoveredTraits.includes("OriginDocuments"));
+});
+
+test("Lily의 공개 방송은 전용 컷신과 DAY 16 후속 주파수를 열고 저장된다", () => {
+  const starting = resolutionState("lily");
+  starting.flags.lily_documents_decoded = true;
+  starting.flags.lily_truth_archived = true;
+  const state = applyStoryChoice(starting, "lily-truth", "broadcast").state;
+  assert.equal(state.flags.lily_truth_broadcast, true);
+  assert.equal(state.flags.lily_truth_archived, false);
+  assert.equal(state.activeCutsceneId, "lily_truth_broadcast");
+  assert.equal(getCutscene(state.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/lily-truth-broadcast-v1.png");
+  const restored = restoreGameState(serializeGameState(state));
+  assert.equal(restored.flags.lily_truth_broadcast, true);
+  assert.equal(restored.activeCutsceneId, "lily_truth_broadcast");
 });
 
 test("Vale의 연구 완성은 Lily 관계와 THE TRUTH 핵심 플래그를 기록한다", () => {
