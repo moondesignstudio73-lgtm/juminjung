@@ -18,6 +18,8 @@ const NIGHT_EVENT_PORTRAITS: Partial<Record<string, [NightEventPortrait, NightEv
 };
 
 const STORY_EVENT_EXPRESSIONS: Partial<Record<string, GuestExpression>> = {
+  "mia-daniel": "afraid",
+  "mia-family": "happy",
   "claire-pursuer": "afraid",
   "claire-future": "happy",
 };

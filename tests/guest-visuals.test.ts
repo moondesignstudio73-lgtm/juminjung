@@ -51,6 +51,19 @@ test("Claire의 갈등과 결말 스토리는 사건 문맥에 맞는 전용 표
   assert.equal(getGuestVisualState(guest("claire"), happy).asset, "/juminjung/assets/portraits/claire/happy-v1.png");
 });
 
+test("Mia의 가족 갈등과 결말은 사건 문맥에 맞는 전용 표정을 제공한다", () => {
+  const conflict = STORY_CHOICE_EVENTS.find((event) => event.id === "mia-daniel");
+  const resolution = STORY_CHOICE_EVENTS.find((event) => event.id === "mia-family");
+  const afraid = getStoryEventExpression("mia-daniel");
+  const happy = getStoryEventExpression("mia-family");
+  assert.deepEqual([conflict?.guestId, conflict?.stage], ["mia", "CONFLICT"]);
+  assert.deepEqual([resolution?.guestId, resolution?.stage], ["mia", "RESOLUTION"]);
+  assert.equal(afraid, "afraid");
+  assert.equal(happy, "happy");
+  assert.equal(getGuestVisualState(guest("mia"), afraid).asset, "/juminjung/assets/portraits/mia/afraid-v1.png");
+  assert.equal(getGuestVisualState(guest("mia"), happy).asset, "/juminjung/assets/portraits/mia/happy-v1.png");
+});
+
 test("도착 대기 중인 방문자는 젖은 옷 상태로 표시된다", () => {
   const visual = getGuestVisualState(guest("eleanor"));
   assert.ok(visual.modifiers.includes("WET"));
@@ -109,6 +122,6 @@ test("과거 저장의 오래된 초상화 경로는 최신 카탈로그 자산�
   const restored = restoreGameState(serializeGameState(state));
   const mia = restored.guests.find((item) => item.id === "mia")!;
   assert.equal(mia.portrait, "/juminjung/assets/portraits/mia/neutral-v1.png");
-  assert.deepEqual(mia.portraitVariants, {});
+  assert.deepEqual(mia.portraitVariants, { afraid: "/juminjung/assets/portraits/mia/afraid-v1.png", happy: "/juminjung/assets/portraits/mia/happy-v1.png" });
   assert.equal(mia.expressions.length, 7);
 });
