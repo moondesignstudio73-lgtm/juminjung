@@ -1,7 +1,7 @@
 import type { EndingNarrative } from "./types.ts";
 
 export const ENDING_NARRATIVES: EndingNarrative[] = [
-  { endingId: "SAFE_HAVEN", kicker: "FINAL EVENT · 살아 있는 호텔", scenes: [
+  { endingId: "SAFE_HAVEN", kicker: "FINAL EVENT · 살아 있는 호텔", image: "/juminjung/assets/cutscenes/ending-safe-haven-v1.png", imageAlt: "JUJU HOTEL 표지가 걸린 로비에서 주민들이 공동 장부와 역할별 열쇠표를 정리하고, 아이가 물통을 나르는 사이 열린 바리케이드 너머의 여행자들에게 새벽빛이 비치는 장면.", scenes: [
     { id: "assembly", title: "열린 로비", body: "새벽이 오자 로비 입구의 바리케이드가 걷힌다. 주민들은 객실 번호 대신 맡을 일을 적고, 정수 시설의 첫 물통을 아이들 앞으로 밀어 놓는다.", quote: "‘오늘부터 여긴 숨는 곳이 아니라, 살아가는 곳이에요.’" },
     { id: "charter", title: "JUJU HOTEL 헌장", body: "당신은 프런트 장부의 빈 페이지에 배급, 경계, 치료의 규칙을 쓴다. 누구도 방 하나를 독점하지 않고, 누구도 문밖의 목소리를 혼자 판단하지 않는다.", quote: "열쇠는 방을 잠그는 물건이 아니라 서로의 책임을 여는 증표가 되었다." },
     { id: "epilogue", title: "SAFE HAVEN", body: "몇 계절 뒤, 낡은 간판 아래에는 밤마다 따뜻한 등이 켜진다. 여행자들은 폐허의 지도에 JUJU HOTEL을 집을 뜻하는 작은 원으로 표시한다.", quote: "MAY I HAVE A ROOM? — 네. 함께 지킬 방이 있습니다." },
