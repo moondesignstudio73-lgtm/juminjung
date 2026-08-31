@@ -38,6 +38,8 @@ const STORY_EVENT_EXPRESSIONS: Partial<Record<string, GuestExpression>> = {
   "victor-crown": "happy",
   "rosa-ration": "angry",
   "rosa-family": "happy",
+  "eli-theft": "suspicious",
+  "eli-keyring": "happy",
 };
 
 export function getNightEventPortraits(eventId: string): [NightEventPortrait, NightEventPortrait] | null {
