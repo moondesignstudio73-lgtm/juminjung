@@ -42,7 +42,7 @@ export const STORY_CHOICE_EVENTS: StoryChoiceEvent[] = [
     { id: "stay", label: "Mia를 호텔 공동체에 남긴다", description: "혈연보다 아이가 선택한 안전을 우선합니다.", effect: { trust: 12, reputations: { community: 8, humanitarian: 5 }, flags: { mia_stays_at_hotel: true, vulnerable_survivors_protected: true } } },
   ] },
   { id: "owen-future", guestId: "owen", stage: "RESOLUTION", title: "군의 포위망", description: "Hayes의 병력이 호텔로 접근합니다. Owen은 싸울지, 떠날지 결정할 준비가 되었습니다.", quote: "‘이번에는 명령이 아니라 내가 지킬 곳을 고르겠습니다.’", choices: [
-    { id: "resistance", label: "호텔 방어대를 조직한다", description: "군의 영향력에 맞서 호텔의 자치권을 지킵니다.", effect: { trust: 10, hotelStats: { security: 8 }, reputations: { military: -10, refugee: 8 }, flags: { military_resistance_succeeded: true, hotel_defense_force: true } } },
+    { id: "resistance", label: "호텔 방어대를 조직한다", description: "호텔의 자치권을 지키고 대규모 공성 때 로비 방어 비용과 선두 부상을 줄이는 주민 방위대를 조직합니다.", effect: { trust: 10, hotelStats: { security: 8 }, reputations: { military: -10, refugee: 8 }, flags: { military_resistance_succeeded: true, hotel_defense_force: true, owen_siege_plan: true } } },
     { id: "escape", label: "Owen의 탈출을 돕는다", description: "정면 충돌을 피하고 Owen을 안전한 길로 내보냅니다.", effect: { threat: -5, reputations: { humanitarian: 4 }, flags: { owen_escaped: true } } },
   ] },
   { id: "white-answer", guestId: "white", stage: "RESOLUTION", title: "문 너머의 대답", description: "지하에서 들려오는 목소리가 호텔의 주인에게 마지막 질문을 던집니다.", quote: "‘괴물을 들이는 것과 사람을 내쫓는 것, 어느 쪽이 더 인간답습니까?’", choices: [

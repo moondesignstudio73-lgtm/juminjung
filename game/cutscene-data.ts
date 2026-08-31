@@ -2,6 +2,18 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: "owen_defense_force",
+    triggerStoryEventId: "owen-future",
+    triggerStoryChoiceId: "resistance",
+    priority: 170,
+    kicker: "JUJU HOTEL · CIVIL DEFENSE",
+    title: "명령 없이 세운 방어선",
+    body: "Owen은 군용 계급장을 떼어 프런트 장부 옆에 내려놓고, 투숙객들과 로비의 모든 출입로를 다시 걸었다. 누가 총을 들지보다 누가 아이들을 지하로 이끌고, 누가 부상자를 옮기고, 누가 마지막 바리케이드를 놓을지 먼저 정했다. 객실 문짝과 철제 선반은 번호가 붙은 방어 자재가 되었고, 보안 물자는 두 사람이 확인한 뒤에만 배분됐다. Hayes의 병력처럼 명령을 기다리는 부대가 아니라, 각자 다음 사람의 빈자리를 아는 방위대가 호텔 안에 생겼다.",
+    quote: "이번 방어선은 누군가의 명령이 아니라, 여기 남기로 한 사람들의 약속입니다.",
+    image: "/juminjung/assets/cutscenes/owen-defense-force-v1.png",
+    imageAlt: "오웬 밀러가 JUJU HOTEL 로비에서 계급장을 내려놓고 주민들과 출입로 지도와 역할표를 점검하며 객실 문짝과 철제 선반으로 방어선을 준비하는 장면.",
+  },
+  {
     id: "vale_behavior_map",
     triggerStoryEventId: "vale-research",
     triggerStoryChoiceId: "complete",

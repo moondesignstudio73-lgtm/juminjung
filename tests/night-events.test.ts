@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { resolveDay } from "../game/day-manager.ts";
-import { applyNightChoice, canChooseNightChoice, selectNightEvent } from "../game/night-event-manager.ts";
+import { applyNightChoice, canChooseNightChoice, getEffectiveNightChoice, selectNightEvent } from "../game/night-event-manager.ts";
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
 import { dismissCutscene, queueNightEventCutscene } from "../game/cutscene-manager.ts";
 import { evaluateEndings } from "../game/ending-manager.ts";
@@ -171,6 +171,68 @@ test("로비 방어전의 중상은 저체력 투숙객을 즉시 사망 수치�
   const defended = applyNightChoice(state, "hotel_siege", "hold_lobby").state;
   assert.equal(defended.guests[0].health, 1);
   assert.equal(defended.guests[0].alive, true);
+});
+
+test("Owen의 자치 방위대는 화면 표시와 실제 공성 비용·부상을 함께 완화한다", () => {
+  const state=withGuest();
+  state.day=25;
+  state.worldState="CRITICAL";
+  state.flags.monster_threat=50;
+  state.flags.owen_siege_plan=true;
+  state.hotelStats.security=60;
+  state.resources.security=4;
+  state.resources.parts=2;
+  const baseChoice=selectNightEvent(state).choices.find((candidate)=>candidate.id==="hold_lobby")!;
+  const shownChoice=getEffectiveNightChoice(state,baseChoice);
+  assert.deepEqual(shownChoice.requiredResources,{security:4,parts:2});
+  assert.match(shownChoice.description,/보안 물자 4와 부품 2/);
+  assert.match(shownChoice.description,/10 Health/);
+  assert.equal(canChooseNightChoice(state,baseChoice),true);
+  const beforeHealth=state.guests[0].health;
+  const result=applyNightChoice(state,"hotel_siege","hold_lobby");
+  assert.deepEqual({security:result.state.resources.security,parts:result.state.resources.parts},{security:0,parts:0});
+  assert.equal(result.state.guests[0].health,beforeHealth-10);
+  assert.deepEqual(result.choice.requiredResources,shownChoice.requiredResources);
+  assert.equal(result.choice.description,shownChoice.description);
+});
+
+test("자치 방위대 부상 완화는 고정 문구가 아니라 원본 공성 부상의 절반에서 파생된다", () => {
+  const state=withGuest();
+  state.flags.owen_siege_plan=true;
+  const baseChoice=selectNightEvent({ ...state, day:25, worldState:"CRITICAL", hotelStats:{...state.hotelStats,security:60}, flags:{...state.flags,monster_threat:50} }).choices.find((candidate)=>candidate.id==="hold_lobby")!;
+  const changedBase={...baseChoice,effect:{...baseChoice.effect,targetGuestHealth:-30}};
+  const effective=getEffectiveNightChoice(state,changedBase);
+  assert.equal(effective.effect.targetGuestHealth,-15);
+  assert.match(effective.description,/15 Health/);
+});
+
+test("자치 방위대도 완화된 공성 비용보다 자원이 부족하면 로비를 사수할 수 없다", () => {
+  const state=withGuest();
+  state.day=25;
+  state.worldState="CRITICAL";
+  state.flags.monster_threat=50;
+  state.flags.owen_siege_plan=true;
+  state.hotelStats.security=60;
+  state.resources.security=3;
+  state.resources.parts=2;
+  const choice=selectNightEvent(state).choices.find((candidate)=>candidate.id==="hold_lobby")!;
+  assert.equal(canChooseNightChoice(state,choice),false);
+  assert.throws(()=>applyNightChoice(state,"hotel_siege","hold_lobby"),/필요한 자원이 부족/);
+});
+
+test("Samuel의 일반 민간 경비대 플래그는 Owen의 전용 공성 훈련을 대신하지 않는다", () => {
+  const state=withGuest();
+  state.day=25;
+  state.worldState="CRITICAL";
+  state.flags.monster_threat=50;
+  state.flags.hotel_defense_force=true;
+  state.flags.samuel_civil_guard=true;
+  state.hotelStats.security=60;
+  state.resources.security=4;
+  state.resources.parts=2;
+  const choice=selectNightEvent(state).choices.find((candidate)=>candidate.id==="hold_lobby")!;
+  assert.equal(getEffectiveNightChoice(state,choice),choice);
+  assert.equal(canChooseNightChoice(state,choice),false);
 });
 
 test("방어 물자가 부족하면 로비 사수는 선택할 수 없고 자원을 음수로 만들지 않는다", () => {

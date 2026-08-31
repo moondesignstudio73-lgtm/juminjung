@@ -22,7 +22,7 @@ import { advanceEnding, getEndingCondition, getEndingNarrative, leaveEnding, sta
 import { ENDING_CONDITIONS } from '@/game/ending-data';
 import { FACILITIES } from '@/game/facility-data';
 import { buildFacility, canBuildFacility, performHotelAction } from '@/game/hotel-action-manager';
-import { canChooseNightChoice, selectNightEvent } from '@/game/night-event-manager';
+import { canChooseNightChoice, getEffectiveNightChoice, selectNightEvent } from '@/game/night-event-manager';
 import { getHotelLogEntries } from '@/game/hotel-log-manager';
 import { applyVisitorCheckInBenefits, getEligibleVisitor, getNextRevisitDay, getVisitorReaction, getVisitorReactionById, markVisitorRefused, prepareGuestCheckIn } from '@/game/visitor-manager';
 import { getGuestVisualState, getNightEventPortraits, getStoryEventExpression } from '@/game/guest-visual-manager';
@@ -307,7 +307,7 @@ function NightEvent({ state, onChoose }: { state:UiSave; onChoose:(eventId:strin
   const portraits = getNightEventPortraits(event.id);
   const leftGuest = portraits ? state.guests.find((guest)=>guest.id===portraits[0].guestId) : undefined;
   const rightGuest = portraits ? state.guests.find((guest)=>guest.id===portraits[1].guestId) : undefined;
-  return <main className="event-screen"><div className="event-light"/><Radio className="event-icon"/>{leftGuest&&<CharacterSprite guest={leftGuest} context="event-left" expression={portraits?.[0].expression}/>} {rightGuest&&<CharacterSprite guest={rightGuest} context="event-right" expression={portraits?.[1].expression}/>}<p className="scene-index">DAY {state.day} · 오전 2:13 · THREAT {String(state.flags.monster_threat??0)}</p><section><span>야간 사건 · {state.worldState}</span><h1>{event.title}</h1><p>{event.description}</p><blockquote>{event.quote}</blockquote><div className="night-choices">{event.choices.map((choice)=><Button key={choice.id} disabled={!canChooseNightChoice(state,choice)} onClick={()=>onChoose(event.id,choice.id)}><span>{choice.label}</span><small>{choice.description}</small><ChevronRight/></Button>)}</div></section></main>;
+  return <main className="event-screen"><div className="event-light"/><Radio className="event-icon"/>{leftGuest&&<CharacterSprite guest={leftGuest} context="event-left" expression={portraits?.[0].expression}/>} {rightGuest&&<CharacterSprite guest={rightGuest} context="event-right" expression={portraits?.[1].expression}/>}<p className="scene-index">DAY {state.day} · 오전 2:13 · THREAT {String(state.flags.monster_threat??0)}</p><section><span>야간 사건 · {state.worldState}</span><h1>{event.title}</h1><p>{event.description}</p><blockquote>{event.quote}</blockquote><div className="night-choices">{event.choices.map((baseChoice)=>{const choice=getEffectiveNightChoice(state,baseChoice);return <Button key={choice.id} disabled={!canChooseNightChoice(state,baseChoice)} onClick={()=>onChoose(event.id,choice.id)}><span>{choice.label}</span><small>{choice.description}</small><ChevronRight/></Button>})}</div></section></main>;
 }
 
 function StoryChoiceScene({ state, onChoose }: { state:UiSave; onChoose:(eventId:string,choiceId:string)=>void }) {

@@ -65,6 +65,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - Claire's safe-nursery route opens a dedicated illustrated hotel-room refuge and gives three nightly Stress relief to assigned children and pregnant residents, independently tracking care when Ruth's broader community team is also active
 - Grace's mutual-aid route opens a dedicated illustrated repair shift and restores one Hotel Condition each night through shared maintenance, logging only repair that fits below the condition cap
 - Vale's completed research with Lily opens a dedicated illustrated behavior-map scene and reduces Monster Threat by two each night through shared prediction notes, logging only reduction that survives the global threat floor
+- Owen's civilian defense route opens a dedicated illustrated preparation scene and records its own siege plan, distinct from Samuel's general guard flag; during the DAY 25 hotel siege, Security supplies cost 4 instead of 6, parts cost 2 instead of 3, and the lead defender loses 10 rather than 20 Health, with the night UI and settlement consuming the same derived choice
 
 ## Next system priorities
 

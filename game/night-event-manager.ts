@@ -35,8 +35,28 @@ export function selectNightEvent(state: GameState): NightEventDefinition {
   return [...NIGHT_EVENTS].sort((a, b) => b.priority - a.priority).find((event) => meetsCondition(state, event)) ?? NIGHT_EVENTS.at(-1)!;
 }
 
+export const DEFENSE_FORCE_SECURITY_COST = 4;
+export const DEFENSE_FORCE_PARTS_COST = 2;
+export const DEFENSE_FORCE_INJURY_DIVISOR = 2;
+
+export function getEffectiveNightChoice(state: GameState, choice: NightEventChoice): NightEventChoice {
+  if (choice.id !== "hold_lobby" || state.flags.owen_siege_plan !== true) return choice;
+  const mitigatedInjury = Math.trunc(Number(choice.effect.targetGuestHealth ?? 0) / DEFENSE_FORCE_INJURY_DIVISOR);
+  return {
+    ...choice,
+    description: `자치 방위대가 보안 물자 ${DEFENSE_FORCE_SECURITY_COST}와 부품 ${DEFENSE_FORCE_PARTS_COST}로 방어선을 조직합니다. 침입을 격퇴하고 선두 투숙객의 부상을 ${Math.abs(mitigatedInjury)} Health로 줄입니다.`,
+    requiredResources: { ...choice.requiredResources, security: DEFENSE_FORCE_SECURITY_COST, parts: DEFENSE_FORCE_PARTS_COST },
+    effect: {
+      ...choice.effect,
+      resources: { ...choice.effect.resources, security: -DEFENSE_FORCE_SECURITY_COST, parts: -DEFENSE_FORCE_PARTS_COST },
+      targetGuestHealth: mitigatedInjury,
+    },
+  };
+}
+
 export function canChooseNightChoice(state: GameState, choice: NightEventChoice): boolean {
-  return !choice.requiredResources || Object.entries(choice.requiredResources).every(([key, value]) => state.resources[key as keyof GameState["resources"]] >= Number(value));
+  const effective = getEffectiveNightChoice(state, choice);
+  return !effective.requiredResources || Object.entries(effective.requiredResources).every(([key, value]) => state.resources[key as keyof GameState["resources"]] >= Number(value));
 }
 
 function addRecord<T extends Record<string, number>>(current: T, changes: Partial<T> | undefined): T {
@@ -51,7 +71,7 @@ export function applyNightChoice(state: GameState, eventId: string, choiceId: st
   const requested = event.choices.find((item) => item.id === choiceId);
   if (!requested) throw new Error("선택할 수 없는 야간 사건 응답입니다.");
   if (!canChooseNightChoice(state, requested)) throw new Error("이 선택에 필요한 자원이 부족합니다.");
-  const choice = requested;
+  const choice = getEffectiveNightChoice(state, requested);
   const effect = choice.effect;
   for (const guestEffect of effect.guestEffects ?? []) {
     if (!state.guests.some((guest) => guest.id === guestEffect.guestId)) throw new Error(`NPC 상태 변경 대상을 찾을 수 없습니다: ${guestEffect.guestId}`);

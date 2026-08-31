@@ -203,10 +203,24 @@ test("손상된 컷신 대기열은 알 수 없는 ID·중복·이미 본 장면
   assert.deepEqual(restored.queuedCutsceneIds, ["mia_daniel_reunion"]);
 });
 
-test("Owen의 방어대는 군사 저항 성공 조건을 기록한다", () => {
+test("Owen의 방어대는 군사 저항 성공 조건과 전용 컷씬을 기록하고 저장한다", () => {
   const result = applyStoryChoice(resolutionState("owen"), "owen-future", "resistance");
   assert.equal(result.state.flags.military_resistance_succeeded, true);
   assert.equal(result.state.flags.hotel_defense_force, true);
+  assert.equal(result.state.flags.owen_siege_plan,true);
+  assert.equal(result.state.activeCutsceneId,"owen_defense_force");
+  assert.equal(getCutscene(result.state.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/owen-defense-force-v1.png");
+  const restored=restoreGameState(serializeGameState(result.state));
+  assert.equal(restored.flags.hotel_defense_force,true);
+  assert.equal(restored.flags.owen_siege_plan,true);
+  assert.equal(restored.activeCutsceneId,"owen_defense_force");
+});
+
+test("Owen의 탈출 경로는 자치 방위대의 공성 완화와 전용 컷씬을 열지 않는다", () => {
+  const result=applyStoryChoice(resolutionState("owen"),"owen-future","escape").state;
+  assert.equal(result.flags.hotel_defense_force,undefined);
+  assert.equal(result.flags.owen_siege_plan,undefined);
+  assert.equal(result.activeCutsceneId,null);
 });
 
 test("Mr. White를 받아들이면 THE DOOR 응답과 비인간 단서가 남는다", () => {
