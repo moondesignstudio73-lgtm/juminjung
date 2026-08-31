@@ -75,6 +75,34 @@
   font-size: 8px;
 }
 
+.resident-selector {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 16px;
+}
+
+.resident-selector > span {
+  color: #a8a397;
+  font-size: 9px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.resident-selector select {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 34px 0 12px;
+  color: #eee4d0;
+  background: #24251f;
+  border: 1px solid #625c4d;
+  border-radius: 3px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.resident-selector select:hover { border-color: #9d855d; }
+.resident-selector select:focus-visible { outline: 2px solid #c6a56d; outline-offset: 2px; }
+
 @media (max-width: 900px) {
   .room-board-toolbar { min-width: 680px; }
 }

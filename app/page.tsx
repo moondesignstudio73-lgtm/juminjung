@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { getActiveAuraSynergies, getAffectedRoomNumbers, recalculateRoomEffects } from '@/game/aura-effect-manager';
 import { shouldShowAuraOverlay, toggleAuraGuestId } from '@/game/aura-display';
+import { getManagedGuest, getStayingGuestsForManagement } from '@/game/management-guest';
 import { resolveDay } from '@/game/day-manager';
 import { setGuestRoomFlags } from '@/game/event-manager';
 import { createGuests, ELEANOR_ID } from '@/game/guest-data';
@@ -46,11 +47,12 @@ export default function Home() {
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [showQuestions, setShowQuestions] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [managedGuestId, setManagedGuestId] = useState<string | null>(null);
   const eligibleVisitor = getEligibleVisitor(save.guests, save.day, save.flags);
   const visitor = eligibleVisitor ?? save.guests.find((guest) => guest.status === 'STAYING') ?? save.guests[0];
   const visitorReaction = eligibleVisitor ? getVisitorReaction(save, eligibleVisitor) : null;
-  const stayingGuest = [...save.guests].filter((guest) => guest.status === 'STAYING').sort((a,b) => (b.checkedInDay ?? 0) - (a.checkedInDay ?? 0))[0];
-  const managedGuest = stayingGuest ?? visitor;
+  const stayingGuests = getStayingGuestsForManagement(save.guests);
+  const managedGuest = getManagedGuest(save.guests, managedGuestId) ?? visitor;
   const activeCutscene = getCutscene(save.activeCutsceneId);
 
   useEffect(() => {
@@ -68,7 +70,7 @@ export default function Home() {
   }, [save.phase, save.day, eligibleVisitor?.id, visitorReaction?.id]);
 
   const update = (patch: Partial<UiSave>) => setSave((current) => ({ ...current, ...patch }));
-  const reset = () => { clearBrowserGame(); setSave(makeInitial()); setDialogue(''); setSelectedItem(null); };
+  const reset = () => { clearBrowserGame(); setSave(makeInitial()); setDialogue(''); setSelectedItem(null); setManagedGuestId(null); };
   const ask = (question: Guest['questions'][number]) => {
     const result = applyVisitorQuestionClue(save.guests, visitor.id, question.id, save.inspected);
     update({ guests:result.guests, asked: [...new Set([...save.asked, question.id])] });
@@ -100,6 +102,7 @@ export default function Home() {
       : assignGuest(save.rooms, save.selectedRoomNumber, assignmentGuest.id);
     const roomFlags = assignmentGuest.id === ELEANOR_ID ? setGuestRoomFlags(save.flags, save.selectedRoomNumber) : save.flags;
     const reactionApplied = benefits.applied && reaction;
+    setManagedGuestId(assignmentGuest.id);
     update({
       guests,
       rooms: recalculateRoomEffects(positioned, guests),
@@ -136,7 +139,7 @@ export default function Home() {
     );
   }
   if (save.phase === 'assignment') return <RoomAssignment day={save.day} rooms={save.rooms} guest={save.assignmentMode === 'move' ? managedGuest : visitor} selected={save.selectedRoomNumber} mode={save.assignmentMode!} onSelect={(roomNumber) => update({ selectedRoomNumber: roomNumber })} onConfirm={confirmRoom} onCancel={() => update({ phase: save.assignmentMode === 'move' ? 'management' : 'desk', assignmentMode: null, selectedRoomNumber: null, pendingVisitorReactionId: null })} />;
-  if (save.phase === 'management') return <HotelManagement state={save} guest={managedGuest} hasStayingGuest={Boolean(stayingGuest)} onBuild={(id) => setSave((current) => ({ ...buildFacility(current, id).state, prologue: current.prologue }))} onAction={(id) => setSave((current) => ({ ...performHotelAction(current, id).state, prologue: current.prologue }))} onMove={() => openAssignment('move')} onCheckout={checkout} onContinue={() => setSave((current) => routeToNight(current))} />;
+  if (save.phase === 'management') return <HotelManagement state={save} guest={managedGuest} stayingGuests={stayingGuests} hasStayingGuest={stayingGuests.length > 0} onSelectGuest={setManagedGuestId} onBuild={(id) => setSave((current) => ({ ...buildFacility(current, id).state, prologue: current.prologue }))} onAction={(id) => setSave((current) => ({ ...performHotelAction(current, id).state, prologue: current.prologue }))} onMove={() => openAssignment('move')} onCheckout={checkout} onContinue={() => setSave((current) => routeToNight(current))} />;
   if (save.phase === 'story') return <StoryChoiceScene state={save} onChoose={(eventId,choiceId) => setSave((current) => routeToNight({ ...applyStoryChoice(current,eventId,choiceId).state, prologue:current.prologue }))} />;
   if (save.phase === 'night') return <NightEvent state={save} onChoose={(eventId,choiceId) => setSave((current) => ({ ...resolveDay({ ...current, selectedNightEventId:eventId, selectedNightChoiceId:choiceId }), prologue: current.prologue }))} />;
   if (save.phase === 'report') return <MorningReport state={save} onStartEnding={(endingId) => setSave((current)=>({ ...startEnding(current,endingId), prologue:current.prologue }))} onNext={() => { const nextVisitor = getEligibleVisitor(save.guests, save.day, save.flags); const staying = save.guests.some((guest) => guest.status === 'STAYING'); update({ phase: nextVisitor ? 'desk' : staying ? 'management' : 'desk', decision: staying ? 'checkin' : null, asked: [], inspected: [], negotiated: false, held: false }); if (nextVisitor) setDialogue(nextVisitor.introDialogue); }} onReset={reset} />;
@@ -280,7 +283,7 @@ function RoomAssignment({ day, rooms, guest, selected, mode, onSelect, onConfirm
   </main>;
 }
 
-function HotelManagement({ state, guest, hasStayingGuest, onBuild, onAction, onMove, onCheckout, onContinue }: { state:UiSave; guest:Guest; hasStayingGuest:boolean; onBuild:(id:FacilityId)=>void; onAction:(id:HotelActionId)=>void; onMove:()=>void; onCheckout:()=>void; onContinue:()=>void }) {
+function HotelManagement({ state, guest, stayingGuests, hasStayingGuest, onSelectGuest, onBuild, onAction, onMove, onCheckout, onContinue }: { state:UiSave; guest:Guest; stayingGuests:Guest[]; hasStayingGuest:boolean; onSelectGuest:(guestId:string)=>void; onBuild:(id:FacilityId)=>void; onAction:(id:HotelActionId)=>void; onMove:()=>void; onCheckout:()=>void; onContinue:()=>void }) {
   const [auraGuestId, setAuraGuestId] = useState<string | null>(null);
   const affected = hasStayingGuest ? getAffectedRoomNumbers(state.rooms, guest) : [];
   const auraRequested = auraGuestId === guest.id;
@@ -290,7 +293,11 @@ function HotelManagement({ state, guest, hasStayingGuest, onBuild, onAction, onM
   return <main className="room-screen">
     <header><div><p className="eyebrow">JUJU HOTEL · 운영 현황</p><h1>객실·시설 관리</h1></div><div className="day-chip"><span>DAY {state.day}</span><small>행동 {state.actionPoints}/{state.maxActionPoints} · 부품 {state.resources.parts}</small></div></header>
     <section className="room-layout"><div className="room-board"><div className="room-board-toolbar"><span>Aura 범위는 필요할 때만 객실 위에 표시됩니다.</span><Button variant="secondary" aria-label="Aura 범위 표시" aria-pressed={showAura} disabled={!hasStayingGuest||!guest.aura} onClick={()=>setAuraGuestId((visibleGuestId)=>toggleAuraGuestId(visibleGuestId,guest.id))}>{guest.aura&&<AuraGlyph aura={guest.aura} size={14}/>} Aura 범위 <small>{showAura?'표시 중':'숨김'}</small></Button></div><HotelGrid rooms={state.rooms} auraDefinition={showAura?guest.aura:null} auraMode="ambient" affected={showAura?affected:[]}/><div className="operations-panel"><span className="panel-label">낮 행동</span><div className="operation-grid"><Button disabled={state.actionPoints<1||state.resources.parts<2} onClick={()=>onAction('repair_hotel')}>호텔 보수 · 부품 2</Button><Button disabled={state.actionPoints<1} onClick={()=>onAction('community_outreach')}>공동체 회의</Button><Button disabled={state.actionPoints<1||state.resources.fuel<1} onClick={()=>onAction('security_patrol')}>경계 순찰 · 연료 1</Button><Button disabled={state.actionPoints<1||state.resources.fuel<2} onClick={()=>onAction('trade_run')}>교역 원정 · 연료 2</Button></div><span className="panel-label">시설 건설 · 업그레이드</span><div className="facility-grid">{FACILITIES.map((facility)=>{const level=state.facilities[facility.id]??0;const active=level?facility.levels[level-1]:null;const next=facility.levels[level];return <article key={facility.id} className={level?'built':''}><strong>{facility.name} · LV.{level}</strong><p>{active?active.description:facility.description}{next&&<><br/><em>다음: {next.name} · {next.description}</em></>}</p><small>{next?Object.entries(next.cost).map(([key,value])=>`${key} ${value}`).join(' · '):'최고 단계 · 안정 가동'}</small><Button disabled={!canBuildFacility(state,facility.id)} onClick={()=>onBuild(facility.id)}>{!next?'MAX':level?'강화':'건설'}</Button></article>})}</div></div></div>
-      <aside className="aura-preview"><span className="panel-label">{hasStayingGuest?'현재 투숙객':'호텔 운영'}</span><h2>{hasStayingGuest?`${guest.name} · ${guest.currentRoomNumber}호`:'현재 투숙객 없음'}</h2><p>{hasStayingGuest?`${guest.role} · 남은 숙박 ${guest.remainingNights}박`:'빈 호텔에서도 낮 행동과 시설 건설을 진행할 수 있습니다.'}</p>{hasStayingGuest&&guest.aura?<div className={`aura-card active aura-${guest.aura.category.toLowerCase()}`}><AuraGlyph aura={guest.aura} size={20}/><div><strong>{guest.aura.name} 활성</strong><p>{guest.aura.description}<br/>{affected.length?`영향 객실 ${affected.join(' · ')}`:'영향 범위 없음'}</p></div></div>:<p className="system-note">{hasStayingGuest?'객실 Aura 없음 · 관계 이벤트 대상':'다음 방문자를 기다리며 호텔을 정비하십시오.'}</p>}<dl><div><dt>호텔 상태</dt><dd>{state.hotelStats.hotelCondition}</dd></div><div><dt>Security</dt><dd>{state.hotelStats.security}</dd></div><div><dt>공동체 / 군 / 상인</dt><dd>{state.reputations.community} / {state.reputations.military} / {state.reputations.merchant}</dd></div><div><dt>활성 관계</dt><dd>{relationships.length}</dd></div><div><dt>Aura 시너지</dt><dd>{synergies.map((item)=>item.name).join(' · ')||'없음'}</dd></div></dl><p className="system-note">{state.eventHistory.at(-1)?.message??'행동을 선택하면 시설·평판·엔딩 경로가 변화합니다.'}</p><div className="management-actions"><Button variant="secondary" disabled={!hasStayingGuest} onClick={onMove}>객실 이동</Button><Button className="refuse" disabled={!hasStayingGuest} onClick={onCheckout}>체크아웃</Button><Button className="checkin" onClick={onContinue}>DAY {state.day} 종료 <ChevronRight/></Button></div></aside>
+      <aside className="aura-preview">
+        <span className="panel-label">{hasStayingGuest?'현재 투숙객':'호텔 운영'}</span>
+        {hasStayingGuest&&<label className="resident-selector"><span>관리할 투숙객</span><select aria-label="관리할 투숙객" value={guest.id} onChange={(event)=>onSelectGuest(event.target.value)}>{stayingGuests.map((resident)=><option key={resident.id} value={resident.id}>{resident.name} · {resident.currentRoomNumber}호 · {resident.remainingNights}박</option>)}</select></label>}
+        <h2>{hasStayingGuest?`${guest.name} · ${guest.currentRoomNumber}호`:'현재 투숙객 없음'}</h2><p>{hasStayingGuest?`${guest.role} · 남은 숙박 ${guest.remainingNights}박`:'빈 호텔에서도 낮 행동과 시설 건설을 진행할 수 있습니다.'}</p>{hasStayingGuest&&guest.aura?<div className={`aura-card active aura-${guest.aura.category.toLowerCase()}`}><AuraGlyph aura={guest.aura} size={20}/><div><strong>{guest.aura.name} 활성</strong><p>{guest.aura.description}<br/>{affected.length?`영향 객실 ${affected.join(' · ')}`:'영향 범위 없음'}</p></div></div>:<p className="system-note">{hasStayingGuest?'객실 Aura 없음 · 관계 이벤트 대상':'다음 방문자를 기다리며 호텔을 정비하십시오.'}</p>}<dl><div><dt>호텔 상태</dt><dd>{state.hotelStats.hotelCondition}</dd></div><div><dt>Security</dt><dd>{state.hotelStats.security}</dd></div><div><dt>공동체 / 군 / 상인</dt><dd>{state.reputations.community} / {state.reputations.military} / {state.reputations.merchant}</dd></div><div><dt>활성 관계</dt><dd>{relationships.length}</dd></div><div><dt>Aura 시너지</dt><dd>{synergies.map((item)=>item.name).join(' · ')||'없음'}</dd></div></dl><p className="system-note">{state.eventHistory.at(-1)?.message??'행동을 선택하면 시설·평판·엔딩 경로가 변화합니다.'}</p><div className="management-actions"><Button variant="secondary" disabled={!hasStayingGuest} onClick={onMove}>객실 이동</Button><Button className="refuse" disabled={!hasStayingGuest} onClick={onCheckout}>체크아웃</Button><Button className="checkin" onClick={onContinue}>DAY {state.day} 종료 <ChevronRight/></Button></div>
+      </aside>
     </section>
   </main>;
 }
