@@ -2,6 +2,30 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: "hotel_siege_held",
+    triggerEventId: "hotel_siege",
+    triggerChoiceId: "hold_lobby",
+    priority: 150,
+    kicker: "JUJU HOTEL · LOBBY DEFENSE",
+    title: "호텔이 마지막 문이 된 밤",
+    body: "유리벽이 안쪽으로 휘어질 때마다 황동 열쇠들이 한꺼번에 울렸다. 투숙객들은 프런트와 소파를 밀어 방어선을 세웠고, 남은 보안 물자와 부품을 바리케이드에 쏟았다. 선두에 선 한 사람이 쓰러진 뒤에야 폭우 속 형체들이 물러났다. 로비는 부서졌지만, 아침까지 호텔의 문은 안쪽에서 잠겨 있었다.",
+    quote: "우리는 승리한 것이 아니라, 오늘 밤의 마지막 문을 지켰다.",
+    image: "/juminjung/assets/cutscenes/hotel-siege-v1.png",
+    imageAlt: "폭우와 번개 속 비인간적인 형체들이 JUJU HOTEL 로비 유리벽을 밀어붙이고, 생존자들이 바리케이드를 붙들며 부상자를 후송하고 손전등으로 방어하는 대규모 공성 장면.",
+  },
+  {
+    id: "hotel_siege_retreat",
+    triggerEventId: "hotel_siege",
+    triggerChoiceId: "retreat_basement",
+    priority: 150,
+    kicker: "JUJU HOTEL · LOWER SHELTER",
+    title: "로비를 내어주고 사람을 지켰다",
+    body: "관리자는 객실 열쇠 대신 지하 방화문 열쇠를 들었다. 마지막 사람이 계단 아래로 사라지자 로비 유리벽이 무너졌고, 형체들은 프런트와 발전기 배선을 짓밟았다. 누구도 뒤에 남지 않았지만, 위층에서 들려오는 발소리는 호텔이 더는 완전한 피난처가 아니라는 사실을 밤새 되풀이했다.",
+    quote: "건물은 다시 세울 수 있다. 하지만 오늘 포기한 층을 되찾으려면 또 다른 밤을 견뎌야 한다.",
+    image: "/juminjung/assets/cutscenes/hotel-siege-v1.png",
+    imageAlt: "폭우 속 비인간적인 형체들이 JUJU HOTEL 로비 유리벽을 돌파하려는 동안 생존자들이 지친 투숙객을 부축해 지하로 후퇴하고, 관리자가 마지막으로 방어선을 확인하는 장면.",
+  },
+  {
     id: "first_night",
     priority: 10,
     minimumCompletedDay: 1,

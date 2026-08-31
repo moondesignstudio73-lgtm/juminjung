@@ -69,7 +69,9 @@ export function applyNightChoice(state: GameState, eventId: string, choiceId: st
       return change ? { ...relation, value: Math.max(-100, Math.min(100, relation.value + change.delta)) } : relation;
     }) : guest.relationships;
     if (!stayingIds.includes(guest.id) && !guestEffect && !relationshipChanges.length) return guest;
-    return { ...guest, relationships, trust: clamp(guest.trust + Number(guestEffect?.trust ?? 0)), stress: clamp(guest.stress + Number(effect.allGuestStress ?? 0) + Number(guestEffect?.stress ?? 0)), health: clamp(guest.health + (guest.id === targetId ? Number(effect.targetGuestHealth ?? 0) : 0) + Number(guestEffect?.health ?? 0)) };
+    const health = clamp(guest.health + (guest.id === targetId ? Number(effect.targetGuestHealth ?? 0) : 0) + Number(guestEffect?.health ?? 0));
+    const protectedHealth = guest.id === targetId && effect.targetGuestHealthMinimum !== undefined ? Math.max(effect.targetGuestHealthMinimum, health) : health;
+    return { ...guest, relationships, trust: clamp(guest.trust + Number(guestEffect?.trust ?? 0)), stress: clamp(guest.stress + Number(effect.allGuestStress ?? 0) + Number(guestEffect?.stress ?? 0)), health: protectedHealth };
   });
   const threat = clamp(Number(state.flags.monster_threat ?? 0) + Number(effect.threat ?? 0));
   const rooms = effect.roomChange ? state.rooms.map((room) => room.roomNumber === effect.roomChange!.roomNumber ? { ...room, occupied: false, guestId: null, status: effect.roomChange!.status, roomCondition: clamp(effect.roomChange!.roomCondition), temporaryEffects: [] } : room) : state.rooms;

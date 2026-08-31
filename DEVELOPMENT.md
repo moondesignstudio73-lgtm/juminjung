@@ -50,6 +50,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - From DAY 10, low Security and rising monster threat can reveal an unknown death in empty Room 207; sealing or investigating it changes resources, stress, threat, evidence flags, the room's usable state, and opens a dedicated illustrated aftermath, while hotel repair can later restore the room
 - From DAY 20, discovering the father's archive can wake the dead 91.3 MHz frequency; tracing it creates an alternate monster-origin clue for THE TRUTH, while answering opens a dangerous conditional return route, both with a dedicated illustrated signal scene
 - From DAY 24, only players who answered that signal can meet the father's likeness at the locked gate; quarantine verification trades medical and security supplies for an anomalous biological clue, while opening the gate gains carried generator supplies and a riskier reunion route, with choice-specific illustrated aftermaths
+- From DAY 25, CRITICAL or END STAGE pressure with high Monster Threat and weakened Security can trigger a one-time full-hotel siege; holding the lobby spends scarce defense supplies and inflicts a nonfatal defender injury while supporting military/fortress play, and retreating preserves lives at heavy structural cost that a later hotel-repair action can clear, each with a choice-specific illustrated aftermath
 
 ## Next system priorities
 

@@ -1,6 +1,10 @@
 import type { NightEventDefinition } from "./types.ts";
 
 export const NIGHT_EVENTS: NightEventDefinition[] = [
+  { id: "hotel_siege", title: "JUJU HOTEL 공성", description: "폭우 속에서 몰려든 형체들이 로비 유리벽과 모든 출입구를 동시에 밀어붙입니다.", quote: "철문 하나를 두드리던 밤은 끝났다. 이번에는 호텔 전체가 문이 되었다.", priority: 115, condition: { worldStates: ["CRITICAL", "END_STAGE"], minimumDay: 25, minimumThreat: 45, maximumSecurity: 74, requiresGuests: true, forbiddenFlags: ["hotel_siege_resolved"] }, choices: [
+    { id: "hold_lobby", label: "로비 방어선을 끝까지 지킨다", description: "보안 물자 6과 부품 3으로 바리케이드를 보강합니다. 침입은 격퇴하지만 방어선의 투숙객 한 명이 중상을 입고 모두가 충격을 받습니다.", requiredResources: { security: 6, parts: 3 }, effect: { resources: { security: -6, parts: -3 }, hotelStats: { hotelCondition: -5, security: 5 }, reputations: { military: 8, community: 4 }, flags: { hotel_siege_resolved: true, hotel_siege_repelled: true }, threat: -18, allGuestStress: 6, targetGuestHealth: -20, targetGuestHealthMinimum: 1 } },
+    { id: "retreat_basement", label: "생활층을 버리고 지하로 후퇴한다", description: "사람을 우선해 지하 방화문으로 철수합니다. 부상은 피하지만 로비와 방어 시설이 크게 파괴됩니다.", effect: { hotelStats: { hotelCondition: -15, security: -10 }, reputations: { community: 5, humanitarian: 3 }, flags: { hotel_siege_resolved: true, hotel_siege_breached: true }, threat: 8, allGuestStress: 12 } },
+  ] },
   { id: "perimeter_breach", title: "동쪽 철문의 그림자", description: "철문 바깥의 무언가가 바리케이드를 밀어내고 있습니다.", quote: "금속이 한 번 휘고, 복도 조명이 모두 꺼졌다.", priority: 100, condition: { worldStates: ["COLLAPSE", "CRITICAL", "END_STAGE"], minimumThreat: 20, maximumSecurity: 59, requiresGuests: true }, choices: [
     { id: "barricade", label: "부품으로 철문을 보강한다", description: "부품 2를 사용해 침입을 늦춥니다.", requiredResources: { parts: 2 }, effect: { resources: { parts: -2 }, hotelStats: { hotelCondition: -2, security: 3 }, threat: -5 } },
     { id: "fight", label: "무장 인원을 내보낸다", description: "위협은 크게 줄지만 투숙객 한 명이 다칠 수 있습니다.", effect: { resources: { security: -5 }, reputations: { military: 5 }, threat: -10, targetGuestHealth: -15 } },

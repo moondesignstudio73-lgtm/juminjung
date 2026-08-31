@@ -54,6 +54,18 @@ test("호텔 보수는 가장 심하게 손상되거나 봉쇄된 객실 하나�
   assert.equal(second.state.rooms.find((room) => room.roomNumber === 207)?.status, "EMPTY");
 });
 
+test("호텔 보수는 지하 후퇴 뒤 남은 공성 피해 상태를 실제 복구한다", () => {
+  const state = createInitialGameState();
+  state.flags.hotel_siege_resolved = true;
+  state.flags.hotel_siege_breached = true;
+  const repaired = performHotelAction(state, "repair_hotel");
+  assert.equal(repaired.ok, true);
+  assert.equal(repaired.state.flags.hotel_siege_breached, false);
+  assert.equal(repaired.state.flags.hotel_siege_damage_repaired, true);
+  assert.match(repaired.message, /공성 피해 복구/);
+  assert.match(repaired.state.eventHistory.at(-1)?.message ?? "", /공성 피해 복구/);
+});
+
 test("교역 원정은 연료를 자원과 부품으로 교환해 추가 시설 건설을 가능하게 한다", () => {
   const state = createInitialGameState();
   const result = performHotelAction(state, "trade_run");

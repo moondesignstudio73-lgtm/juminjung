@@ -79,6 +79,129 @@ test("철문 침입에 맞서 싸운 실제 정산은 투숙객을 다치게 하
   assert.ok(resolved.eventHistory.some((entry) => entry.message.includes("무장 인원을 내보낸다")));
 });
 
+test("호텔 전체 공성은 DAY 25 이후 고위협·저치안 후반 상태에서만 발생한다", () => {
+  const state = withGuest();
+  state.day = 24;
+  state.worldState = "CRITICAL";
+  state.flags.monster_threat = 45;
+  state.hotelStats.security = 74;
+  assert.notEqual(selectNightEvent(state).id, "hotel_siege");
+  state.day = 25;
+  assert.equal(selectNightEvent(state).id, "hotel_siege");
+  state.flags.monster_threat = 44;
+  assert.notEqual(selectNightEvent(state).id, "hotel_siege");
+  state.flags.monster_threat = 45;
+  state.hotelStats.security = 75;
+  assert.notEqual(selectNightEvent(state).id, "hotel_siege");
+  state.hotelStats.security = 74;
+  state.flags.hotel_siege_resolved = true;
+  assert.notEqual(selectNightEvent(state).id, "hotel_siege");
+  state.flags.hotel_siege_resolved = false;
+  state.worldState = "END_STAGE";
+  assert.equal(selectNightEvent(state).id, "hotel_siege");
+  state.guests[0] = { ...state.guests[0], status: "CHECKED_OUT", currentRoomNumber: null };
+  assert.notEqual(selectNightEvent(state).id, "hotel_siege");
+});
+
+test("호텔 공성은 동시에 발생 가능한 일반 철문 침입보다 우선한다", () => {
+  const state = withGuest();
+  state.day = 25;
+  state.worldState = "CRITICAL";
+  state.flags.monster_threat = 50;
+  state.hotelStats.security = 50;
+  assert.equal(selectNightEvent(state).id, "hotel_siege");
+});
+
+test("로비 사수는 방어 물자를 소모해 공성을 격퇴하지만 선두 투숙객이 다친다", () => {
+  const state = withGuest();
+  state.day = 25;
+  state.phase = "night";
+  state.worldState = "CRITICAL";
+  state.flags.monster_threat = 50;
+  state.hotelStats.security = 60;
+  state.resources.security = 8;
+  state.resources.parts = 5;
+  state.selectedNightEventId = "hotel_siege";
+  state.selectedNightChoiceId = "hold_lobby";
+  const before = { securitySupply: state.resources.security, parts: state.resources.parts, condition: state.hotelStats.hotelCondition, hotelSecurity: state.hotelStats.security, threat: Number(state.flags.monster_threat), health: state.guests[0].health, stress: state.guests[0].stress, military: state.reputations.military, community: state.reputations.community };
+  const resolved = resolveDay(state);
+  assert.equal(resolved.activeCutsceneId, "hotel_siege_held");
+  assert.equal(resolved.flags.hotel_siege_repelled, true);
+  assert.equal(resolved.resources.security, before.securitySupply - 6);
+  assert.equal(resolved.resources.parts, before.parts - 3);
+  assert.equal(resolved.hotelStats.hotelCondition, before.condition - 5);
+  assert.equal(resolved.hotelStats.security, before.hotelSecurity + 5);
+  assert.equal(resolved.flags.monster_threat, before.threat - 18);
+  assert.equal(resolved.guests[0].health, before.health - 20);
+  assert.equal(resolved.guests[0].stress, before.stress + 6);
+  assert.equal(resolved.reputations.military, before.military + 8);
+  assert.equal(resolved.reputations.community, before.community + 4);
+});
+
+test("로비 방어전의 중상은 저체력 투숙객을 즉시 사망 수치로 만들지 않는다", () => {
+  const state = withGuest();
+  state.day = 25;
+  state.worldState = "CRITICAL";
+  state.flags.monster_threat = 50;
+  state.hotelStats.security = 60;
+  state.resources.security = 6;
+  state.resources.parts = 3;
+  state.guests[0] = { ...state.guests[0], health: 10 };
+  const defended = applyNightChoice(state, "hotel_siege", "hold_lobby").state;
+  assert.equal(defended.guests[0].health, 1);
+  assert.equal(defended.guests[0].alive, true);
+});
+
+test("방어 물자가 부족하면 로비 사수는 선택할 수 없고 자원을 음수로 만들지 않는다", () => {
+  const state = withGuest();
+  state.day = 25;
+  state.worldState = "CRITICAL";
+  state.flags.monster_threat = 50;
+  state.hotelStats.security = 60;
+  state.resources.security = 5;
+  state.resources.parts = 3;
+  const choice = selectNightEvent(state).choices.find((candidate) => candidate.id === "hold_lobby")!;
+  assert.equal(canChooseNightChoice(state, choice), false);
+  assert.throws(() => applyNightChoice(state, "hotel_siege", "hold_lobby"), /필요한 자원이 부족/);
+  assert.equal(state.resources.security, 5);
+  assert.equal(state.resources.parts, 3);
+});
+
+test("지하 후퇴는 투숙객 부상 없이 호텔 손상·불안·추가 위협을 남긴다", () => {
+  const state = withGuest();
+  state.day = 25;
+  state.worldState = "CRITICAL";
+  state.flags.monster_threat = 50;
+  state.hotelStats.security = 60;
+  const before = { condition: state.hotelStats.hotelCondition, security: state.hotelStats.security, threat: Number(state.flags.monster_threat), health: state.guests[0].health, stress: state.guests[0].stress, community: state.reputations.community, humanitarian: state.reputations.humanitarian };
+  const retreated = applyNightChoice(state, "hotel_siege", "retreat_basement").state;
+  assert.equal(retreated.flags.hotel_siege_breached, true);
+  assert.equal(retreated.hotelStats.hotelCondition, before.condition - 15);
+  assert.equal(retreated.hotelStats.security, before.security - 10);
+  assert.equal(retreated.flags.monster_threat, before.threat + 8);
+  assert.equal(retreated.guests[0].health, before.health);
+  assert.equal(retreated.guests[0].stress, before.stress + 12);
+  assert.equal(retreated.reputations.community, before.community + 5);
+  assert.equal(retreated.reputations.humanitarian, before.humanitarian + 3);
+});
+
+test("호텔 공성 결과별 컷신과 해결 상태는 저장 복원 후 한 번만 유지된다", () => {
+  const state = withGuest();
+  state.day = 25;
+  state.worldState = "CRITICAL";
+  state.flags.monster_threat = 50;
+  state.hotelStats.security = 60;
+  const retreated = applyNightChoice(state, "hotel_siege", "retreat_basement").state;
+  const queued = queueNightEventCutscene(retreated, "hotel_siege", "retreat_basement", 25);
+  assert.equal(queued.activeCutsceneId, "hotel_siege_retreat");
+  const restored = restoreGameState(serializeGameState(queued));
+  assert.equal(restored.flags.hotel_siege_resolved, true);
+  assert.equal(restored.flags.hotel_siege_breached, true);
+  assert.equal(restored.activeCutsceneId, "hotel_siege_retreat");
+  const dismissed = dismissCutscene(restored);
+  assert.equal(queueNightEventCutscene(dismissed, "hotel_siege", "retreat_basement", 25).activeCutsceneId, null);
+});
+
 test("DAY 1 정산은 첫날 밤 컷신을 한 번만 예약한다", () => {
   const state = createInitialGameState();
   state.day = 1;
