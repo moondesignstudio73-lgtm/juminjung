@@ -2,6 +2,18 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: "mia_daniel_reunion",
+    triggerStoryEventId: "mia-family",
+    triggerStoryChoiceId: "reunite",
+    priority: 160,
+    kicker: "ROOM KEY 103 · FAMILY FOUND",
+    title: "사진 속 두 사람이 다시 만난 밤",
+    body: "다니엘은 미아가 품고 있던 토끼 인형의 찢어진 귀를 알아보았다. 미아는 곧장 달려가지 않았다. 비에 젖은 남자가 사진 속 아버지와 같은 목소리로 오래전 약속을 말할 때까지, 프런트의 황동 램프 아래에서 한 걸음씩 다가갔다. 다니엘이 무릎을 꿇자 아이의 손이 먼저 그의 얼굴에 닿았다.",
+    quote: "방을 찾으러 온 두 사람은, 서로가 돌아갈 곳이라는 걸 가장 늦게 알았다.",
+    image: "/juminjung/assets/cutscenes/mia-daniel-reunion-v1.png",
+    imageAlt: "폭우가 내리는 낡은 JUJU HOTEL 복도에서 토끼 인형을 안은 미아가 한 손을 내밀고, 지친 다니엘이 무릎을 꿇어 조심스럽게 딸과 재회하는 장면.",
+  },
+  {
     id: "hotel_siege_held",
     triggerEventId: "hotel_siege",
     triggerChoiceId: "hold_lobby",

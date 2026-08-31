@@ -6,6 +6,8 @@ import { advanceHotelStories } from "../game/story-event-manager.ts";
 import { evaluateEndings } from "../game/ending-manager.ts";
 import { STORY_CHOICE_EVENTS } from "../game/story-choice-data.ts";
 import { createGuests } from "../game/guest-data.ts";
+import { dismissCutscene, queueStoryChoiceCutscene } from "../game/cutscene-manager.ts";
+import { getCutscene } from "../game/cutscene-data.ts";
 
 function conflictState(guestId: string) {
   const state = createInitialGameState();
@@ -117,6 +119,48 @@ test("Mia의 재회는 가족 경로와 Daniel 관계를 완성한다", () => {
   const mia = result.state.guests.find((guest) => guest.id === "mia")!;
   assert.equal(result.state.flags.family_routes_complete, true);
   assert.equal(mia.relationships.find((relation) => relation.targetId === "daniel")?.value, 25);
+  assert.equal(result.state.activeCutsceneId, "mia_daniel_reunion");
+  assert.equal(getCutscene(result.state.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/mia-daniel-reunion-v1.png");
+});
+
+test("미아·다니엘 재회 컷신은 본 뒤 같은 선택 결과에서 다시 예약되지 않는다", () => {
+  const resolved = applyStoryChoice(resolutionState("mia"), "mia-family", "reunite").state;
+  const dismissed = dismissCutscene(resolved);
+  assert.equal(dismissed.activeCutsceneId, null);
+  assert.ok(dismissed.seenCutsceneIds.includes("mia_daniel_reunion"));
+  assert.equal(queueStoryChoiceCutscene(dismissed, "mia-family", "reunite"), dismissed);
+});
+
+test("미아·다니엘 재회 컷신의 진행 및 시청 상태는 저장 복원된다", () => {
+  const active = applyStoryChoice(resolutionState("mia"), "mia-family", "reunite").state;
+  assert.equal(restoreGameState(serializeGameState(active)).activeCutsceneId, "mia_daniel_reunion");
+  const dismissed = dismissCutscene(active);
+  const restored = restoreGameState(serializeGameState(dismissed));
+  assert.equal(restored.activeCutsceneId, null);
+  assert.ok(restored.seenCutsceneIds.includes("mia_daniel_reunion"));
+});
+
+test("다른 컷신이 열린 상태의 미아 재회는 대기열에 보존되어 다음 장면으로 이어진다", () => {
+  const state = resolutionState("mia");
+  state.activeCutsceneId = "first_night";
+  const resolved = applyStoryChoice(state, "mia-family", "reunite").state;
+  assert.equal(resolved.activeCutsceneId, "first_night");
+  assert.deepEqual(resolved.queuedCutsceneIds, ["mia_daniel_reunion"]);
+  const restored = restoreGameState(serializeGameState(resolved));
+  assert.deepEqual(restored.queuedCutsceneIds, ["mia_daniel_reunion"]);
+  const advanced = dismissCutscene(restored);
+  assert.equal(advanced.activeCutsceneId, "mia_daniel_reunion");
+  assert.deepEqual(advanced.queuedCutsceneIds, []);
+  assert.ok(advanced.seenCutsceneIds.includes("first_night"));
+});
+
+test("손상된 컷신 대기열은 알 수 없는 ID·중복·이미 본 장면을 제거한다", () => {
+  const state = createInitialGameState();
+  state.seenCutsceneIds = ["first_night"];
+  const raw = JSON.parse(serializeGameState(state));
+  raw.queuedCutsceneIds = ["mia_daniel_reunion", "unknown_scene", "mia_daniel_reunion", "first_night"];
+  const restored = restoreGameState(JSON.stringify(raw));
+  assert.deepEqual(restored.queuedCutsceneIds, ["mia_daniel_reunion"]);
 });
 
 test("Owen의 방어대는 군사 저항 성공 조건을 기록한다", () => {

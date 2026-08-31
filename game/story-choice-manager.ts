@@ -1,4 +1,5 @@
 import { completeEventStage } from "./story-event-manager.ts";
+import { queueStoryChoiceCutscene } from "./cutscene-manager.ts";
 import { STORY_CHOICE_EVENTS } from "./story-choice-data.ts";
 import type { GameState, HotelLogEntry, StoryChoice, StoryChoiceEvent } from "./types.ts";
 
@@ -48,5 +49,5 @@ export function applyStoryChoice(state: GameState, eventId: string, choiceId: st
   const resources = add(state.resources, effect.resources);
   const entry: HotelLogEntry = { day: state.day, type: "EVENT", message: `NPC 사건 · ${event.title} · ${choice.label}`, relationshipChanges: effectiveRelationship ? [{ sourceId: event.guestId, targetId: effectiveRelationship.targetId, delta: effectiveRelationship.delta }] : undefined };
   const next: GameState = { ...state, guests: completed.guests, resources, hotelStats: add(state.hotelStats, effect.hotelStats), reputations: add(state.reputations, effect.reputations), flags: { ...state.flags, ...effect.flags, monster_threat: clamp(Number(state.flags.monster_threat ?? 0) + Number(effect.threat ?? 0)) }, fatherStoryProgress: clamp(state.fatherStoryProgress + Number(effect.fatherStoryProgress ?? 0)), pendingStoryEventId: null, eventHistory: [...state.eventHistory, entry] };
-  return { state: next, event, choice, entry };
+  return { state: queueStoryChoiceCutscene(next, event.id, choice.id), event, choice, entry };
 }

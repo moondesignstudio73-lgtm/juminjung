@@ -64,6 +64,11 @@ test("철문 침입 정산은 첫 괴물 목격 컷신을 한 번만 예약한�
   assert.equal(queueNightEventCutscene(dismissed, "perimeter_breach", "barricade", 12), dismissed);
 });
 
+test("NPC 스토리 전용 컷신은 일반 야간 사건에서 잘못 예약되지 않는다", () => {
+  const queued = queueNightEventCutscene(createInitialGameState(), "quiet_watch", "listen", 2);
+  assert.equal(queued.activeCutsceneId, null);
+});
+
 test("철문 침입에 맞서 싸운 실제 정산은 투숙객을 다치게 하고 피습 컷신을 예약한다", () => {
   const state = withGuest();
   state.phase = "night";
