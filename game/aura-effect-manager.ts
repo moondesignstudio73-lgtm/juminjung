@@ -35,7 +35,7 @@ export function recalculateRoomEffects(rooms: Room[], guests: Guest[]): Room[] {
   const medicalWard = getActiveAuraSynergies(withAuras, guests).find((synergy) => synergy.id === "medical-ward");
   if (!medicalWard) return withAuras;
   const affected = new Set(medicalWard.affectedRoomNumbers);
-  return withAuras.map((room) => affected.has(room.roomNumber) ? { ...room, temporaryEffects: [...room.temporaryEffects, { id: "medical-ward", sourceGuestId: "eleanor+ruth", name: "MEDICAL WARD", metric: "injuryRecovery", diseaseType: "INJURY", operation: "ADD", value: 10 }] } : room);
+  return withAuras.map((room) => affected.has(room.roomNumber) ? { ...room, temporaryEffects: [...room.temporaryEffects, { id: "medical-ward", sourceGuestId: "eleanor+ruth", name: "MEDICAL WARD", metric: "injuryRecovery", diseaseType: "INJURY", operation: "SET", value: 10 }] } : room);
 }
 
 export function getActiveAuraSynergies(rooms: Room[], guests: Guest[]): ActiveSynergy[] {
