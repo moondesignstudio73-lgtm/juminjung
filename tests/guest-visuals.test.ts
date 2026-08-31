@@ -89,6 +89,19 @@ test("Daniel의 가족 증명 갈등과 결말은 사건 문맥에 맞는 전용
   assert.equal(getGuestVisualState(guest("daniel"), happy).asset, "/juminjung/assets/portraits/daniel/happy-v1.png");
 });
 
+test("Samuel의 과거 고백과 결말은 사건 문맥에 맞는 전용 표정을 제공한다", () => {
+  const conflict = STORY_CHOICE_EVENTS.find((event) => event.id === "samuel-ledger");
+  const resolution = STORY_CHOICE_EVENTS.find((event) => event.id === "samuel-duty");
+  const sad = getStoryEventExpression("samuel-ledger");
+  const happy = getStoryEventExpression("samuel-duty");
+  assert.deepEqual([conflict?.guestId, conflict?.stage], ["samuel", "CONFLICT"]);
+  assert.deepEqual([resolution?.guestId, resolution?.stage], ["samuel", "RESOLUTION"]);
+  assert.equal(sad, "sad");
+  assert.equal(happy, "happy");
+  assert.equal(getGuestVisualState(guest("samuel"), sad).asset, "/juminjung/assets/portraits/samuel/sad-v1.png");
+  assert.equal(getGuestVisualState(guest("samuel"), happy).asset, "/juminjung/assets/portraits/samuel/happy-v1.png");
+});
+
 test("도착 대기 중인 방문자는 젖은 옷 상태로 표시된다", () => {
   const visual = getGuestVisualState(guest("eleanor"));
   assert.ok(visual.modifiers.includes("WET"));
