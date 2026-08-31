@@ -14,7 +14,7 @@ export type NightEventPortrait = { guestId: string; expression?: GuestExpression
 const NIGHT_EVENT_PORTRAITS: Partial<Record<string, [NightEventPortrait, NightEventPortrait]>> = {
   medical_shift: [{ guestId: "eleanor" }, { guestId: "ruth" }],
   owen_hayes_standoff: [{ guestId: "owen", expression: "angry" }, { guestId: "hayes", expression: "angry" }],
-  lily_vale_breakthrough: [{ guestId: "lily" }, { guestId: "vale" }],
+  lily_vale_breakthrough: [{ guestId: "lily", expression: "happy" }, { guestId: "vale", expression: "suspicious" }],
 };
 
 export function getNightEventPortraits(eventId: string): [NightEventPortrait, NightEventPortrait] | null {

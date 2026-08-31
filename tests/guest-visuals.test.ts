@@ -27,10 +27,13 @@ test("관계 야간 사건은 두 NPC와 사건 전용 표정을 제공한다", 
   const standoff = getNightEventPortraits("owen_hayes_standoff");
   assert.deepEqual(standoff, [{ guestId: "owen", expression: "angry" }, { guestId: "hayes", expression: "angry" }]);
   assert.deepEqual(getNightEventPortraits("medical_shift"), [{ guestId: "eleanor" }, { guestId: "ruth" }]);
-  assert.deepEqual(getNightEventPortraits("lily_vale_breakthrough"), [{ guestId: "lily" }, { guestId: "vale" }]);
+  const breakthrough = getNightEventPortraits("lily_vale_breakthrough");
+  assert.deepEqual(breakthrough, [{ guestId: "lily", expression: "happy" }, { guestId: "vale", expression: "suspicious" }]);
   assert.equal(getNightEventPortraits("quiet_watch"), null);
   assert.equal(getGuestVisualState(guest("owen"), standoff?.[0].expression).asset, "/juminjung/assets/portraits/owen/angry-v1.png");
   assert.equal(getGuestVisualState(guest("hayes"), standoff?.[1].expression).asset, "/juminjung/assets/portraits/hayes/angry-v1.png");
+  assert.equal(getGuestVisualState(guest("lily"), breakthrough?.[0].expression).asset, "/juminjung/assets/portraits/lily/happy-v1.png");
+  assert.equal(getGuestVisualState(guest("vale"), breakthrough?.[1].expression).asset, "/juminjung/assets/portraits/vale/suspicious-v1.png");
 });
 
 test("도착 대기 중인 방문자는 젖은 옷 상태로 표시된다", () => {
