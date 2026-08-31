@@ -22,7 +22,7 @@ import { buildFacility, canBuildFacility, performHotelAction } from '@/game/hote
 import { canChooseNightChoice, selectNightEvent } from '@/game/night-event-manager';
 import { getHotelLogEntries } from '@/game/hotel-log-manager';
 import { applyVisitorCheckInBenefits, getEligibleVisitor, getVisitorReaction, getVisitorReactionById, markVisitorRefused } from '@/game/visitor-manager';
-import { getGuestVisualState, getNightEventPortraits } from '@/game/guest-visual-manager';
+import { getGuestVisualState, getNightEventPortraits, getStoryEventExpression } from '@/game/guest-visual-manager';
 import type { FacilityId, GameState, Guest, GuestExpression, HotelActionId, Room } from '@/game/types';
 
 type UiSave = GameState & { prologue: number };
@@ -269,7 +269,7 @@ function StoryChoiceScene({ state, onChoose }: { state:UiSave; onChoose:(eventId
   const event = getPendingStoryChoice(state);
   const guest = state.guests.find((item)=>item.id===event?.guestId);
   if (!event || !guest) return <main className="event-screen"><section><h1>스토리 기록을 확인할 수 없습니다.</h1></section></main>;
-  return <main className="event-screen story-event"><div className="event-light"/><CharacterSprite guest={guest} context="story"/><p className="scene-index">DAY {state.day} · {guest.name} · {event.stage==='CONFLICT'?'갈등':'결말'}</p><section><span>NPC STORY EVENT</span><h1>{event.title}</h1><p>{event.description}</p><blockquote>{event.quote}</blockquote><div className="night-choices">{event.choices.map((choice)=><Button key={choice.id} disabled={!canChooseStoryChoice(state,choice)} onClick={()=>onChoose(event.id,choice.id)}><span>{choice.label}</span><small>{choice.description}</small><ChevronRight/></Button>)}</div></section></main>;
+  return <main className="event-screen story-event"><div className="event-light"/><CharacterSprite guest={guest} context="story" expression={getStoryEventExpression(event.id)}/><p className="scene-index">DAY {state.day} · {guest.name} · {event.stage==='CONFLICT'?'갈등':'결말'}</p><section><span>NPC STORY EVENT</span><h1>{event.title}</h1><p>{event.description}</p><blockquote>{event.quote}</blockquote><div className="night-choices">{event.choices.map((choice)=><Button key={choice.id} disabled={!canChooseStoryChoice(state,choice)} onClick={()=>onChoose(event.id,choice.id)}><span>{choice.label}</span><small>{choice.description}</small><ChevronRight/></Button>)}</div></section></main>;
 }
 
 function MorningReport({ state, onNext, onReset, onStartEnding }: { state:UiSave; onNext:()=>void; onReset:()=>void; onStartEnding:(endingId:GameState['availableEndings'][number])=>void }) {

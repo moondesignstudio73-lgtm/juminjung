@@ -2,8 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createGuests } from "../game/guest-data.ts";
-import { getGuestVisualState, getNightEventPortraits } from "../game/guest-visual-manager.ts";
+import { getGuestVisualState, getNightEventPortraits, getStoryEventExpression } from "../game/guest-visual-manager.ts";
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
+import { STORY_CHOICE_EVENTS } from "../game/story-choice-data.ts";
 
 const guest = (id: string) => createGuests().find((item) => item.id === id)!;
 
@@ -34,6 +35,20 @@ test("관계 야간 사건은 두 NPC와 사건 전용 표정을 제공한다", 
   assert.equal(getGuestVisualState(guest("hayes"), standoff?.[1].expression).asset, "/juminjung/assets/portraits/hayes/angry-v1.png");
   assert.equal(getGuestVisualState(guest("lily"), breakthrough?.[0].expression).asset, "/juminjung/assets/portraits/lily/happy-v1.png");
   assert.equal(getGuestVisualState(guest("vale"), breakthrough?.[1].expression).asset, "/juminjung/assets/portraits/vale/suspicious-v1.png");
+});
+
+test("Claire의 갈등과 결말 스토리는 사건 문맥에 맞는 전용 표정을 제공한다", () => {
+  const pursuer = STORY_CHOICE_EVENTS.find((event) => event.id === "claire-pursuer");
+  const future = STORY_CHOICE_EVENTS.find((event) => event.id === "claire-future");
+  const afraid = getStoryEventExpression("claire-pursuer");
+  const happy = getStoryEventExpression("claire-future");
+  assert.deepEqual([pursuer?.guestId, pursuer?.stage], ["claire", "CONFLICT"]);
+  assert.deepEqual([future?.guestId, future?.stage], ["claire", "RESOLUTION"]);
+  assert.equal(afraid, "afraid");
+  assert.equal(happy, "happy");
+  assert.equal(getStoryEventExpression("walter-father-lie"), undefined);
+  assert.equal(getGuestVisualState(guest("claire"), afraid).asset, "/juminjung/assets/portraits/claire/afraid-v1.png");
+  assert.equal(getGuestVisualState(guest("claire"), happy).asset, "/juminjung/assets/portraits/claire/happy-v1.png");
 });
 
 test("도착 대기 중인 방문자는 젖은 옷 상태로 표시된다", () => {

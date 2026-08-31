@@ -17,8 +17,17 @@ const NIGHT_EVENT_PORTRAITS: Partial<Record<string, [NightEventPortrait, NightEv
   lily_vale_breakthrough: [{ guestId: "lily", expression: "happy" }, { guestId: "vale", expression: "suspicious" }],
 };
 
+const STORY_EVENT_EXPRESSIONS: Partial<Record<string, GuestExpression>> = {
+  "claire-pursuer": "afraid",
+  "claire-future": "happy",
+};
+
 export function getNightEventPortraits(eventId: string): [NightEventPortrait, NightEventPortrait] | null {
   return NIGHT_EVENT_PORTRAITS[eventId] ?? null;
+}
+
+export function getStoryEventExpression(eventId: string): GuestExpression | undefined {
+  return STORY_EVENT_EXPRESSIONS[eventId];
 }
 
 export function getGuestVisualState(guest: Guest, expressionOverride?: GuestExpression): GuestVisualState {
