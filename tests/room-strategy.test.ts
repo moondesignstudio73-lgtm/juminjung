@@ -69,3 +69,43 @@ test("10. 저장 복원 후 객실 위치와 Aura가 복구된다", () => {
   assert.equal(restored.guests[0].currentRoomNumber, 301);
   assert.equal(getDiseaseChance(restored.rooms.find((room) => room.roomNumber === 202)!, "NORMAL_DISEASE", 25), 0);
 });
+
+test("11. 손상된 저장에서 한 NPC가 여러 객실을 점유하면 현재 객실 하나만 복원한다", () => {
+  const state = placeEleanor(301);
+  state.rooms = state.rooms.map((room) => [202, 205].includes(room.roomNumber)
+    ? { ...room, occupied: true, guestId: ELEANOR_ID, status: "OCCUPIED" as const }
+    : room);
+  const restored = restoreGameState(JSON.stringify(state));
+  const occupied = restored.rooms.filter((room) => room.guestId === ELEANOR_ID);
+  assert.deepEqual(occupied.map((room) => room.roomNumber), [301]);
+  assert.equal(restored.guests.find((guest) => guest.id === ELEANOR_ID)?.currentRoomNumber, 301);
+});
+
+test("12. 두 투숙객의 현재 객실이 충돌하면 저장된 실제 점유자를 유지하고 다른 빈방으로 복구한다", () => {
+  const state = placeEleanor(202);
+  state.guests = state.guests.map((guest) => guest.id === "samuel"
+    ? { ...guest, status: "STAYING" as const, currentRoomNumber: 202, checkedInDay: 2 }
+    : guest);
+  state.rooms = state.rooms.map((room) => room.roomNumber === 202
+    ? { ...room, occupied: true, guestId: "samuel", status: "OCCUPIED" as const }
+    : room);
+  const restored = restoreGameState(JSON.stringify(state));
+  const eleanor = restored.guests.find((guest) => guest.id === ELEANOR_ID)!;
+  const samuel = restored.guests.find((guest) => guest.id === "samuel")!;
+  assert.equal(samuel.currentRoomNumber, 202);
+  assert.notEqual(eleanor.currentRoomNumber, 202);
+  assert.equal(restored.rooms.filter((room) => room.guestId === ELEANOR_ID).length, 1);
+  assert.equal(restored.rooms.filter((room) => room.guestId === "samuel").length, 1);
+});
+
+test("13. 파손된 선호 객실은 점유하지 않고 사용 가능한 빈방으로 복구한다", () => {
+  const state = placeEleanor(301);
+  state.rooms = state.rooms.map((room) => room.roomNumber === 301
+    ? { ...room, status: "DAMAGED" as const, occupied: false, guestId: null }
+    : room);
+  const restored = restoreGameState(JSON.stringify(state));
+  const eleanor = restored.guests.find((guest) => guest.id === ELEANOR_ID)!;
+  assert.notEqual(eleanor.currentRoomNumber, 301);
+  assert.equal(restored.rooms.find((room) => room.roomNumber === 301)?.status, "DAMAGED");
+  assert.equal(restored.rooms.filter((room) => room.guestId === ELEANOR_ID).length, 1);
+});

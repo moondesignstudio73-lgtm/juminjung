@@ -30,6 +30,7 @@ Understood as: grow the published browser game into an open-duration hotel survi
 - Structured relationship deltas from story and night choices persist in the hotel log and appear in the morning RELATIONSHIP JOURNAL
 - Reputation and prior-event flags now produce authored front-desk reactions, modifying visitor Trust, Risk, dialogue, and check-in offers
 - Refugee shelter/denial, generator blackout, medical cooperation, investigation, and military resistance create later visitor follow-up dialogue
+- Save restoration now repairs duplicate room claims and guest/room mismatches into one authoritative room per active guest before Aura recalculation
 - Four facilities now support three upgrade levels with escalating costs, visible next-stage previews, daily production, upkeep, and shortage shutdown logs
 - The trade network creates a renewable parts/fuel route; a deterministic 30-day regression covers four continuously occupied rooms at maximum infrastructure
 - HOTEL JOURNAL exposes the complete reverse-chronological record with check-in, checkout, resource, and event filters plus relationship details

@@ -6,7 +6,7 @@ import { createRooms } from "./room-manager.ts";
 import { FACILITIES } from "./facility-data.ts";
 import { ENDING_NARRATIVES } from "./ending-narrative-data.ts";
 import { CUTSCENES } from "./cutscene-data.ts";
-import type { FacilityId, GameState } from "./types.ts";
+import type { FacilityId, GameState, Guest, Room } from "./types.ts";
 
 export const SAVE_KEY = "juju-hotel-save-v2";
 export const LEGACY_SAVE_KEY = "juju-hotel-save-v1";
@@ -28,6 +28,69 @@ function mergeGuest(catalogGuest: ReturnType<typeof createGuests>[number], saved
     eventChain: catalogGuest.eventChain.map((event) => ({ ...event, ...savedEvents.find((item) => item.id === event.id) })),
     remainingNights: Math.max(0, Math.min(savedGuest.remainingNights ?? catalogGuest.remainingNights, savedGuest.stayDuration ?? catalogGuest.stayDuration)),
   };
+}
+
+function normalizeOccupancy(savedRooms: Room[], guests: Guest[]): { rooms: Room[]; guests: Guest[] } {
+  const canonicalRooms = createRooms();
+  const roomNumbers = new Set(canonicalRooms.map((room) => room.roomNumber));
+  const savedRoomByNumber = new Map(savedRooms.filter((room) => roomNumbers.has(room.roomNumber)).map((room) => [room.roomNumber, room]));
+  const claimedRoomsByGuest = new Map<string, number[]>();
+
+  for (const room of savedRoomByNumber.values()) {
+    if (!room.guestId) continue;
+    claimedRoomsByGuest.set(room.guestId, [...(claimedRoomsByGuest.get(room.guestId) ?? []), room.roomNumber]);
+  }
+
+  const occupiedByRoom = new Map<number, string>();
+  const assignedRoomByGuest = new Map<string, number>();
+  const seenGuestIds = new Set<string>();
+  const stayingGuests = guests.filter((guest) => {
+    if (seenGuestIds.has(guest.id)) return false;
+    seenGuestIds.add(guest.id);
+    return guest.alive && (guest.status === "STAYING" || guest.currentRoomNumber !== null || claimedRoomsByGuest.has(guest.id));
+  });
+  const isUsable = (roomNumber: number) => !["DAMAGED", "LOCKED"].includes(savedRoomByNumber.get(roomNumber)?.status ?? "EMPTY");
+  const desiredRoom = (guest: Guest) => {
+    if (guest.currentRoomNumber !== null && roomNumbers.has(guest.currentRoomNumber) && isUsable(guest.currentRoomNumber)) return guest.currentRoomNumber;
+    const claims = claimedRoomsByGuest.get(guest.id) ?? [];
+    return claims.length === 1 && isUsable(claims[0]) ? claims[0] : null;
+  };
+
+  const orderedGuests = [...stayingGuests].sort((a, b) => {
+    const aRoom = desiredRoom(a);
+    const bRoom = desiredRoom(b);
+    const aMatches = aRoom ? savedRoomByNumber.get(aRoom)?.guestId === a.id : false;
+    const bMatches = bRoom ? savedRoomByNumber.get(bRoom)?.guestId === b.id : false;
+    return Number(bMatches) - Number(aMatches) || Number(a.checkedInDay ?? 0) - Number(b.checkedInDay ?? 0) || a.id.localeCompare(b.id);
+  });
+
+  for (const guest of orderedGuests) {
+    const preferred = desiredRoom(guest);
+    const fallback = canonicalRooms.find((room) => !occupiedByRoom.has(room.roomNumber) && isUsable(room.roomNumber))?.roomNumber;
+    const roomNumber = preferred && !occupiedByRoom.has(preferred) ? preferred : fallback;
+    if (roomNumber === undefined) continue;
+    occupiedByRoom.set(roomNumber, guest.id);
+    assignedRoomByGuest.set(guest.id, roomNumber);
+  }
+
+  const normalizedGuests = guests.map((guest) => ({
+    ...guest,
+    status: assignedRoomByGuest.has(guest.id) ? "STAYING" as const : guest.status,
+    currentRoomNumber: assignedRoomByGuest.get(guest.id) ?? null,
+  }));
+  const rooms = canonicalRooms.map((room) => {
+    const saved = savedRoomByNumber.get(room.roomNumber);
+    const guestId = occupiedByRoom.get(room.roomNumber) ?? null;
+    return {
+      ...room,
+      ...(saved ? { roomCondition: saved.roomCondition, permanentEffects: saved.permanentEffects ?? [] } : {}),
+      occupied: Boolean(guestId),
+      guestId,
+      status: guestId ? "OCCUPIED" as const : saved?.status === "DAMAGED" || saved?.status === "LOCKED" ? saved.status : "EMPTY" as const,
+      temporaryEffects: [],
+    };
+  });
+  return { rooms, guests: normalizedGuests };
 }
 
 export function createInitialGameState(): GameState {
@@ -61,7 +124,8 @@ export function restoreGameState(raw: string | null): GameState {
     const savedSeenCutsceneIds = Array.isArray(parsed.seenCutsceneIds) ? parsed.seenCutsceneIds : [];
     const seenCutsceneIds = [...new Set(savedSeenCutsceneIds)].filter((id) => knownCutsceneIds.has(id));
     const phase = parsed.phase === "ending" && !activeEndingId ? "report" : parsed.phase ?? base.phase;
-    const state = { ...base, ...parsed, version: 9, phase, resources: { ...base.resources, ...parsed.resources }, flags: { ...base.flags, ...parsed.flags }, hotelStats: { ...base.hotelStats, ...parsed.hotelStats }, reputations: { ...base.reputations, ...parsed.reputations }, facilities, endingRelatedFlags: { ...base.endingRelatedFlags, ...parsed.endingRelatedFlags }, rooms: parsed.rooms!, guests, eventHistory: parsed.eventHistory ?? [], lastDaySummary: parsed.lastDaySummary ?? null, availableEndings: parsed.availableEndings ?? [], completedEndingFlags, endingProgress: parsed.endingProgress ?? {}, activeEndingId, endingSceneIndex, actionPoints: parsed.actionPoints ?? base.maxActionPoints, maxActionPoints: parsed.maxActionPoints ?? base.maxActionPoints, selectedNightEventId: parsed.selectedNightEventId ?? null, selectedNightChoiceId: parsed.selectedNightChoiceId ?? null, lastNightEventId: parsed.lastNightEventId ?? null, pendingStoryEventId: parsed.pendingStoryEventId ?? null, pendingVisitorReactionId: parsed.pendingVisitorReactionId ?? null, activeCutsceneId, seenCutsceneIds } as GameState;
+    const occupancy = normalizeOccupancy(parsed.rooms!, guests);
+    const state = { ...base, ...parsed, version: 9, phase, resources: { ...base.resources, ...parsed.resources }, flags: { ...base.flags, ...parsed.flags }, hotelStats: { ...base.hotelStats, ...parsed.hotelStats }, reputations: { ...base.reputations, ...parsed.reputations }, facilities, endingRelatedFlags: { ...base.endingRelatedFlags, ...parsed.endingRelatedFlags }, rooms: occupancy.rooms, guests: occupancy.guests, eventHistory: parsed.eventHistory ?? [], lastDaySummary: parsed.lastDaySummary ?? null, availableEndings: parsed.availableEndings ?? [], completedEndingFlags, endingProgress: parsed.endingProgress ?? {}, activeEndingId, endingSceneIndex, actionPoints: parsed.actionPoints ?? base.maxActionPoints, maxActionPoints: parsed.maxActionPoints ?? base.maxActionPoints, selectedNightEventId: parsed.selectedNightEventId ?? null, selectedNightChoiceId: parsed.selectedNightChoiceId ?? null, lastNightEventId: parsed.lastNightEventId ?? null, pendingStoryEventId: parsed.pendingStoryEventId ?? null, pendingVisitorReactionId: parsed.pendingVisitorReactionId ?? null, activeCutsceneId, seenCutsceneIds } as GameState;
     return { ...state, rooms: recalculateRoomEffects(state.rooms, state.guests) };
   } catch { return createInitialGameState(); }
 }
