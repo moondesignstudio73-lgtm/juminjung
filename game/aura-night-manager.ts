@@ -13,6 +13,7 @@ export type AuraNightResolution = {
   sickGuestIds:string[];
   clinicPreventedGuestIds:string[];
   perimeterAlarmThreatReduction:number;
+  pathfinderThreatReduction:number;
   communityKitchenFoodSaving:number;
   civilGuardSecurityGain:number;
   civilGuardCrimeReduction:number;
@@ -33,6 +34,7 @@ export const CIVIL_GUARD_CRIME_REDUCTION = 2;
 export const CARE_TEAM_HEALTH_RECOVERY = 3;
 export const CARE_TEAM_STRESS_RELIEF = 4;
 export const HOUSEHOLD_NETWORK_WATER_SAVING = 1;
+export const PATHFINDER_THREAT_REDUCTION = 1;
 
 export function isCareTeamEligible(guest:Guest):boolean {
   return guest.age<18||guest.age>=65||guest.health<80||guest.infectionState!=="HEALTHY"||guest.baseTraits.includes("Pregnant");
@@ -70,6 +72,7 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
   const careTeamGuestIds:string[] = [];
   const clinicActive = flags.eleanor_clinic_established === true;
   const perimeterAlarmActive = flags.perimeter_alarm === true;
+  const pathfinderActive = flags.eli_pathfinder === true;
   const civilGuardActive = flags.samuel_civil_guard === true;
   const careTeamActive = flags.ruth_care_team === true;
 
@@ -108,7 +111,8 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
   }));
 
   const threatWithoutAlarm = clamp(Math.round(threatScore/10),-10,10);
-  const threatDelta = clamp(threatWithoutAlarm-(perimeterAlarmActive?PERIMETER_ALARM_THREAT_REDUCTION:0),-10,10);
+  const threatAfterAlarm = clamp(threatWithoutAlarm-(perimeterAlarmActive?PERIMETER_ALARM_THREAT_REDUCTION:0),-10,10);
+  const threatDelta = clamp(threatAfterAlarm-(pathfinderActive?PATHFINDER_THREAT_REDUCTION:0),-10,10);
   const securityWithoutCivilGuard = clamp(Math.round(securityScore/10),-10,10);
   const securityDelta = clamp(securityWithoutCivilGuard+(civilGuardActive?CIVIL_GUARD_SECURITY_GAIN:0),-10,10);
   const civilGuardSecurityGain = securityDelta-securityWithoutCivilGuard;
@@ -126,7 +130,8 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
     tradeBonus:{food:Math.floor(Math.max(0,tradeScore)/20),parts:Math.floor(Math.max(0,tradeScore)/40)},
     sickGuestIds,
     clinicPreventedGuestIds,
-    perimeterAlarmThreatReduction:threatWithoutAlarm-threatDelta,
+    perimeterAlarmThreatReduction:threatWithoutAlarm-threatAfterAlarm,
+    pathfinderThreatReduction:threatAfterAlarm-threatDelta,
     communityKitchenFoodSaving:food.saving,
     civilGuardSecurityGain,
     civilGuardCrimeReduction,

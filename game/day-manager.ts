@@ -54,8 +54,10 @@ export function resolveDay(state: GameState): GameState {
   const economy = getFacilityEconomy(state, afterGuestConsumption);
   const threatBeforeAuraNight = Math.max(0,Number(state.flags.monster_threat??0));
   const threatAfterAuraNight = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta);
-  const threatWithoutAlarm = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta+auraNight.perimeterAlarmThreatReduction);
-  const appliedAlarmThreatReduction = threatWithoutAlarm-threatAfterAuraNight;
+  const threatWithoutPathfinder = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta+auraNight.pathfinderThreatReduction);
+  const threatWithoutAlarm = Math.max(0,threatBeforeAuraNight+auraNight.threatDelta+auraNight.pathfinderThreatReduction+auraNight.perimeterAlarmThreatReduction);
+  const appliedPathfinderThreatReduction = threatWithoutPathfinder-threatAfterAuraNight;
+  const appliedAlarmThreatReduction = threatWithoutAlarm-threatWithoutPathfinder;
   const securityWithoutCivilGuard = Math.max(0,Math.min(100,state.hotelStats.security+auraNight.securityDelta-auraNight.civilGuardSecurityGain));
   const securityAfterAuraNight = Math.max(0,Math.min(100,state.hotelStats.security+auraNight.securityDelta));
   const appliedCivilGuardSecurityGain = securityAfterAuraNight-securityWithoutCivilGuard;
@@ -74,6 +76,7 @@ export function resolveDay(state: GameState): GameState {
     ...(auraNight.sickGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`객실 질병 발생 · ${auraNight.sickGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
     ...(auraNight.clinicPreventedGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`상설 진료소 예방 · ${auraNight.clinicPreventedGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
     ...(appliedAlarmThreatReduction ? [{day:state.day,type:"EVENT" as const,message:`외곽 조기경보망 가동 · Monster Threat 보정 -${appliedAlarmThreatReduction}`}] : []),
+    ...(appliedPathfinderThreatReduction ? [{day:state.day,type:"EVENT" as const,message:`안전 통로 정찰 · Monster Threat 보정 -${appliedPathfinderThreatReduction}`}] : []),
     ...(appliedCivilGuardSecurityGain||appliedCivilGuardCrimeReduction ? [{day:state.day,type:"EVENT" as const,message:`민간 경비대 순찰${appliedCivilGuardSecurityGain?` · Security +${appliedCivilGuardSecurityGain}`:""}${appliedCivilGuardCrimeReduction?` · Crime -${appliedCivilGuardCrimeReduction}`:""}`}] : []),
     ...(auraNight.careTeamGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`공동 돌봄팀 돌봄 · ${auraNight.careTeamGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
     ...(Object.keys(economy.production).length ? [{ day: state.day, type: "RESOURCE" as const, message: `시설 생산 · ${Object.entries(economy.production).map(([key,value]) => `${key} +${value}`).join(" · ")}` }] : []),

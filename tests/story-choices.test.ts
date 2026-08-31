@@ -450,6 +450,24 @@ test("Rosa의 가족 안전 구역은 공동 생활조 물 절감과 전용 컷�
   assert.equal(result.activeCutsceneId,null);
 });
 
+test("Eli의 길잡이 경로는 안전 통로와 전용 컷신을 열고 저장된다", () => {
+  const result=applyStoryChoice(resolutionState("eli"),"eli-keyring","pathfinder").state;
+  assert.equal(result.flags.eli_pathfinder,true);
+  assert.equal(result.flags.safe_routes_mapped,true);
+  assert.equal(result.activeCutsceneId,"eli_safe_passage");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/eli-safe-passage-v1.png");
+  const restored=restoreGameState(serializeGameState(result));
+  assert.equal(restored.flags.eli_pathfinder,true);
+  assert.equal(restored.activeCutsceneId,"eli_safe_passage");
+});
+
+test("Eli의 창고 책임 경로는 안전 통로 효과와 전용 컷신을 열지 않는다", () => {
+  const result=applyStoryChoice(resolutionState("eli"),"eli-keyring","quartermaster").state;
+  assert.equal(result.flags.eli_quartermaster,true);
+  assert.equal(result.flags.eli_pathfinder,undefined);
+  assert.equal(result.activeCutsceneId,null);
+});
+
 test("Hazel의 외곽 경계대는 지속 경보망과 전용 컷신을 열고 저장된다", () => {
   const result = applyStoryChoice(resolutionState("hazel"), "hazel-watch", "ranger").state;
   assert.equal(result.flags.hazel_ranger_watch, true);

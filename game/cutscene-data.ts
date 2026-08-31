@@ -2,6 +2,18 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: "eli_safe_passage",
+    triggerStoryEventId: "eli-keyring",
+    triggerStoryChoiceId: "pathfinder",
+    priority: 165,
+    kicker: "JUJU HOTEL · SAFE PASSAGE",
+    title: "훔친 열쇠 대신 그린 길",
+    body: "Eli는 정문으로 이어지는 큰길을 지도에서 지우고, 무너진 세탁소 뒤편과 배수로, 두 건물 사이의 좁은 서비스 통로를 하나의 길로 이었다. 눈에 띄는 표지판 대신 비에 쉽게 씻기는 분필과 천 조각만 남겼다. 그날 새벽, 보급 주머니를 든 두 사람이 괴물의 흔적이 남은 대로를 피해 호텔 뒤편에 도착했다. 누구도 Eli를 감시하러 따라가지 않았다. 그는 처음으로 훔친 물건이 아니라, 모두가 돌아올 수 있는 길을 들고 돌아왔다.",
+    quote: "표시는 오래 남으면 안 돼. 사람은 찾고, 저것들은 지나치게 해야 하니까.",
+    image: "/juminjung/assets/cutscenes/eli-safe-passage-v1.png",
+    imageAlt: "엘리가 비 내린 폐허의 골목 벽에 작은 분필 표시를 남기고, 보급 주머니를 든 주민들이 위험한 큰길을 피해 JUJU HOTEL로 향하는 장면.",
+  },
+  {
     id: "rosa_household_network",
     triggerStoryEventId: "rosa-family",
     triggerStoryChoiceId: "household",
