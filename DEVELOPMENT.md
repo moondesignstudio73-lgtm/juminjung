@@ -48,6 +48,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - The first night, first monster sighting, generator blackout, and a dedicated guest-attack outcome for fighting a perimeter breach interrupt their morning reports once, using full-screen illustrated scenes with rain, lamp flicker, slow camera movement, reduced-motion support, choice-aware triggers, and save restoration
 - The refugee-wave decision now branches into distinct shelter and denial aftermath cutscenes, preserving the selected moral consequence alongside resources, reputation, threat, and follow-up flags
 - From DAY 10, low Security and rising monster threat can reveal an unknown death in empty Room 207; sealing or investigating it changes resources, stress, threat, evidence flags, the room's usable state, and opens a dedicated illustrated aftermath, while hotel repair can later restore the room
+- From DAY 20, discovering the father's archive can wake the dead 91.3 MHz frequency; tracing it creates an alternate monster-origin clue for THE TRUTH, while answering opens a dangerous conditional return route, both with a dedicated illustrated signal scene
 
 ## Next system priorities
 

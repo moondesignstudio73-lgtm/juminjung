@@ -73,6 +73,6 @@ export function applyNightChoice(state: GameState, eventId: string, choiceId: st
   });
   const threat = clamp(Number(state.flags.monster_threat ?? 0) + Number(effect.threat ?? 0));
   const rooms = effect.roomChange ? state.rooms.map((room) => room.roomNumber === effect.roomChange!.roomNumber ? { ...room, occupied: false, guestId: null, status: effect.roomChange!.status, roomCondition: clamp(effect.roomChange!.roomCondition), temporaryEffects: [] } : room) : state.rooms;
-  const next = { ...state, guests, rooms, resources: addRecord(state.resources, effect.resources), hotelStats: addRecord(state.hotelStats, effect.hotelStats), reputations: addRecord(state.reputations, effect.reputations), flags: { ...state.flags, ...effect.flags, monster_threat: threat }, selectedNightEventId: event.id, selectedNightChoiceId: choice.id };
+  const next = { ...state, guests, rooms, resources: addRecord(state.resources, effect.resources), hotelStats: addRecord(state.hotelStats, effect.hotelStats), reputations: addRecord(state.reputations, effect.reputations), flags: { ...state.flags, ...effect.flags, monster_threat: threat }, fatherStoryProgress: clamp(state.fatherStoryProgress + Number(effect.fatherStoryProgress ?? 0)), selectedNightEventId: event.id, selectedNightChoiceId: choice.id };
   return { state: next, event, choice, entry: { day: state.day, type: "EVENT", message: `야간 사건 · ${event.title} · ${choice.label}`, relationshipChanges: effectiveRelationshipChanges } };
 }

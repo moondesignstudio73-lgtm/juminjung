@@ -4,6 +4,7 @@ import { resolveDay } from "../game/day-manager.ts";
 import { applyNightChoice, canChooseNightChoice, selectNightEvent } from "../game/night-event-manager.ts";
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
 import { dismissCutscene, queueNightEventCutscene } from "../game/cutscene-manager.ts";
+import { evaluateEndings } from "../game/ending-manager.ts";
 
 function withGuest() {
   const state = createInitialGameState();
@@ -205,6 +206,69 @@ test("207호 사건으로 사용할 수 없어진 객실 상태는 저장 복원
 
 test("207호 컷신은 사건 자체의 DAY 조건을 따르고 완료 날짜 경계에서 누락되지 않는다", () => {
   assert.equal(queueNightEventCutscene(createInitialGameState(), "room_body_discovery", "investigate_body", 9).activeCutsceneId, "room_body_discovery");
+});
+
+test("아버지 기록실 단서를 얻은 플레이만 DAY 20부터 91.3MHz 신호를 수신한다", () => {
+  const state = withGuest();
+  state.day = 19;
+  state.flags.father_secret_discovered = true;
+  assert.notEqual(selectNightEvent(state).id, "father_radio_signal");
+  state.day = 20;
+  assert.equal(selectNightEvent(state).id, "father_radio_signal");
+  state.flags.father_secret_discovered = false;
+  assert.notEqual(selectNightEvent(state).id, "father_radio_signal");
+});
+
+test("아버지 신호 역추적은 자원과 위험을 감수해 THE TRUTH 대체 단서를 만든다", () => {
+  const state = withGuest();
+  state.day = 20;
+  state.phase = "night";
+  Object.assign(state.flags, { father_secret_discovered: true, monster_origin_clue_1: true, vale_research_complete: true, lily_documents_decoded: true });
+  const before = { fuel: state.resources.fuel, parts: state.resources.parts, progress: state.fatherStoryProgress };
+  state.selectedNightEventId = "father_radio_signal";
+  state.selectedNightChoiceId = "trace_signal";
+  const resolved = resolveDay(state);
+  assert.equal(resolved.activeCutsceneId, "father_radio_signal");
+  assert.equal(resolved.flags.father_signal_traced, true);
+  assert.equal(resolved.flags.monster_origin_clue_2, true);
+  assert.equal(resolved.resources.fuel, before.fuel - 3);
+  assert.equal(resolved.resources.parts, before.parts - 1);
+  assert.equal(resolved.fatherStoryProgress, before.progress + 15);
+  assert.ok(evaluateEndings(resolved).available.includes("THE_TRUTH"));
+});
+
+test("아버지 신호에 응답하면 귀환 경로와 더 큰 위협이 열리고 사건은 반복되지 않는다", () => {
+  const state = withGuest();
+  state.day = 20;
+  state.flags.father_secret_discovered = true;
+  const beforeThreat = Number(state.flags.monster_threat ?? 0);
+  const beforeProgress = state.fatherStoryProgress;
+  const beforeSecurity = state.hotelStats.security;
+  const answered = applyNightChoice(state, "father_radio_signal", "answer_signal").state;
+  assert.equal(answered.flags.father_signal_answered, true);
+  assert.equal(answered.flags.father_return_route, true);
+  assert.equal(answered.flags.monster_threat, beforeThreat + 12);
+  assert.equal(answered.fatherStoryProgress, beforeProgress + 20);
+  assert.equal(answered.hotelStats.security, beforeSecurity - 3);
+  assert.equal(answered.guests[0].stress, state.guests[0].stress + 8);
+  assert.notEqual(selectNightEvent(answered).id, "father_radio_signal");
+});
+
+test("아버지 신호 응답의 스토리 진행도는 상한 100을 넘지 않는다", () => {
+  const state = withGuest();
+  state.day = 20;
+  state.fatherStoryProgress = 95;
+  state.flags.father_secret_discovered = true;
+  const answered = applyNightChoice(state, "father_radio_signal", "answer_signal").state;
+  assert.equal(answered.fatherStoryProgress, 100);
+});
+
+test("아버지 신호 조건이 충족되면 일반 발전기 위기보다 먼저 제시된다", () => {
+  const state = withGuest();
+  state.day = 20;
+  state.resources.fuel = 10;
+  state.flags.father_secret_discovered = true;
+  assert.equal(selectNightEvent(state).id, "father_radio_signal");
 });
 
 test("발전기 정전 실제 정산은 호텔 상태·치안을 낮추고 전용 컷신과 후속 플래그를 남긴다", () => {

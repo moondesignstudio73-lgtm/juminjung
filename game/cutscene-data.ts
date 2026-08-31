@@ -60,6 +60,17 @@ export const CUTSCENES: CutsceneDefinition[] = [
     imageAlt: "비 내리는 새벽의 낡은 JUJU HOTEL 207호에서 두 생존자가 시트로 완전히 덮인 시신과 창가에서 이어진 검은 흔적, 바닥의 황동 열쇠를 발견한 장면.",
   },
   {
+    id: "father_radio_signal",
+    triggerEventId: "father_radio_signal",
+    priority: 120,
+    kicker: "91.3 MHz · 01:13 AM",
+    title: "죽어 있던 주파수의 목소리",
+    body: "잡음 사이로 아버지만 쓰던 호출명이 세 번 반복됐다. 목소리는 대답하지 말라는 경고와 함께 서로 다른 세 중계기의 좌표를 차례로 읽었다. 지도에서 초록색 호텔 표식과 세 붉은 송신점을 연결하자, 붉은 삼각형은 호텔이 아니라 재난 최초 발생 구역을 에워쌌다. 세 송신기가 같은 기억을 되풀이하는 덫인지, 아버지가 자신의 위치를 숨긴 구조 신호인지는 아직 알 수 없었다.",
+    quote: "그 목소리는 집으로 돌아오겠다고 하지 않았다. 먼저 자신을 찾아내라고 했다.",
+    image: "/juminjung/assets/cutscenes/father-radio-signal-v1.png",
+    imageAlt: "폭우가 내리는 JUJU HOTEL 프런트에서 두 생존자가 갑자기 켜진 낡은 라디오와 세 송신 지점을 표시한 도시 지도를 바라보고, 깨진 창밖의 긴 그림자를 경계하는 장면.",
+  },
+  {
     id: "refugees_sheltered",
     triggerEventId: "refugee_wave",
     triggerChoiceId: "shelter",
