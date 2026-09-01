@@ -25,7 +25,7 @@ import { buildFacility, canBuildFacility, canPerformHotelAction, getHotelActionD
 import { canChooseNightChoice, getEffectiveNightChoice, selectNightEvent } from '@/game/night-event-manager';
 import { getHotelLogEntries } from '@/game/hotel-log-manager';
 import { applyVisitorCheckInBenefits, getNextRevisitDay, getVisitorReaction, getVisitorReactionById, markVisitorRefused, prepareGuestCheckIn } from '@/game/visitor-manager';
-import { advanceDailyVisitorQueue, getCurrentQueuedVisitor, hasPendingDailyVisitors, prepareDailyVisitorQueue, recordVisitorDecision, updateVisitorFinalState } from '@/game/visitor-queue-manager';
+import { advanceDailyVisitorQueue, getCurrentQueuedVisitor, getDailyVisitorCountBreakdown, hasPendingDailyVisitors, prepareDailyVisitorQueue, recordVisitorDecision, updateVisitorFinalState } from '@/game/visitor-queue-manager';
 import { getGuestVisualState, getNightEventPortraits, getStoryEventExpression } from '@/game/guest-visual-manager';
 import { getCutscene } from '@/game/cutscene-data';
 import { dismissCutscene } from '@/game/cutscene-manager';
@@ -63,6 +63,7 @@ export default function Home() {
   const stayingGuests = getStayingGuestsForManagement(save.guests);
   const managedGuest = getManagedGuest(save.guests, managedGuestId) ?? visitor;
   const activeCutscene = getCutscene(save.activeCutsceneId);
+  const visitorFlow = getDailyVisitorCountBreakdown(save);
 
   useEffect(() => {
     const restored = loadBrowserGame();
@@ -213,6 +214,7 @@ export default function Home() {
             <div><dt>위험도</dt><dd>{visitor.riskLevel}</dd></div>
           </dl>
           <div className="clue-count">단서 {save.asked.length + save.inspected.length} / {visitor.questions.length + visitor.offeredItems.length}<small>숨겨진 특성은 조사 전 표시되지 않습니다.</small></div>
+          {visitorFlow.radioSources.length>0&&<div className="radio-exposure"><Radio size={13}/><div><span>{visitorFlow.radioAppliedBonus>0?`라디오 유입 +${visitorFlow.radioAppliedBonus}`:'라디오 유입 · 오늘 상한 도달'}</span><small>{visitorFlow.radioSources.map((source)=>source.label).join(' · ')} · 일일 상한 6명</small></div></div>}
           {visitor.discoveredTraits.length>0&&<div className="verified-traits"><span>확인된 특성</span>{visitor.discoveredTraits.map((trait)=><b key={trait}>{getVisitorTraitLabel(visitor.id,trait)}</b>)}</div>}
           {visitorReaction&&<div className="faction-reaction"><span>{visitorReaction.faction.toUpperCase()} REACTION</span><strong>{visitorReaction.label}</strong><small>Trust {visitorReaction.trustDelta>0?'+':''}{visitorReaction.trustDelta}{visitorReaction.offerBonus?' · 추가 제안 있음':''}</small></div>}
         </aside>

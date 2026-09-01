@@ -6,6 +6,7 @@ import { createInitialGameState, restoreGameState, serializeGameState } from "..
 import { dismissCutscene, queueNightEventCutscene } from "../game/cutscene-manager.ts";
 import { evaluateEndings } from "../game/ending-manager.ts";
 import { getMonsterCodexState } from "../game/monster-codex-manager.ts";
+import { getDailyVisitorCountBreakdown } from "../game/visitor-queue-manager.ts";
 
 function withGuest() {
   const state = createInitialGameState();
@@ -468,6 +469,7 @@ test("되돌아온 증언을 검증하면 연료를 쓰고 보강 단서·위협
   assert.equal(result.state.resources.parts, state.resources.parts + 1);
   assert.equal(result.state.flags.truth_responses_resolved, true);
   assert.equal(result.state.flags.survivor_testimonies_verified, true);
+  assert.ok(getDailyVisitorCountBreakdown(result.state).radioSources.some((source) => source.id === "survivor_testimonies_verified"));
   assert.equal(result.state.flags.monster_origin_clue_2, true);
   assert.equal(result.state.flags.monster_threat, 5);
   assert.equal(result.state.fatherStoryProgress, 45);

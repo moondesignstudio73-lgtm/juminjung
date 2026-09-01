@@ -12,7 +12,7 @@ import { getEffectiveNightChoice, selectNightEvent } from "../game/night-event-m
 import { assignGuest } from "../game/room-manager.ts";
 import { recalculateRoomEffects } from "../game/aura-effect-manager.ts";
 import { getEligibleVisitor } from "../game/visitor-manager.ts";
-import { recordVisitorDecision } from "../game/visitor-queue-manager.ts";
+import { getDailyVisitorCountBreakdown, prepareDailyVisitorQueue, recordVisitorDecision } from "../game/visitor-queue-manager.ts";
 
 function conflictState(guestId: string) {
   const state = createInitialGameState();
@@ -910,22 +910,74 @@ test("Hazel의 복수 원정은 지속 경보망 효과와 전용 컷신을 열�
   assert.equal(result.activeCutsceneId, null);
 });
 
-test("Thomas의 마이크로그리드는 안정 전력망과 전용 컷신을 열고 저장된다", () => {
-  const result = applyStoryChoice(resolutionState("thomas"), "thomas-grid", "microgrid").state;
+test("토머스의 마이크로그리드는 안정 전력망을 열고 자신의 라디오 노출만 닫는다", () => {
+  const state=resolutionState("thomas");
+  state.flags.thomas_radio_grid=true;
+  state.flags.safe_routes_mapped=true;
+  const choice=STORY_CHOICE_EVENTS.find((event)=>event.id==="thomas-grid")!.choices.find((candidate)=>candidate.id==="microgrid")!;
+  for (const term of ["연료 3","Trust +12","Security +8","Hotel Condition +8","연료 소모 1","저연료 고장","토머스가 만든 라디오 출처","community 평판 +7","refugee 평판 +5","다른 라디오 출처가 활성이라면 공통 +1은 유지","다른 주민이 만든 안전 통로도 유지"]) assert.ok(choice.description.includes(term),term);
+  const poor=resolutionState("thomas");
+  poor.resources.fuel=2;
+  assert.equal(canChooseStoryChoice(poor,choice),false);
+  const result = applyStoryChoice(state, "thomas-grid", "microgrid").state;
   assert.equal(result.flags.thomas_microgrid, true);
   assert.equal(result.flags.generator_network_stable, true);
+  assert.equal(result.flags.thomas_radio_grid, false);
+  assert.equal(result.flags.safe_routes_mapped, true);
+  assert.equal(getDailyVisitorCountBreakdown(result).radioBonus,0);
   assert.equal(result.activeCutsceneId, "thomas_microgrid_online");
   assert.equal(getCutscene(result.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/thomas-microgrid-online-v1.png");
+  const otherRadio=resolutionState("thomas");
+  otherRadio.flags.thomas_radio_grid=true;
+  otherRadio.flags.lily_truth_broadcast=true;
+  const withLily=applyStoryChoice(otherRadio,"thomas-grid","microgrid").state;
+  assert.deepEqual(getDailyVisitorCountBreakdown(withLily).radioSources.map((source)=>source.id),["lily_truth_broadcast"]);
+  assert.equal(getDailyVisitorCountBreakdown(withLily).radioBonus,1);
   const restored = restoreGameState(serializeGameState(result));
   assert.equal(restored.flags.generator_network_stable, true);
   assert.equal(restored.activeCutsceneId, "thomas_microgrid_online");
 });
 
-test("Thomas의 라디오 중계망은 마이크로그리드 효과와 전용 컷신을 열지 않는다", () => {
-  const result = applyStoryChoice(resolutionState("thomas"), "thomas-grid", "signal").state;
+test("토머스의 라디오 중계망은 다음 DAY 방문을 늘리고 마이크로그리드를 닫는 전용 컷씬을 연다", () => {
+  let state=resolutionState("thomas");
+  state.flags.thomas_microgrid=true;
+  state.flags.generator_network_stable=true;
+  state=prepareDailyVisitorQueue(state);
+  const currentDayQueue=[...state.dailyVisitorQueue];
+  const choice=STORY_CHOICE_EVENTS.find((event)=>event.id==="thomas-grid")!.choices.find((candidate)=>candidate.id==="signal")!;
+  for (const term of ["Trust +10","community 평판 +7","refugee 평판 +5","안전 통로","다음 DAY","공통 라디오 유입 보너스 +1","상한","중첩되지 않음","Monster Threat","5 증가","연료 3","Security +8","Hotel Condition +8","연료 소모 1","저연료 고장","영구히 포기"]) assert.ok(choice.description.includes(term),term);
+  const result = applyStoryChoice(state, "thomas-grid", "signal").state;
   assert.equal(result.flags.thomas_radio_grid, true);
-  assert.equal(result.flags.generator_network_stable, undefined);
-  assert.equal(result.activeCutsceneId, null);
+  assert.equal(result.flags.safe_routes_mapped, true);
+  assert.equal(result.flags.thomas_microgrid, false);
+  assert.equal(result.flags.generator_network_stable, false);
+  assert.equal(result.flags.monster_threat,5);
+  assert.equal(result.reputations.community,7);
+  assert.equal(result.reputations.refugee,5);
+  assert.deepEqual(result.dailyVisitorQueue,currentDayQueue);
+  assert.deepEqual(getDailyVisitorCountBreakdown(result).radioSources.map((source)=>source.id),["thomas_radio_grid"]);
+  assert.equal(result.activeCutsceneId, "thomas_radio_relay");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/thomas-radio-relay-v1.png");
+  const nextDay={...result,day:result.day+1,phase:"desk" as const};
+  const nextDayWithoutRelay={...nextDay,flags:{...nextDay.flags,thomas_radio_grid:false}};
+  assert.equal(getDailyVisitorCountBreakdown(nextDay).total,Math.min(6,getDailyVisitorCountBreakdown(nextDayWithoutRelay).total+1));
+  const prepared=prepareDailyVisitorQueue(nextDay);
+  assert.equal(prepared.visitorQueueDay,nextDay.day);
+  assert.equal(prepared.dailyVisitorQueue.length,getDailyVisitorCountBreakdown(nextDay).total);
+  const restored = restoreGameState(serializeGameState(prepared));
+  assert.equal(restored.flags.thomas_radio_grid,true);
+  assert.deepEqual(restored.dailyVisitorQueue,prepared.dailyVisitorQueue);
+  assert.equal(restored.activeCutsceneId, "thomas_radio_relay");
+});
+
+test("토머스의 두 전력망 결말 컷씬은 다른 장면 뒤에 큐로 저장되어 유실되지 않는다", () => {
+  for (const [choiceId,cutsceneId] of [["microgrid","thomas_microgrid_online"],["signal","thomas_radio_relay"]] as const) {
+    const state=resolutionState("thomas");
+    state.activeCutsceneId="first_night";
+    const resolved=applyStoryChoice(state,"thomas-grid",choiceId).state;
+    assert.deepEqual(resolved.queuedCutsceneIds,[cutsceneId]);
+    assert.equal(dismissCutscene(restoreGameState(serializeGameState(resolved))).activeCutsceneId,cutsceneId);
+  }
 });
 
 test("Noah의 회복 경로는 공동 식당과 전용 컷신을 열고 저장된다", () => {

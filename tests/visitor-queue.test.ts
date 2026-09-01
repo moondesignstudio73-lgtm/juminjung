@@ -4,9 +4,10 @@ import { createGuests } from "../game/guest-data.ts";
 import { createNormalVisitor, NORMAL_VISITOR_JOBS } from "../game/normal-visitor-data.ts";
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
 import {
-  advanceDailyVisitorQueue, getCurrentQueuedVisitor, getDailyVisitorCount, getEligibleMainVisitors, getMainVisitorChance,
+  advanceDailyVisitorQueue, getCurrentQueuedVisitor, getDailyVisitorCount, getDailyVisitorCountBreakdown, getEligibleMainVisitors, getMainVisitorChance,
   hasPendingDailyVisitors, prepareDailyVisitorQueue, recordVisitorDecision, selectMainVisitor,
 } from "../game/visitor-queue-manager.ts";
+import { getActiveVisitorRadioExposureSources } from "../game/visitor-queue-data.ts";
 
 const dayState = (day=1,seed=12345) => {
   const state=createInitialGameState();
@@ -49,10 +50,54 @@ test("가중 일일 방문 수는 2~6명이며 3~4명이 가장 흔하다",()=>{
 test("붕괴·평판·라디오는 방문을 늘리고 고위협·폭풍은 같은 계산에서 줄인다",()=>{
   const base=dayState(12,81);
   const baseCount=getDailyVisitorCount(base);
-  const attractive={...base,worldState:"COLLAPSE" as const,reputations:{...base.reputations,community:50},flags:{...base.flags,lily_public_broadcast:true}};
+  const attractive={...base,worldState:"COLLAPSE" as const,reputations:{...base.reputations,community:50},flags:{...base.flags,lily_truth_broadcast:true}};
   const hostile={...base,flags:{...base.flags,monster_threat:90,severe_storm:true}};
   assert.equal(getDailyVisitorCount(attractive),Math.min(6,baseCount+3));
   assert.equal(getDailyVisitorCount(hostile),Math.max(2,baseCount-2));
+});
+
+test("릴리·토머스·검증된 생존자 무전은 하나의 라디오 노출 계약으로 방문 수를 최대 1만 늘린다",()=>{
+  const base=dayState(13,91);
+  const lily={...base,flags:{...base.flags,lily_truth_broadcast:true}};
+  const thomas={...base,flags:{...base.flags,thomas_radio_grid:true}};
+  const survivor={...base,flags:{...base.flags,survivor_testimonies_verified:true}};
+  const stacked={...base,flags:{...base.flags,lily_truth_broadcast:true,thomas_radio_grid:true,survivor_testimonies_verified:true}};
+  assert.deepEqual(getActiveVisitorRadioExposureSources(lily.flags).map((source)=>source.id),["lily_truth_broadcast"]);
+  assert.deepEqual(getActiveVisitorRadioExposureSources(thomas.flags).map((source)=>source.label),["토머스의 라디오 중계망"]);
+  assert.deepEqual(getActiveVisitorRadioExposureSources(survivor.flags).map((source)=>source.id),["survivor_testimonies_verified"]);
+  assert.equal(getDailyVisitorCountBreakdown(stacked).radioSources.length,3);
+  for (const state of [lily,thomas,survivor,stacked]) {
+    const breakdown=getDailyVisitorCountBreakdown(state);
+    assert.equal(breakdown.radioBonus,1);
+    assert.equal(breakdown.total,Math.min(6,getDailyVisitorCount(base)+1));
+    assert.equal(breakdown.radioAppliedBonus,breakdown.total-getDailyVisitorCount(base));
+  }
+  assert.equal(getDailyVisitorCountBreakdown({...base,flags:{...base.flags,lily_truth_archived:true,lily_truth_broadcast:false}}).radioBonus,0);
+});
+
+test("방문자 상한에 이미 도달하면 라디오 출처는 남아도 오늘 적용 증가는 0이다",()=>{
+  const base=Array.from({length:256},(_,index)=>dayState(20,index+1)).find((state)=>getDailyVisitorCountBreakdown(state).baseCount===4);
+  assert.ok(base);
+  const capped={...base,worldState:"COLLAPSE" as const,reputations:{...base.reputations,community:50},flags:{...base.flags,thomas_radio_grid:true}};
+  const breakdown=getDailyVisitorCountBreakdown(capped);
+  assert.equal(breakdown.radioBonus,1);
+  assert.equal(breakdown.radioAppliedBonus,0);
+  assert.equal(breakdown.total,6);
+});
+
+test("옛 라디오 플래그는 정식 출처로 이관되며 중복 합산되지 않는다",()=>{
+  const legacyTestimony=dayState(14,76);
+  legacyTestimony.flags.radio_survivor_testimony=true;
+  assert.deepEqual(getActiveVisitorRadioExposureSources(legacyTestimony.flags).map((source)=>source.id),["survivor_testimonies_verified"]);
+  const state=dayState(14,77);
+  state.flags.lily_public_broadcast=true;
+  state.flags.lily_truth_broadcast=true;
+  const sources=getActiveVisitorRadioExposureSources(state.flags);
+  assert.deepEqual(sources.map((source)=>source.id),["lily_truth_broadcast"]);
+  assert.equal(getDailyVisitorCountBreakdown(state).radioBonus,1);
+  const restored=restoreGameState(serializeGameState(prepareDailyVisitorQueue(state)));
+  assert.deepEqual(restored.dailyVisitorQueue,prepareDailyVisitorQueue(state).dailyVisitorQueue);
+  assert.equal(getDailyVisitorCountBreakdown(restored).radioBonus,1);
 });
 
 test("하루 큐는 일반 손님 슬롯과 최대 한 명의 MAIN 방문자로 구성된다",()=>{

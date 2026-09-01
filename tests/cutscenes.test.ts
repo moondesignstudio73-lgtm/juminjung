@@ -77,6 +77,13 @@ test("Eleanor의 최종 진료 선택은 상설 진료소와 순회 진료의 �
   assert.ok(scenes.every((scene) => scene.imageAlt.includes("엘리너 리드")));
 });
 
+test("토머스의 최종 전력 선택은 마이크로그리드와 라디오 중계망의 서로 다른 전용 원화를 소유한다", () => {
+  const scenes = CUTSCENES.filter((cutscene) => cutscene.triggerStoryEventId === "thomas-grid");
+  assert.deepEqual(scenes.map((scene) => scene.triggerStoryChoiceId).sort(), ["microgrid", "signal"]);
+  assert.equal(new Set(scenes.map((scene) => scene.image)).size, 2);
+  assert.ok(scenes.every((scene) => scene.imageAlt.includes("토머스 그레이")));
+});
+
 test("Owen의 최종 선택은 자치 방위대와 영구 탈출의 서로 다른 전용 원화를 소유한다", () => {
   const scenes = CUTSCENES.filter((cutscene) => cutscene.triggerStoryEventId === "owen-future");
   assert.deepEqual(scenes.map((scene) => scene.triggerStoryChoiceId).sort(), ["escape", "resistance"]);

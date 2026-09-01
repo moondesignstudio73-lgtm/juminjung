@@ -1,6 +1,7 @@
 import { createNormalVisitor } from "./normal-visitor-data.ts";
 import type { EventFlags, GameState, Guest, Resources, VisitorDecision, VisitorHistoryRecord, WorldState } from "./types.ts";
 import { getNextRevisitDay, REVISIT_REFUSAL_DELAY_DAYS } from "./visitor-manager.ts";
+import { getActiveVisitorRadioExposureSources, type VisitorRadioExposureSource } from "./visitor-queue-data.ts";
 
 export const VISITOR_COUNT_WEIGHTS = [
   { count:2, weight:15 },
@@ -56,16 +57,35 @@ const returnReadyDay = (guest:Guest) => {
 };
 const isReturnReady = (guest:Guest,day:number) => guest.alive&&guest.revisitPolicy!=="NEVER"&&(guest.status==="CHECKED_OUT"||guest.status==="REFUSED")&&day>=returnReadyDay(guest)+(guest.revisitPolicy==="CONDITIONAL"?3:0)&&day>=Number(guest.storyFlags.revisit_refused_until??0);
 
-export function getDailyVisitorCount(state:Pick<GameState,"visitorSeed"|"day"|"worldState"|"reputations"|"flags">):number {
+type VisitorCountState = Pick<GameState,"visitorSeed"|"day"|"worldState"|"reputations"|"flags">;
+export type DailyVisitorCountBreakdown = {
+  baseCount:number;
+  worldBonus:number;
+  reputationBonus:number;
+  radioBonus:number;
+  radioAppliedBonus:number;
+  radioSources:VisitorRadioExposureSource[];
+  threatPenalty:number;
+  stormPenalty:number;
+  total:number;
+};
+
+export function getDailyVisitorCountBreakdown(state:VisitorCountState):DailyVisitorCountBreakdown {
   const random=seeded(hash(`${state.visitorSeed}:count:${state.day}`));
-  const selected=VISITOR_COUNT_WEIGHTS[weightedIndex(VISITOR_COUNT_WEIGHTS.map((entry)=>entry.weight),random)].count;
+  const baseCount=VISITOR_COUNT_WEIGHTS[weightedIndex(VISITOR_COUNT_WEIGHTS.map((entry)=>entry.weight),random)].count;
   const worldBonus:Partial<Record<WorldState,number>>={COLLAPSE:1,CRITICAL:1,END_STAGE:1};
+  const activeWorldBonus=Number(worldBonus[state.worldState]??0);
   const reputationBonus=state.reputations.community>=40||state.reputations.refugee>=40?1:0;
-  const radioBonus=state.flags.lily_public_broadcast===true||state.flags.radio_survivor_testimony===true?1:0;
+  const radioSources=getActiveVisitorRadioExposureSources(state.flags);
+  const radioBonus=radioSources.length>0?1:0;
   const threatPenalty=Number(state.flags.monster_threat??0)>=75?1:0;
   const stormPenalty=state.flags.severe_storm===true?1:0;
-  return clamp(selected+Number(worldBonus[state.worldState]??0)+reputationBonus+radioBonus-threatPenalty-stormPenalty,2,6);
+  const totalWithoutRadio=clamp(baseCount+activeWorldBonus+reputationBonus-threatPenalty-stormPenalty,2,6);
+  const total=clamp(baseCount+activeWorldBonus+reputationBonus+radioBonus-threatPenalty-stormPenalty,2,6);
+  return { baseCount, worldBonus:activeWorldBonus, reputationBonus, radioBonus, radioAppliedBonus:total-totalWithoutRadio, radioSources, threatPenalty, stormPenalty, total };
 }
+
+export const getDailyVisitorCount = (state:VisitorCountState):number => getDailyVisitorCountBreakdown(state).total;
 
 export function getEligibleMainVisitors(state:Pick<GameState,"guests"|"day"|"flags">):Guest[] {
   const appeared=new Set(state.guests.filter((guest)=>guest.status!=="WAITING").map((guest)=>guest.id));
