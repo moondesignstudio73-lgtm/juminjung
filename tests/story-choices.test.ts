@@ -11,6 +11,7 @@ import { getCutscene } from "../game/cutscene-data.ts";
 import { getEffectiveNightChoice, selectNightEvent } from "../game/night-event-manager.ts";
 import { assignGuest } from "../game/room-manager.ts";
 import { recalculateRoomEffects } from "../game/aura-effect-manager.ts";
+import { getNightFoodDemand } from "../game/aura-night-manager.ts";
 import { getEligibleVisitor } from "../game/visitor-manager.ts";
 import { getDailyVisitorCountBreakdown, prepareDailyVisitorQueue, recordVisitorDecision } from "../game/visitor-queue-manager.ts";
 
@@ -983,29 +984,61 @@ test("토머스의 두 전력망 결말 컷씬은 다른 장면 뒤에 큐로 �
 test("Noah의 회복 경로는 공동 식당과 전용 컷신을 열고 저장된다", () => {
   let state=applyStoryChoice(conflictState("noah"),"noah-cellar","rehabilitate").state;
   state.guests=state.guests.map((guest)=>guest.id==="noah"?{...guest,remainingNights:1}:guest);
+  state.flags.noah_ration_system=true;
+  const choice=STORY_CHOICE_EVENTS.find((event)=>event.id==="noah-table")!.choices.find((candidate)=>candidate.id==="community_kitchen")!;
+  for(const term of ["Trust +15","Hotel Condition +10","community 평판 +9","humanitarian 평판 +5","투숙객 2명 이상","매일 식량 1","즉시 식량 4","Food Sustainability +3","Aura 보정 수요 3마다 1","최대 2","영구히 포기"]) assert.ok(choice.description.includes(term),term);
   const result=applyStoryChoice(state,"noah-table","community_kitchen").state;
   assert.equal(result.flags.noah_recovery_started,true);
   assert.equal(result.flags.noah_community_kitchen,true);
+  assert.equal(result.flags.noah_ration_system,false);
   assert.equal(result.activeCutsceneId,"noah_community_table");
   assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/noah-community-table-v1.png");
   const restored=restoreGameState(serializeGameState(result));
   assert.equal(restored.flags.noah_community_kitchen,true);
+  assert.equal(restored.flags.noah_ration_system,false);
   assert.equal(restored.activeCutsceneId,"noah_community_table");
 });
 
-test("부엌에서 내보낸 Noah는 공동 식당을 열 수 없지만 보존식 연구는 가능하다", () => {
+test("부엌에서 내보낸 Noah의 보존식 연구는 실제 대규모 식량 수요와 전용 컷씬에 연결된다", () => {
   let state=applyStoryChoice(conflictState("noah"),"noah-cellar","dismiss").state;
   state.guests=state.guests.map((guest)=>guest.id==="noah"?{...guest,remainingNights:1}:guest);
+  state.flags.noah_community_kitchen=true;
   const pending=getPendingStoryChoice(state)!;
   const kitchen=pending.choices.find((choice)=>choice.id==="community_kitchen")!;
   const ration=pending.choices.find((choice)=>choice.id==="ration_lab")!;
+  for(const term of ["부엌 복귀 여부와 무관하게","Trust +8","식량 +4","Food Sustainability +3","객실 Aura 계산 뒤","식량 수요 3마다 1","매일 최대 2","수요가 3 미만","Trust가 7 낮고","Hotel Condition +10","community 평판 +9","humanitarian 평판 +5","영구히 포기"]) assert.ok(ration.description.includes(term),term);
   assert.equal(canChooseStoryChoice(state,kitchen),false);
   assert.equal(canChooseStoryChoice(state,ration),true);
   assert.throws(()=>applyStoryChoice(state,"noah-table","community_kitchen"),/선행 사건/);
+  const foodBefore=state.resources.food;
   const result=applyStoryChoice(state,"noah-table","ration_lab").state;
+  assert.equal(result.resources.food,foodBefore+4);
   assert.equal(result.flags.noah_ration_system,true);
-  assert.equal(result.flags.noah_community_kitchen,undefined);
-  assert.equal(result.activeCutsceneId,null);
+  assert.equal(result.flags.noah_community_kitchen,false);
+  assert.equal(result.activeCutsceneId,"noah_ration_lab");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/noah-ration-lab-v1.png");
+  const residentIds=["noah","walter","claire","mia","samuel","ruth"];
+  const populated={...result,guests:result.guests.map((guest)=>{
+    const index=residentIds.indexOf(guest.id);
+    return index>=0?{...guest,status:"STAYING" as const,currentRoomNumber:101+index}:{...guest,status:"WAITING" as const,currentRoomNumber:null};
+  })};
+  assert.deepEqual(getNightFoodDemand(populated.rooms,populated.guests,populated.flags),{demand:4,saving:2});
+  const restored=restoreGameState(serializeGameState(populated));
+  assert.equal(restored.flags.noah_ration_system,true);
+  assert.equal(restored.flags.noah_community_kitchen,false);
+  assert.equal(restored.activeCutsceneId,"noah_ration_lab");
+  assert.deepEqual(getNightFoodDemand(restored.rooms,restored.guests,restored.flags),{demand:4,saving:2});
+});
+
+test("Noah의 두 식량 결말 컷씬은 다른 장면 뒤에 큐로 저장되어 유실되지 않는다", () => {
+  for(const [conflictChoiceId,resolutionChoiceId,cutsceneId] of [["rehabilitate","community_kitchen","noah_community_table"],["dismiss","ration_lab","noah_ration_lab"]] as const){
+    let state=applyStoryChoice(conflictState("noah"),"noah-cellar",conflictChoiceId).state;
+    state.guests=state.guests.map((guest)=>guest.id==="noah"?{...guest,remainingNights:1}:guest);
+    state.activeCutsceneId="first_night";
+    const resolved=applyStoryChoice(state,"noah-table",resolutionChoiceId).state;
+    assert.deepEqual(resolved.queuedCutsceneIds,[cutsceneId]);
+    assert.equal(dismissCutscene(restoreGameState(serializeGameState(resolved))).activeCutsceneId,cutsceneId);
+  }
 });
 
 test("Hayes에게 지휘권을 넘기면 군정 점령 경로와 전용 인계 장면이 열린다", () => {

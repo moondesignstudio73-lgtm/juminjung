@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { getInjuryRecovery, recalculateRoomEffects } from "../game/aura-effect-manager.ts";
-import { getNightFoodDemand, getNightWaterDemand, isCareTeamEligible, isNurseryEligible, resolveAuraNight } from "../game/aura-night-manager.ts";
+import { getNightFoodDemand, getNightFoodDemandBreakdown, getNightWaterDemand, isCareTeamEligible, isNurseryEligible, resolveAuraNight } from "../game/aura-night-manager.ts";
 import { resolveDay } from "../game/day-manager.ts";
 import { createInitialGameState } from "../game/save-manager.ts";
 import { assignGuest } from "../game/room-manager.ts";
@@ -104,6 +104,39 @@ test("공동 식당은 혼자 남은 투숙객의 식량 수요를 0으로 만�
   const result = resolveAuraNight(state.rooms,state.guests,1,"STABLE",0,{noah_community_kitchen:true});
   assert.equal(result.foodDemand,1);
   assert.equal(result.communityKitchenFoodSaving,0);
+});
+
+test("중립 foodUse Aura에서 Noah의 보존식 연구는 식량 수요 3마다 1을 절감하고 매일 최대 2에서 멈춘다", () => {
+  const two=place([["walter",101],["claire",102]]);
+  assert.deepEqual(getNightFoodDemand(two.rooms,two.guests,{noah_ration_system:true}),{demand:2,saving:0});
+  const three=place([["walter",101],["claire",102],["mia",103]]);
+  assert.deepEqual(getNightFoodDemandBreakdown(three.rooms,three.guests,{noah_ration_system:true}),{demand:2,saving:1,communityKitchenSaving:0,rationLabSaving:1});
+  const six=place([["walter",101],["claire",102],["mia",103],["daniel",104],["samuel",105],["ruth",106]]);
+  assert.deepEqual(getNightFoodDemandBreakdown(six.rooms,six.guests,{noah_ration_system:true}),{demand:4,saving:2,communityKitchenSaving:0,rationLabSaving:2});
+  const nine=place([["walter",101],["claire",102],["mia",103],["daniel",104],["samuel",105],["ruth",106],["grace",107],["eli",108],["hazel",109]]);
+  assert.deepEqual(getNightFoodDemand(nine.rooms,nine.guests,{noah_ration_system:true}),{demand:7,saving:2});
+});
+
+test("보존식 임계값은 투숙객 수가 아니라 Aura 보정 뒤 식량 수요를 따른다", () => {
+  const twoResidents=place([["walter",101],["claire",102]]);
+  twoResidents.rooms=twoResidents.rooms.map((room)=>room.roomNumber===101?{
+    ...room,
+    permanentEffects:[...room.permanentEffects,{id:"test-extra-ration",sourceGuestId:"walter",name:"추가 배급",metric:"foodUse",operation:"ADD",value:100}],
+  }:room);
+  assert.deepEqual(getNightFoodDemandBreakdown(twoResidents.rooms,twoResidents.guests,{noah_ration_system:true}),{demand:2,saving:1,communityKitchenSaving:0,rationLabSaving:1});
+
+  const threeResidents=place([["walter",101],["claire",102],["mia",103]]);
+  threeResidents.rooms=threeResidents.rooms.map((room)=>room.roomNumber===101||room.roomNumber===102?{
+    ...room,
+    permanentEffects:[...room.permanentEffects,{id:`test-low-ration-${room.roomNumber}`,sourceGuestId:room.guestId!,name:"절약 배급",metric:"foodUse",operation:"ADD",value:-100}],
+  }:room);
+  assert.deepEqual(getNightFoodDemandBreakdown(threeResidents.rooms,threeResidents.guests,{noah_ration_system:true}),{demand:2,saving:0,communityKitchenSaving:0,rationLabSaving:0});
+});
+
+test("서로 배타적인 Noah 결말 플래그가 함께 남아도 식량 절감은 중첩되지 않는다", () => {
+  const state=place([["walter",101],["claire",102],["mia",103],["daniel",104],["samuel",105],["ruth",106]]);
+  const result=getNightFoodDemandBreakdown(state.rooms,state.guests,{noah_community_kitchen:true,noah_ration_system:true});
+  assert.deepEqual(result,{demand:5,saving:1,communityKitchenSaving:1,rationLabSaving:0});
 });
 
 test("Rosa의 공동 생활조는 배정된 투숙객 두 명 이상일 때 물 수요를 1 절감한다", () => {
@@ -526,6 +559,19 @@ test("DAY 정산은 공동 식당의 실제 식량 절감과 공개 배급 로�
   const resolved=resolveDay(state);
   assert.equal(resolved.lastDaySummary?.consumed.food,1);
   assert.ok(resolved.eventHistory.some((entry)=>entry.message==="공동 식당 배급 · 식량 1 절감"));
+});
+
+test("DAY 정산은 보존식 연구의 실제 최대 절감과 전용 장부 기록을 반영한다", () => {
+  const state=place([["walter",101],["claire",102],["mia",103],["daniel",104],["samuel",105],["ruth",106]]);
+  state.phase="night";
+  state.flags.noah_ration_system=true;
+  state.selectedNightEventId="quiet_watch";
+  state.selectedNightChoiceId="rest";
+  state.guests=state.guests.map((guest)=>guest.status==="STAYING"?{...guest,remainingNights:2}:guest);
+  const resolved=resolveDay(state);
+  assert.equal(resolved.lastDaySummary?.consumed.food,4);
+  assert.ok(resolved.eventHistory.some((entry)=>entry.message==="보존식 연구 · 식량 2 절감"));
+  assert.equal(resolved.eventHistory.some((entry)=>entry.message.startsWith("공동 식당 배급")),false);
 });
 
 test("DAY 정산은 공동 생활조의 실제 물 절감과 배급 로그를 반영한다", () => {

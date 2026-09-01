@@ -18,6 +18,7 @@ export type AuraNightResolution = {
   pathfinderThreatReduction:number;
   researchPredictionThreatReduction:number;
   communityKitchenFoodSaving:number;
+  rationLabFoodSaving:number;
   civilGuardSecurityGain:number;
   civilGuardCrimeReduction:number;
   careTeamGuestIds:string[];
@@ -29,11 +30,13 @@ const clamp = (value:number,min=0,max=100) => Math.max(min,Math.min(max,value));
 const effectsFor = (room:Room|undefined, metric:AuraMetric) => room ? [...room.permanentEffects,...room.temporaryEffects].filter((effect)=>effect.metric===metric) : [];
 const additiveValue = (room:Room|undefined, metric:AuraMetric) => effectsFor(room,metric).reduce((sum,effect)=>sum+effect.value,0);
 const diseaseBaseChance:Record<WorldState,number> = {STABLE:2,UNREST:6,COLLAPSE:12,CRITICAL:20,END_STAGE:28};
-const stableGuestSeed = (guestId:string) => [...guestId].reduce((seed,character)=>(seed*31+character.charCodeAt(0))%100,0);
+const stableGuestSeed = (guestId:string) => Array.from(guestId).reduce((seed,character)=>(seed*31+character.charCodeAt(0))%100,0);
 export const ELEANOR_CLINIC_DISEASE_REDUCTION = 5;
 export const ELEANOR_MOBILE_MEDIC_HEALTH_RECOVERY = 5;
 export const PERIMETER_ALARM_THREAT_REDUCTION = 3;
 export const COMMUNITY_KITCHEN_FOOD_SAVING = 1;
+export const NOAH_RATION_LAB_DEMAND_PER_SAVING = 3;
+export const NOAH_RATION_LAB_MAX_FOOD_SAVING = 2;
 export const CIVIL_GUARD_SECURITY_GAIN = 2;
 export const CIVIL_GUARD_CRIME_REDUCTION = 2;
 export const CARE_TEAM_HEALTH_RECOVERY = 3;
@@ -52,15 +55,26 @@ export function isNurseryEligible(guest:Guest):boolean {
   return guest.age<18||guest.baseTraits.includes("Pregnant");
 }
 
-export function getNightFoodDemand(rooms:Room[], guests:Guest[], flags:EventFlags={}):{demand:number;saving:number} {
+export type NightFoodDemandBreakdown = { demand:number; saving:number; communityKitchenSaving:number; rationLabSaving:number };
+
+export function getNightFoodDemandBreakdown(rooms:Room[], guests:Guest[], flags:EventFlags={}):NightFoodDemandBreakdown {
   const staying = guests.filter((guest)=>guest.status==="STAYING"&&guest.currentRoomNumber!==null);
   const foodUnits = staying.reduce((total,guest)=>{
     const room = rooms.find((candidate)=>candidate.roomNumber===guest.currentRoomNumber);
     return total+Math.max(.25,1+additiveValue(room,"foodUse")/100);
   },0);
-  const demandBeforeKitchen = Math.ceil(foodUnits);
-  const saving = flags.noah_community_kitchen===true&&staying.length>=2 ? Math.min(COMMUNITY_KITCHEN_FOOD_SAVING,demandBeforeKitchen) : 0;
-  return {demand:demandBeforeKitchen-saving,saving};
+  const demandBeforePrograms = Math.ceil(foodUnits);
+  const communityKitchenSaving = flags.noah_community_kitchen===true&&staying.length>=2 ? Math.min(COMMUNITY_KITCHEN_FOOD_SAVING,demandBeforePrograms) : 0;
+  const rationLabSaving = flags.noah_ration_system===true&&communityKitchenSaving===0
+    ? Math.min(NOAH_RATION_LAB_MAX_FOOD_SAVING,Math.floor(demandBeforePrograms/NOAH_RATION_LAB_DEMAND_PER_SAVING))
+    : 0;
+  const saving = communityKitchenSaving+rationLabSaving;
+  return {demand:demandBeforePrograms-saving,saving,communityKitchenSaving,rationLabSaving};
+}
+
+export function getNightFoodDemand(rooms:Room[], guests:Guest[], flags:EventFlags={}):{demand:number;saving:number} {
+  const {demand,saving}=getNightFoodDemandBreakdown(rooms,guests,flags);
+  return {demand,saving};
 }
 
 export function getNightWaterDemand(guests:Guest[], flags:EventFlags={}):{demand:number;saving:number} {
@@ -72,7 +86,7 @@ export function getNightWaterDemand(guests:Guest[], flags:EventFlags={}):{demand
 export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, worldState:WorldState, baseDiseaseChance=diseaseBaseChance[worldState], flags:EventFlags={}, diseaseChanceAdjustment=0):AuraNightResolution {
   const staying = guests.filter((guest)=>guest.status==="STAYING"&&guest.currentRoomNumber!==null);
   const guestById = new Map(guests.map((guest)=>[guest.id,guest]));
-  const food = getNightFoodDemand(rooms,guests,flags);
+  const food = getNightFoodDemandBreakdown(rooms,guests,flags);
   const water = getNightWaterDemand(guests,flags);
   let securityScore = 0;
   let breakdownScore = 0;
@@ -170,7 +184,8 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
     perimeterAlarmThreatReduction:threatWithoutAlarm-threatAfterAlarm,
     pathfinderThreatReduction:threatAfterAlarm-threatAfterPathfinder,
     researchPredictionThreatReduction:threatAfterPathfinder-threatDelta,
-    communityKitchenFoodSaving:food.saving,
+    communityKitchenFoodSaving:food.communityKitchenSaving,
+    rationLabFoodSaving:food.rationLabSaving,
     civilGuardSecurityGain,
     civilGuardCrimeReduction,
     careTeamGuestIds,

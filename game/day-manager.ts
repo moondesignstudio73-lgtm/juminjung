@@ -117,6 +117,7 @@ export function resolveDay(state: GameState): GameState {
     ...preparationPlan.warnings.map((message): HotelLogEntry => ({ day: state.day, type: "EVENT", message })),
     ...(microgridActive ? [{day:state.day,type:"RESOURCE" as const,message:`독립 마이크로그리드 · 기본 발전기 연료 ${BASE_GENERATOR_FUEL_DEMAND} 절감`}] : []),
     ...(auraNight.communityKitchenFoodSaving ? [{day:state.day,type:"RESOURCE" as const,message:`공동 식당 배급 · 식량 ${auraNight.communityKitchenFoodSaving} 절감`}] : []),
+    ...(auraNight.rationLabFoodSaving ? [{day:state.day,type:"RESOURCE" as const,message:`보존식 연구 · 식량 ${auraNight.rationLabFoodSaving} 절감`}] : []),
     ...(auraNight.householdWaterSaving ? [{day:state.day,type:"RESOURCE" as const,message:`공동 생활조 배급 · 물 ${auraNight.householdWaterSaving} 절감`}] : []),
     ...(auraNight.tradeBonus.food||auraNight.tradeBonus.parts ? [{day:state.day,type:"RESOURCE" as const,message:`Aura 교역 · 식량 +${auraNight.tradeBonus.food} · 부품 +${auraNight.tradeBonus.parts}`}] : []),
     ...staffDutyResults.map((result):HotelLogEntry=>({day:state.day,type:"EVENT",message:`근무 정산 · ${result.guestName} · ${result.effect}`})),
@@ -135,7 +136,6 @@ export function resolveDay(state: GameState): GameState {
     ...checkedOutGuestIds.map((guestId): HotelLogEntry => ({ day: nextDay, type: "CHECK_OUT", message: `${state.guests.find((guest) => guest.id === guestId)?.name ?? guestId} · 숙박 종료 자동 체크아웃` })),
   ];
   const eleanor = guests.find((guest) => guest.id === "eleanor");
-  const stayingAfter = guests.filter((guest) => guest.status === "STAYING");
   const acceptedSurvivors = guests.filter((guest) => guest.checkedInDay !== null && guest.status !== "REFUSED" && guest.alive);
   const nextState: GameState = {
     ...state,

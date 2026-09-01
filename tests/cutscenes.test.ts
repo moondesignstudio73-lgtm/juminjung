@@ -84,6 +84,13 @@ test("토머스의 최종 전력 선택은 마이크로그리드와 라디오 �
   assert.ok(scenes.every((scene) => scene.imageAlt.includes("토머스 그레이")));
 });
 
+test("Noah의 최종 식량 선택은 공동 식당과 보존식 연구의 서로 다른 전용 원화를 소유한다", () => {
+  const scenes=CUTSCENES.filter((cutscene)=>cutscene.triggerStoryEventId==="noah-table");
+  assert.deepEqual(scenes.map((scene)=>scene.triggerStoryChoiceId).sort(),["community_kitchen","ration_lab"]);
+  assert.equal(new Set(scenes.map((scene)=>scene.image)).size,2);
+  assert.ok(scenes.every((scene)=>scene.imageAlt.includes("노아 그랜트")));
+});
+
 test("Owen의 최종 선택은 자치 방위대와 영구 탈출의 서로 다른 전용 원화를 소유한다", () => {
   const scenes = CUTSCENES.filter((cutscene) => cutscene.triggerStoryEventId === "owen-future");
   assert.deepEqual(scenes.map((scene) => scene.triggerStoryChoiceId).sort(), ["escape", "resistance"]);
