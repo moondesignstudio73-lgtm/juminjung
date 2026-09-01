@@ -520,16 +520,38 @@ test("공정 거래 경로만으로는 폐허의 왕 엔딩이 열리지 않는�
   assert.equal(evaluateEndings(state).available.includes("KING_OF_THE_RUINS"), false);
 });
 
-test("Victor의 시장 독점 경로는 공개 벙커망과 공동 신탁 컷신을 제거한다", () => {
+test("Victor의 시장 독점 경로는 공개 벙커망을 닫고 전용 독점 연합 컷신을 연다", () => {
   const starting = resolutionState("victor");
   starting.flags.victor_public_trust = true;
   starting.flags.bunker_network_open = true;
+  const beforeResources = { ...starting.resources };
   const state = applyStoryChoice(starting, "victor-crown", "rule_market").state;
   assert.equal(state.flags.victor_monopoly_alliance, true);
   assert.equal(state.flags.ruin_market_controlled, true);
   assert.equal(state.flags.victor_public_trust, false);
   assert.equal(state.flags.bunker_network_open, false);
-  assert.equal(state.activeCutsceneId, null);
+  assert.equal(state.resources.food, beforeResources.food + 3);
+  assert.equal(state.resources.medicine, beforeResources.medicine + 2);
+  assert.equal(state.resources.fuel, beforeResources.fuel + 2);
+  assert.equal(state.activeCutsceneId, "victor_monopoly_alliance");
+  assert.equal(getCutscene(state.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/victor-monopoly-alliance-v1.png");
+  const restored = restoreGameState(serializeGameState(state));
+  assert.equal(restored.flags.victor_monopoly_alliance, true);
+  assert.equal(restored.activeCutsceneId, "victor_monopoly_alliance");
+});
+
+test("Victor의 두 시장 결말 컷씬은 다른 장면 뒤에 큐로 저장되어 유실되지 않는다", () => {
+  for (const [choiceId, cutsceneId] of [["public_trust", "victor_public_trust"], ["rule_market", "victor_monopoly_alliance"]] as const) {
+    const state = resolutionState("victor");
+    state.activeCutsceneId = "first_night";
+    const resolved = applyStoryChoice(state, "victor-crown", choiceId).state;
+    assert.equal(resolved.activeCutsceneId, "first_night");
+    assert.deepEqual(resolved.queuedCutsceneIds, [cutsceneId]);
+    const restored = restoreGameState(serializeGameState(resolved));
+    const advanced = dismissCutscene(restored);
+    assert.equal(advanced.activeCutsceneId, cutsceneId);
+    assert.deepEqual(advanced.queuedCutsceneIds, []);
+  }
 });
 
 test("Jack의 독점 거래는 공정 교환 컷신과 연료 절감 계약을 열지 않는다", () => {
