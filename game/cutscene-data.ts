@@ -50,6 +50,18 @@ export const CUTSCENES: CutsceneDefinition[] = [
     imageAlt: "헤이즈 대령이 비 내리는 JUJU HOTEL 프런트에서 군 지휘권 문서의 서명을 지켜보고, 주민들이 계단에서 불안하게 바라보는 사이 병사가 입구 검문선을 재는 장면.",
   },
   {
+    id: "hayes_civilian_command",
+    triggerStoryEventId: "hayes-command",
+    triggerStoryChoiceId: "civilian_rule",
+    priority: 175,
+    kicker: "JUJU HOTEL · CIVILIAN COMMAND",
+    title: "총보다 먼저 놓인 호텔의 규칙",
+    body: "Hayes는 서명되지 않은 지휘권 문서를 접지 않은 채 권총과 함께 프런트 위에 내려놓았다. 주민 대표들은 무기를 빼앗아 환호하는 대신 순찰표와 배급 장부, 객실 열쇠를 같은 불빛 아래 펼쳤다. Owen은 군복을 입은 사람도 문턱을 넘는 순간 호텔 규칙을 따라야 한다는 조항을 소리 내어 읽었다. Hayes의 병력은 남았고 방어선도 강해졌지만, 정문을 열고 보급품을 나누는 마지막 결정은 다시 호텔 사람들의 손으로 돌아왔다.",
+    quote: "내 병력도 이 문턱을 넘는 순간, 당신들의 규칙을 따르겠습니다.",
+    image: "/juminjung/assets/cutscenes/hayes-civilian-command-v1.png",
+    imageAlt: "마커스 헤이스 대령이 비 내리는 JUJU HOTEL 프런트에서 권총과 미서명 지휘 문서를 황동 열쇠와 민간 장부 옆에 내려놓고, 오웬과 주민 협의체가 긴장된 표정으로 지켜보는 장면.",
+  },
+  {
     id: "owen_defense_force",
     triggerStoryEventId: "owen-future",
     triggerStoryChoiceId: "resistance",

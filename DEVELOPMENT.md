@@ -77,14 +77,14 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - Grace's mutual-aid route opens a dedicated illustrated repair shift and restores one Hotel Condition each night through shared maintenance, logging only repair that fits below the condition cap
 - Vale's completed research with Lily opens a dedicated illustrated behavior-map scene and reduces Monster Threat by two each night through shared prediction notes, logging only reduction that survives the global threat floor
 - Owen's civilian defense route opens a dedicated illustrated preparation scene and records its own siege plan, distinct from Samuel's general guard flag; during the DAY 25 hotel siege, Security supplies cost 4 instead of 6, parts cost 2 instead of 3, and the lead defender loses 10 rather than 20 Health, with the night UI and settlement consuming the same derived choice
-- Hayes's signed-command route records the military-resistance failure required by MILITARY OCCUPATION and opens a dedicated illustrated handover scene before the final occupation event; signing and civilian rule explicitly replace one another's military outcome flags so the latest command decision remains authoritative
+- Hayes's final command decision now branches into two dedicated illustrated handovers: signing records the military-resistance failure required by MILITARY OCCUPATION, while civilian rule leaves his soldiers under the hotel's resident council and preserves the successful resistance path. The choices explicitly replace one another's military outcome flags so the latest command decision remains authoritative
 - Jack's fair-market route opens a dedicated illustrated public exchange and changes the daytime trade run at its data source: the UI, affordability check, settlement, and log all use one fuel instead of two and remove the humanitarian reputation loss; fair and monopoly choices replace one another's market flags
 - Victor's public-bunker trust opens a dedicated illustrated handover and changes the refugee-wave shelter choice at its data source: the UI, affordability check, and settlement use food 2, water 2, and Monster Threat +1 instead of food 4, water 3, and threat +4; public-trust and monopoly outcomes replace one another's bunker flags
 - Lily's public truth route opens a dedicated illustrated radio-room broadcast and, from DAY 16, a one-time response event in which the player can spend fuel to verify survivor testimony as a second monster-origin clue or close the frequency to reduce exposure; broadcast and encrypted-archive outcomes replace one another's publication flags
 
 ## Next system priorities
 
-- Expand full-screen illustrated cutscenes for the remaining major story and ending beats
+- Complete resolution cutscenes in branch pairs: once either choice is illustrated, finish its alternate before moving to another event. Each branch must own distinct 1672×941 artwork, use the same data-driven trigger and serialized queue contract, and clear a built Pages preview check
 
 ## Main NPC catalog
 

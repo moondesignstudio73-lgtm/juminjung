@@ -747,7 +747,7 @@ test("Hayes에게 지휘권을 넘기면 군정 점령 경로와 전용 인계 �
   assert.equal(restored.activeCutsceneId, "hayes_command_signed");
 });
 
-test("Hayes를 민간 협의체 아래 두면 군정 점령 플래그와 인계 장면이 생기지 않는다", () => {
+test("Hayes를 민간 협의체 아래 두면 군정 점령을 막고 전용 민간 인계 장면이 열린다", () => {
   const state = resolutionState("hayes");
   state.flags.military_resistance_failed = true;
   state.flags.military_rule_signed = true;
@@ -757,5 +757,23 @@ test("Hayes를 민간 협의체 아래 두면 군정 점령 플래그와 인계 
   assert.equal(result.flags.military_resistance_failed, false);
   assert.equal(result.flags.military_rule_signed, false);
   assert.ok(!evaluateEndings(result).available.includes("MILITARY_OCCUPATION"));
-  assert.equal(result.activeCutsceneId, null);
+  assert.equal(result.activeCutsceneId, "hayes_civilian_command");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/hayes-civilian-command-v1.png");
+  const restored = restoreGameState(serializeGameState(result));
+  assert.equal(restored.flags.civilian_command, true);
+  assert.equal(restored.activeCutsceneId, "hayes_civilian_command");
+});
+
+test("Hayes의 두 지휘권 결말 컷씬은 다른 장면 뒤에 큐로 저장되어 유실되지 않는다", () => {
+  for (const [choiceId, cutsceneId] of [["civilian_rule", "hayes_civilian_command"], ["sign_command", "hayes_command_signed"]] as const) {
+    const state = resolutionState("hayes");
+    state.activeCutsceneId = "first_night";
+    const resolved = applyStoryChoice(state, "hayes-command", choiceId).state;
+    assert.equal(resolved.activeCutsceneId, "first_night");
+    assert.deepEqual(resolved.queuedCutsceneIds, [cutsceneId]);
+    const restored = restoreGameState(serializeGameState(resolved));
+    const advanced = dismissCutscene(restored);
+    assert.equal(advanced.activeCutsceneId, cutsceneId);
+    assert.deepEqual(advanced.queuedCutsceneIds, []);
+  }
 });
