@@ -855,23 +855,80 @@ test("Eli의 창고 책임 경로는 안전 통로 효과와 전용 컷신을 �
   assert.equal(result.activeCutsceneId,null);
 });
 
-test("Claire의 안전 육아실은 지속 안정 효과와 전용 컷신을 열고 저장된다", () => {
-  const result=applyStoryChoice(resolutionState("claire"),"claire-future","nursery").state;
+test("Claire의 안전 육아실은 지속 안정·객실 Aura·근무와 전용 컷씬을 유지한다", () => {
+  const state=resolutionState("claire");
+  state.flags.claire_safe_passage=true;
+  state.rooms=recalculateRoomEffects(assignGuest(state.rooms,301,"claire"),state.guests);
+  state.staffAssignments.MEDICAL="claire";
+  const choice=STORY_CHOICE_EVENTS.find((event)=>event.id==="claire-future")!.choices.find((candidate)=>candidate.id==="nursery")!;
+  for(const term of ["Trust +15","Hotel Condition +10","community 평판 +9","humanitarian 평판 +7","객실 Aura","근무 배치","객실이 배정된","Stress를 매일 3","의약품 2","영구 이동","그 선택의 refugee 평판 +7","다른 주민이 만든 안전 통로는 유지","포기"]) assert.ok(choice.description.includes(term),term);
+  const result=applyStoryChoice(state,"claire-future","nursery").state;
+  const claire=result.guests.find((guest)=>guest.id==="claire")!;
   assert.equal(result.flags.claire_nursery,true);
+  assert.equal(result.flags.claire_safe_passage,false);
+  assert.equal(claire.status,"STAYING");
+  assert.equal(claire.currentRoomNumber,301);
+  assert.equal(result.staffAssignments.MEDICAL,"claire");
+  assert.ok(result.rooms.some((room)=>room.temporaryEffects.some((effect)=>effect.sourceGuestId==="claire")));
   assert.equal(result.activeCutsceneId,"claire_nursery");
   assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/claire-safe-nursery-v1.png");
   const restored=restoreGameState(serializeGameState(result));
   assert.equal(restored.flags.claire_nursery,true);
+  assert.equal(restored.flags.claire_safe_passage,false);
   assert.equal(restored.activeCutsceneId,"claire_nursery");
 });
 
-test("Claire의 의료 거점 이동은 호텔 육아실 효과와 전용 컷신을 열지 않는다", () => {
-  const state=resolutionState("claire");
+test("Claire의 의료 거점 이동은 의약품을 쓰고 객실·Aura·근무·재방문을 정리하는 영구 출발이다", () => {
+  let state=resolutionState("claire");
   state.resources.medicine=2;
-  const result=applyStoryChoice(state,"claire-future","safe_passage").state;
+  Object.assign(state.flags,{claire_nursery:true,vulnerable_survivors_protected:true});
+  state.rooms=recalculateRoomEffects(assignGuest(state.rooms,301,"claire"),state.guests);
+  state.staffAssignments.MEDICAL="claire";
+  state=recordVisitorDecision(state,"claire","ACCEPTED",301);
+  assert.ok(state.rooms.some((room)=>room.temporaryEffects.some((effect)=>effect.sourceGuestId==="claire")));
+  const choice=STORY_CHOICE_EVENTS.find((event)=>event.id==="claire-future")!.choices.find((candidate)=>candidate.id==="safe_passage")!;
+  for(const term of ["의약품 2","Trust +10","refugee 평판 +7","humanitarian 평판 +5","안전 통로","영구 출발","객실 Aura","근무 배치","재방문하지 않습니다","Hotel Condition +10","community 평판 +9","humanitarian 평판 추가 2","객실이 배정된","Stress를 매일 3 낮추는 효과","포기","다른 주민이 만든 취약 생존자 보호는 유지"]) assert.ok(choice.description.includes(term),term);
+  const resolved=applyStoryChoice(state,"claire-future","safe_passage");
+  const result=resolved.state;
+  const claire=result.guests.find((guest)=>guest.id==="claire")!;
+  assert.equal(result.resources.medicine,0);
+  assert.deepEqual({status:claire.status,room:claire.currentRoomNumber,nights:claire.remainingNights,revisit:claire.revisitPolicy,ending:claire.endingState},{status:"CHECKED_OUT",room:null,nights:0,revisit:"NEVER",ending:"SAFE_PASSAGE"});
+  assert.equal(claire.storyFlags.story_departed_day,state.day);
+  assert.equal(result.rooms.find((room)=>room.roomNumber===301)?.status,"EMPTY");
+  assert.ok(result.rooms.every((room)=>room.temporaryEffects.every((effect)=>effect.sourceGuestId!=="claire")));
+  assert.equal(result.staffAssignments.MEDICAL,undefined);
+  assert.equal(result.visitorHistory.find((entry)=>entry.visitorId==="claire")?.finalState,"STORY_MEDICAL_TRANSFER");
   assert.equal(result.flags.claire_safe_passage,true);
-  assert.equal(result.flags.claire_nursery,undefined);
-  assert.equal(result.activeCutsceneId,null);
+  assert.equal(result.flags.claire_nursery,false);
+  assert.equal(result.flags.safe_routes_mapped,true);
+  assert.equal(result.flags.vulnerable_survivors_protected,true);
+  assert.equal(result.activeCutsceneId,"claire_medical_passage");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/claire-medical-passage-v1.png");
+  assert.match(resolved.entry.message,/호텔 출발$/);
+  const restored=restoreGameState(serializeGameState(result));
+  assert.equal(restored.guests.find((guest)=>guest.id==="claire")?.revisitPolicy,"NEVER");
+  assert.equal(getEligibleVisitor(restored.guests.filter((guest)=>guest.id==="claire"),100,restored.flags),null);
+  assert.equal(restored.activeCutsceneId,"claire_medical_passage");
+});
+
+test("Claire의 의료 거점 이동은 의약품이 2 미만이면 상태를 바꾸지 않는다", () => {
+  const state=resolutionState("claire");
+  state.resources.medicine=1;
+  const choice=STORY_CHOICE_EVENTS.find((event)=>event.id==="claire-future")!.choices.find((candidate)=>candidate.id==="safe_passage")!;
+  const before=serializeGameState(state);
+  assert.equal(canChooseStoryChoice(state,choice),false);
+  assert.throws(()=>applyStoryChoice(state,"claire-future","safe_passage"),/자원이 부족합니다/);
+  assert.equal(serializeGameState(state),before);
+});
+
+test("Claire의 두 미래 결말 컷씬은 다른 장면 뒤에 큐로 저장되어 유실되지 않는다", () => {
+  for(const [choiceId,cutsceneId] of [["nursery","claire_nursery"],["safe_passage","claire_medical_passage"]] as const){
+    const state=resolutionState("claire");
+    state.activeCutsceneId="first_night";
+    const resolved=applyStoryChoice(state,"claire-future",choiceId).state;
+    assert.deepEqual(resolved.queuedCutsceneIds,[cutsceneId]);
+    assert.equal(dismissCutscene(restoreGameState(serializeGameState(resolved))).activeCutsceneId,cutsceneId);
+  }
 });
 
 test("Grace의 공동 구호조는 지속 보수와 전용 컷신을 열고 저장된다", () => {
