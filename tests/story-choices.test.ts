@@ -332,16 +332,31 @@ test("Lily와 Dr. Vale의 조사 갈등은 자동 진행 대신 선택 장면으
   assert.equal(getPendingStoryChoice(conflictState("vale"))?.id, "vale-sample");
 });
 
-test("Lily의 결말 선택은 문서 해독과 숨겨진 특성을 기록한다", () => {
+test("Lily의 암호화 보관은 진실을 보존하고 외부 응답을 닫는 전용 컷신을 연다", () => {
+  const archiveChoice = STORY_CHOICE_EVENTS.find((event) => event.id === "lily-truth")!.choices.find((choice) => choice.id === "archive")!;
+  assert.ok(archiveChoice.description.includes("외부 생존자") && archiveChoice.description.includes("포기"));
   const starting = resolutionState("lily");
+  starting.day = 16;
   starting.flags.lily_truth_broadcast = true;
+  starting.flags.father_secret_discovered = true;
+  starting.flags.monster_origin_clue_1 = true;
+  starting.flags.monster_origin_clue_2 = true;
+  starting.flags.vale_research_complete = true;
+  const beforeSecurity = starting.hotelStats.security;
   const result = applyStoryChoice(starting, "lily-truth", "archive");
   const lily = result.state.guests.find((guest) => guest.id === "lily")!;
   assert.equal(result.state.flags.lily_documents_decoded, true);
   assert.equal(result.state.flags.lily_truth_archived, true);
   assert.equal(result.state.flags.lily_truth_broadcast, false);
-  assert.equal(result.state.activeCutsceneId, null);
+  assert.equal(result.state.hotelStats.security, beforeSecurity + 4);
+  assert.equal(result.state.activeCutsceneId, "lily_truth_archive");
+  assert.equal(getCutscene(result.state.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/lily-truth-archive-v1.png");
+  assert.notEqual(selectNightEvent(result.state).id, "truth_responses");
+  assert.ok(evaluateEndings(result.state).available.includes("THE_TRUTH"));
   assert.ok(lily.discoveredTraits.includes("OriginDocuments"));
+  const restored = restoreGameState(serializeGameState(result.state));
+  assert.equal(restored.flags.lily_truth_archived, true);
+  assert.equal(restored.activeCutsceneId, "lily_truth_archive");
 });
 
 test("Lily의 공개 방송은 전용 컷신과 DAY 16 후속 주파수를 열고 저장된다", () => {
@@ -356,6 +371,21 @@ test("Lily의 공개 방송은 전용 컷신과 DAY 16 후속 주파수를 열�
   const restored = restoreGameState(serializeGameState(state));
   assert.equal(restored.flags.lily_truth_broadcast, true);
   assert.equal(restored.activeCutsceneId, "lily_truth_broadcast");
+});
+
+test("Lily의 두 진실 결말 컷씬은 다른 장면 뒤에 큐로 저장되어 유실되지 않는다", () => {
+  for (const [choiceId, cutsceneId] of [["broadcast", "lily_truth_broadcast"], ["archive", "lily_truth_archive"]] as const) {
+    const state = resolutionState("lily");
+    state.flags.lily_documents_decoded = true;
+    state.activeCutsceneId = "first_night";
+    const resolved = applyStoryChoice(state, "lily-truth", choiceId).state;
+    assert.equal(resolved.activeCutsceneId, "first_night");
+    assert.deepEqual(resolved.queuedCutsceneIds, [cutsceneId]);
+    const restored = restoreGameState(serializeGameState(resolved));
+    const advanced = dismissCutscene(restored);
+    assert.equal(advanced.activeCutsceneId, cutsceneId);
+    assert.deepEqual(advanced.queuedCutsceneIds, []);
+  }
 });
 
 test("Vale의 연구 완성은 Lily 관계와 THE TRUTH 핵심 플래그를 기록한다", () => {
