@@ -15,6 +15,11 @@ export type InvestigationPointId = "ROOM_207_DOOR" | "ROOM_207_WINDOW" | "ROOM_2
 export type InvestigationConclusionId = "VOLUNTARY_EXIT" | "HUMAN_ATTACK" | "MONSTER_ENTRY" | "UNRESOLVED";
 export type InvestigationCaseStatus = "OPEN" | "INVESTIGATING" | "SOLVED" | "UNRESOLVED";
 export type EvidenceAssessment = "UNKNOWN" | "SUPPORTED" | "CONTRADICTED";
+export type VisitorStatementAssessment = "RECORDED" | "CORROBORATED" | "CONTRADICTED";
+export type VisitorStatementId = "RUTH_SCRATCH_CLAIM" | "HAZEL_TRACKS_TESTIMONY";
+export type MonsterCodexEntryId = "MIMIC_STALKER";
+export type MonsterInsightId = "TRIPLE_CLAW_PATTERN" | "SHIFTING_GAIT" | "INTERIOR_EXIT_ROUTE";
+export type MonsterKnowledgeSourceId = "RUTH_SCRATCH_CONTRADICTION" | "HAZEL_TRACKS_TESTIMONY" | "ROOM_207_MONSTER_CONCLUSION";
 
 export type Position = { x: number; y: number };
 
@@ -219,6 +224,12 @@ export type InvestigationPointDefinition = { id: InvestigationPointId; name: str
 export type InvestigationConclusionDefinition = { id: InvestigationConclusionId; label: string; description: string; supportedBy: EvidenceId[]; contradictedBy: EvidenceId[]; minimumSupport: number; supportedOnlyFlags?: string[]; effect: { hotelStats?: Partial<HotelStats>; reputations?: Partial<Reputations>; flags: EventFlags; threat: number } };
 export type InvestigationCaseDefinition = { id: InvestigationCaseId; title: string; summary: string; relatedRoom: number; minimumEvidenceToConclude: number; points: InvestigationPointDefinition[]; conclusions: InvestigationConclusionDefinition[]; correctConclusionId: InvestigationConclusionId; correctFlag: string };
 export type InvestigationCaseState = { caseId: InvestigationCaseId; status: InvestigationCaseStatus; openedDay: number; inspectedPointIds: InvestigationPointId[]; collectedEvidenceIds: EvidenceId[]; conclusionId: InvestigationConclusionId | null; resolvedDay: number | null };
+export type VisitorStatementDefinition = { id: VisitorStatementId; guestId: string; questionId: string; claim: string; finding: string; assessment: VisitorStatementAssessment; requiredInspectedItemId?: string; knowledgeSourceId: MonsterKnowledgeSourceId };
+export type VisitorStatementRecord = { statementId: VisitorStatementId; guestId: string; questionId: string; recordedDay: number; assessment: VisitorStatementAssessment };
+export type MonsterInsightDefinition = { id: MonsterInsightId; name: string; description: string };
+export type MonsterCodexEntryDefinition = { id: MonsterCodexEntryId; name: string; classification: string; description: string; tacticalThreshold: number; countermeasure: string; insights: MonsterInsightDefinition[] };
+export type MonsterKnowledgeSourceDefinition = { id: MonsterKnowledgeSourceId; entryId: MonsterCodexEntryId; insightId: MonsterInsightId };
+export type MonsterCodexEntryState = { entryId: MonsterCodexEntryId; sourceIds: MonsterKnowledgeSourceId[]; insightIds: MonsterInsightId[]; updatedDay: number };
 
 export type GamePhase =
   | "title"
@@ -232,7 +243,7 @@ export type GamePhase =
   | "ending";
 
 export type GameState = {
-  version: 13;
+  version: 14;
   phase: GamePhase;
   day: number;
   rooms: Room[];
@@ -277,6 +288,8 @@ export type GameState = {
   lastScavengeDay: number;
   lastScavengeReport: ScavengeReport | null;
   investigationCases: InvestigationCaseState[];
+  visitorStatements: VisitorStatementRecord[];
+  monsterCodex: MonsterCodexEntryState[];
   activeCutsceneId: CutsceneId | null;
   queuedCutsceneIds: CutsceneId[];
   seenCutsceneIds: CutsceneId[];

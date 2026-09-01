@@ -26,7 +26,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - Saved night preparation controls three fuel-limited power circuits for security, clinic, and kitchen operations; disabled circuits create visible, logged penalties instead of hidden failure
 - Saved NORMAL, LIMITED, and SEVERE food-ration policies trade food demand against resident Stress and Health, with the morning ledger showing base demand, actual consumption, powered circuits, and warnings
 - Four buildable facilities with resource costs, passive production, stat changes, and faction reputation effects
-- Save v13 restoration for facilities, reputations, three daily actions, power allocation, ration policy, night choices, pending NPC story scenes, one-time cutscene progress, generated visitors, the current queue position, visitor history, staff assignments, scavenging, and investigation cases; full unused AP in older saves migrates to the new three-point day
+- Save v14 restoration for facilities, reputations, three daily actions, power allocation, ration policy, night choices, pending NPC story scenes, one-time cutscene progress, generated visitors, the current queue position, visitor history, staff assignments, scavenging, investigation cases, persistent visitor statements, and Monster Codex knowledge; full unused AP in older saves migrates to the new three-point day
 - Conditional night events driven by World State, shortages, Monster Threat, Security, and resources
 - Two-choice night outcomes that alter resources, hotel stats, faction reputation, flags, and guest condition
 - All twenty catalog NPCs have authored conflict and resolution choices with persistent consequences
@@ -53,6 +53,7 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 - The first night, first monster sighting, generator blackout, and a dedicated guest-attack outcome for fighting a perimeter breach interrupt their morning reports once, using full-screen illustrated scenes with rain, lamp flicker, slow camera movement, reduced-motion support, choice-aware triggers, and save restoration
 - The refugee-wave decision now branches into distinct shelter and denial aftermath cutscenes, preserving the selected moral consequence alongside resources, reputation, threat, and follow-up flags
 - From DAY 10, low Security and rising monster threat can reveal an unknown death in empty Room 207. Sealing it contains the immediate danger; investigating opens a saved case file with four 1-AP scene points, evidence-owned flags, supported/contradicted conclusion states, and player-selected consequences. Only a supported monster-entry conclusion creates the later Vale reaction clue. The room remains damaged until hotel repair restores it
+- Ruth's contradicted scratch claim, Hazel's corroborated gait testimony, and the supported Room 207 monster conclusion now feed one saved, data-driven Monster Codex entry. Two distinct observations unlock a grounded low-wire perimeter countermeasure; both the night UI and settlement reduce the east-gate barricade to one part, prevent hotel-condition damage, strengthen Security, and cut Monster Threat by eight from the same effective choice
 - From DAY 20, discovering the father's archive can wake the dead 91.3 MHz frequency; tracing it creates an alternate monster-origin clue for THE TRUTH, while answering opens a dangerous conditional return route, both with a dedicated illustrated signal scene
 - From DAY 24, only players who answered that signal can meet the father's likeness at the locked gate; quarantine verification trades medical and security supplies for an anomalous biological clue, while opening the gate gains carried generator supplies and a riskier reunion route, with choice-specific illustrated aftermaths
 - From DAY 25, CRITICAL or END STAGE pressure with high Monster Threat and weakened Security can trigger a one-time full-hotel siege; holding the lobby spends scarce defense supplies and inflicts a nonfatal defender injury while supporting military/fortress play, and retreating preserves lives at heavy structural cost that a later hotel-repair action can clear, each with a choice-specific illustrated aftermath
@@ -82,8 +83,8 @@ Aura presentation is understood as data-owned: every Aura defines its own short 
 
 ## Next system priorities
 
-- Extend the 207 case framework into visitor-statement contradictions and a Monster Codex whose knowledge changes night counterplay
 - Deepen night preparation with patrol, isolation, exterior-light, and noise-policy trade-offs
+- Expand the Monster Codex with distinct creatures, uncertain reports, and countermeasures beyond the east-gate breach
 - Expand full-screen illustrated cutscenes for the remaining major story and ending beats
 
 ## Main NPC catalog

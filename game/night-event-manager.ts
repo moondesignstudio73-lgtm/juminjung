@@ -2,6 +2,7 @@ import { NIGHT_EVENTS } from "./night-event-data.ts";
 import { getNightFoodDemand } from "./aura-night-manager.ts";
 import { getActiveRelationships } from "./relationship-manager.ts";
 import { openInvestigationCase } from "./investigation-manager.ts";
+import { hasMonsterCountermeasure } from "./monster-codex-manager.ts";
 import type { GameState, HotelLogEntry, NightEventChoice, NightEventDefinition } from "./types.ts";
 
 const clamp = (value: number) => Math.max(0, Math.min(100, value));
@@ -42,9 +43,26 @@ export const DEFENSE_FORCE_INJURY_DIVISOR = 2;
 export const PUBLIC_BUNKER_FOOD_COST = 2;
 export const PUBLIC_BUNKER_WATER_COST = 2;
 export const PUBLIC_BUNKER_THREAT_GAIN = 1;
+export const CODEX_BARRICADE_PARTS_COST = 1;
+export const CODEX_BARRICADE_THREAT_REDUCTION = -8;
 
 export function getEffectiveNightChoice(state: GameState, choice: NightEventChoice): NightEventChoice {
   let effective = choice;
+  if (choice.id === "barricade" && hasMonsterCountermeasure(state, "MIMIC_STALKER")) {
+    effective = {
+      ...choice,
+      label: "CODEX · 낮은 철선으로 이동로를 막는다",
+      description: `기록된 보행 패턴에 맞춰 부품 ${CODEX_BARRICADE_PARTS_COST}로 지면 가까운 철선과 외부등을 설치합니다. 객실 피해 없이 침입 경로를 꺾습니다.`,
+      requiredResources: { ...choice.requiredResources, parts: CODEX_BARRICADE_PARTS_COST },
+      effect: {
+        ...choice.effect,
+        resources: { ...choice.effect.resources, parts: -CODEX_BARRICADE_PARTS_COST },
+        hotelStats: { ...choice.effect.hotelStats, hotelCondition: 0, security: 4 },
+        flags: { ...choice.effect.flags, mimic_countermeasure_used: true },
+        threat: CODEX_BARRICADE_THREAT_REDUCTION,
+      },
+    };
+  }
   if (choice.id === "hold_lobby" && state.flags.owen_siege_plan === true) {
     const mitigatedInjury = Math.trunc(Number(choice.effect.targetGuestHealth ?? 0) / DEFENSE_FORCE_INJURY_DIVISOR);
     effective = {

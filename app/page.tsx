@@ -32,6 +32,7 @@ import { dismissCutscene } from '@/game/cutscene-manager';
 import { configureFoodRation, configurePowerCircuit, getActivePowerCircuits, getDailyObjectives, getPowerCapacity, POWER_CIRCUITS, RATION_POLICIES } from '@/game/daily-survival-manager';
 import { assignStaffDuty, canRunScavengeMission, getAssignedStaff, getScavengeChance, pruneStaffAssignments, runScavengeMission, SCAVENGE_MISSIONS, STAFF_DUTIES } from '@/game/staff-operation-manager';
 import { assessInvestigationConclusion, canConcludeInvestigationCase, canInvestigateCasePoint, concludeInvestigationCase, getEvidenceDefinition, getInvestigationCaseDefinition, investigateCasePoint } from '@/game/investigation-manager';
+import { getMonsterCodexDefinition, getVisitorStatementDefinition, hasMonsterCountermeasure, recordVisitorStatement } from '@/game/monster-codex-manager';
 import { normalizePrologueIndex, PROLOGUE_BEATS } from '@/game/prologue-data';
 import { DEFAULT_FRONT_DESK_BACKGROUND } from '@/game/background-data';
 import { beginSpriteLoad, canDisplaySprite, completeSpriteLoad, failSpriteLoad, shouldDisplaySpritePlaceholder, type SpriteLoadState } from '@/game/sprite-load-manager';
@@ -86,9 +87,12 @@ export default function Home() {
   const update = (patch: Partial<UiSave>) => setSave((current) => ({ ...current, ...patch }));
   const reset = () => { clearBrowserGame(); setSave(makeInitial()); setDialogue(''); setSelectedItem(null); setManagedGuestId(null); };
   const ask = (question: Guest['questions'][number]) => {
-    const result = applyVisitorQuestionClue(save.guests, visitor.id, question.id, save.inspected);
-    update({ guests:result.guests, asked: [...new Set([...save.asked, question.id])] });
-    setDialogue(`“${question.answer}”${result.applied&&result.rule?`\n\n[확인된 단서] ${result.rule.finding}`:''}`); setShowQuestions(false);
+    const clue = applyVisitorQuestionClue(save.guests, visitor.id, question.id, save.inspected);
+    const questioned:UiSave = { ...save, guests:clue.guests, asked:[...new Set([...save.asked,question.id])] };
+    const statement = recordVisitorStatement(questioned,visitor.id,question.id,save.inspected);
+    setSave({ ...statement.state, prologue:save.prologue });
+    const statementLabel=statement.record?.assessment==='CONTRADICTED'?'진술 모순':statement.record?.assessment==='CORROBORATED'?'진술 확인':'진술 기록';
+    setDialogue(`“${question.answer}”${clue.applied&&clue.rule?`\n\n[확인된 단서] ${clue.rule.finding}`:''}${statement.message?`\n\n[${statementLabel} · MONSTER CODEX] ${statement.message}`:''}`); setShowQuestions(false);
   };
   const inspect = (id: string) => {
     update({ inspected: [...new Set([...save.inspected, id])] }); setSelectedItem(id);
@@ -317,13 +321,13 @@ function StaffOperations({state,stayingGuests,onAssign,onScavenge}:{state:UiSave
   const scout=getAssignedStaff(state,'SCAVENGE');
   const done=state.lastScavengeDay===state.day;
   const resourceLabel:Record<keyof GameState['resources'],string>={food:'식량',water:'물',medicine:'의약품',fuel:'연료',parts:'부품',security:'보안 물자'};
-  return <section className="staff-operations" aria-label="투숙객 근무 및 탐색">
+  return <><section className="staff-operations" aria-label="투숙객 근무 및 탐색">
     <div className="staff-heading"><span className="panel-label">투숙객 근무 배치</span><small>한 사람당 한 역할 · 야간 자동 정산</small></div>
     <div className="staff-grid">{STAFF_DUTIES.map((duty)=><label key={duty.id}><strong>{duty.name}</strong><small>{duty.description}</small><select aria-label={`${duty.name} 담당자`} value={state.staffAssignments[duty.id]??''} onChange={(event)=>onAssign(duty.id,event.target.value||null)}><option value="">미배치</option>{stayingGuests.map((resident)=><option key={resident.id} value={resident.id}>{resident.name} · {duty.skillLabel} {resident.skills[duty.skill]}</option>)}</select></label>)}</div>
     <div className="staff-heading"><span className="panel-label">외부 탐색 · 1 AP</span><small>{scout?`${scout.name} · 탐색 ${scout.skills.scavenge}`:'외부 정찰 담당자를 배치하십시오.'}</small></div>
     <div className="scavenge-grid">{SCAVENGE_MISSIONS.map((mission)=>{const chance=scout?getScavengeChance(scout,mission.id):0;const cost=Object.entries(mission.cost).map(([key,value])=>`${resourceLabel[key as keyof GameState['resources']]} ${value}`).join(' · ')||'준비 자원 없음';const reward=Object.entries(mission.rewards).map(([key,value])=>`${resourceLabel[key as keyof GameState['resources']]} +${value}`).join(' · ');return <article key={mission.id}><strong>{mission.name}</strong><p>{mission.description}</p><small>성공 가능성 {chance}% · {cost}<br/>기본 회수 {reward}</small><Button disabled={!canRunScavengeMission(state,mission.id)} onClick={()=>onScavenge(mission.id)}>{done?'오늘 탐색 완료':'탐색 출발'}</Button></article>})}</div>
     {state.lastScavengeReport?.day===state.day&&<p className={`scavenge-report outcome-${state.lastScavengeReport.outcome.toLowerCase()}`}>{state.lastScavengeReport.message} · 판정 {state.lastScavengeReport.roll}/{state.lastScavengeReport.chance}</p>}
-  </section>;
+  </section><MonsterCodexPanel state={state}/></>;
 }
 
 function InvestigationPanel({state,onInvestigate,onConclude}:{state:UiSave;onInvestigate:(caseId:InvestigationCaseId,pointId:InvestigationPointId)=>void;onConclude:(caseId:InvestigationCaseId,conclusionId:InvestigationConclusionId)=>void}) {
@@ -338,6 +342,20 @@ function InvestigationPanel({state,onInvestigate,onConclude}:{state:UiSave;onInv
       {caseState.collectedEvidenceIds.length>0&&<div className="evidence-list">{caseState.collectedEvidenceIds.map((evidenceId)=>{const evidence=getEvidenceDefinition(evidenceId);return evidence?<div key={evidence.id}><Inspect size={15}/><span><b>{evidence.name}</b><small>{evidence.description}</small></span></div>:null})}</div>}
       <div className="case-conclusions"><strong>사건 결론</strong><small>{canConclude?'수집한 증거를 바탕으로 하나의 결론을 기록할 수 있습니다.':`증거 ${definition.minimumEvidenceToConclude}개를 모아야 결론을 선택할 수 있습니다.`}</small>{definition.conclusions.map((conclusion)=>{const assessment=assessInvestigationConclusion(caseState,caseState.caseId,conclusion.id);return <button type="button" key={conclusion.id} className={`assessment-${assessment.toLowerCase()} ${caseState.conclusionId===conclusion.id?'selected':''}`} disabled={!active||!canConclude} onClick={()=>onConclude(caseState.caseId,conclusion.id)}><span><b>{conclusion.label}</b><small>{conclusion.description}</small></span><em>{caseState.conclusionId===conclusion.id?'채택됨':assessmentLabel[assessment]}</em></button>})}</div>
       {selectedConclusion&&<p className="case-result">최종 기록 · {selectedConclusion.label}</p>}
+    </article>})}
+  </section>;
+}
+
+function MonsterCodexPanel({state}:{state:UiSave}) {
+  if (!state.monsterCodex.length) return null;
+  return <section className="monster-codex-panel" aria-label="괴물 관찰 기록">
+    <div className="staff-heading"><span className="panel-label">MONSTER CODEX · 행동 기록</span><small>프런트 진술과 현장 증거가 야간 대응책을 해금합니다.</small></div>
+    {state.monsterCodex.map((entry)=>{const definition=getMonsterCodexDefinition(entry.entryId);if(!definition)return null;const ready=hasMonsterCountermeasure(state,entry.entryId);const statements=state.visitorStatements.map((record)=>getVisitorStatementDefinition(record.statementId)).filter((record)=>record&&entry.sourceIds.includes(record.knowledgeSourceId));return <article className={`codex-entry ${ready?'countermeasure-ready':''}`} key={entry.entryId}>
+      <header><BookOpen size={20}/><div><strong>{definition.name}</strong><small>{definition.classification}</small></div><em>{entry.insightIds.length}/{definition.insights.length} 관찰</em></header>
+      <p>{definition.description}</p>
+      <div className="codex-insights">{definition.insights.map((insight)=>{const unlocked=entry.insightIds.includes(insight.id);return <div key={insight.id} className={unlocked?'unlocked':'locked'}><Search size={14}/><span><b>{unlocked?insight.name:'미확인 행동'}</b><small>{unlocked?insight.description:'추가 진술이나 현장 증거가 필요합니다.'}</small></span></div>})}</div>
+      {statements.length>0&&<p className="codex-sources">진술 기록 · {statements.map((statement)=>`${state.guests.find((guest)=>guest.id===statement!.guestId)?.name??statement!.guestId} ${statement!.assessment==='CONTRADICTED'?'모순':'확인'}`).join(' · ')}</p>}
+      <div className={`codex-countermeasure ${ready?'ready':'pending'}`}><Shield size={16}/><span><b>{ready?'야간 대응 준비 완료':'대응 분석 중'}</b><small>{ready?definition.countermeasure:`행동 관찰 ${definition.tacticalThreshold-entry.insightIds.length}개를 더 확보하십시오.`}</small></span></div>
     </article>})}
   </section>;
 }

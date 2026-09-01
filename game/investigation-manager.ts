@@ -1,4 +1,5 @@
 import { EVIDENCE_CATALOG, INVESTIGATION_CASES } from "./investigation-data.ts";
+import { applyMonsterKnowledgeSource } from "./monster-codex-manager.ts";
 import type {
   EvidenceAssessment, EvidenceId, EventFlags, GameState, HotelStats, InvestigationCaseDefinition,
   InvestigationCaseId, InvestigationCaseState, InvestigationConclusionId, InvestigationPointId,
@@ -118,5 +119,7 @@ export function concludeInvestigationCase(state:GameState,caseId:InvestigationCa
   const nextCase:InvestigationCaseState={...caseState,status:conclusionId==="UNRESOLVED"?"UNRESOLVED":"SOLVED",conclusionId,resolvedDay:state.day};
   const assessmentLabel={UNKNOWN:"미확인",SUPPORTED:"증거 지지",CONTRADICTED:"증거 모순"} as const;
   const message=`사건 결론 · ${definition.title} · ${conclusion.label} · ${assessmentLabel[assessment]}`;
-  return {ok:true,message,state:{...state,hotelStats:mergeNumbers<HotelStats>(state.hotelStats,conclusion.effect.hotelStats),reputations:mergeNumbers<Reputations>(state.reputations,conclusion.effect.reputations),flags:{...state.flags,...appliedFlags,monster_threat:clamp(numeric(state.flags.monster_threat)+conclusion.effect.threat)},investigationCases:state.investigationCases.map((entry)=>entry.caseId===caseId?nextCase:entry),eventHistory:[...state.eventHistory,{day:state.day,type:"EVENT",message}]}};
+  const resolved:GameState={...state,hotelStats:mergeNumbers<HotelStats>(state.hotelStats,conclusion.effect.hotelStats),reputations:mergeNumbers<Reputations>(state.reputations,conclusion.effect.reputations),flags:{...state.flags,...appliedFlags,monster_threat:clamp(numeric(state.flags.monster_threat)+conclusion.effect.threat)},investigationCases:state.investigationCases.map((entry)=>entry.caseId===caseId?nextCase:entry),eventHistory:[...state.eventHistory,{day:state.day,type:"EVENT",message}]};
+  const withKnowledge=conclusion.id===definition.correctConclusionId&&assessment==="SUPPORTED"?applyMonsterKnowledgeSource(resolved,"ROOM_207_MONSTER_CONCLUSION"):resolved;
+  return {ok:true,message,state:withKnowledge};
 }

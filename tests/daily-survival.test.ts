@@ -79,19 +79,19 @@ test("주방·방호·진료 회로 정지는 식량, 위협, 치안, 환자 Hea
   assert.equal(resolved.lastDaySummary?.survivalWarnings?.length, 3);
 });
 
-test("저장 복원은 v13 전력 배분·배급 정책·남은 AP를 유지한다", () => {
+test("저장 복원은 v14 전력 배분·배급 정책·남은 AP를 유지한다", () => {
   let state = createInitialGameState();
   state = configurePowerCircuit(state, "CLINIC", false).state;
   state = configureFoodRation(state, "SEVERE");
   state.actionPoints = 1;
   const restored = restoreGameState(serializeGameState(state));
-  assert.equal(restored.version, 13);
+  assert.equal(restored.version, 14);
   assert.equal(restored.foodRationPolicy, "SEVERE");
   assert.deepEqual(restored.powerAllocation, ["SECURITY", "KITCHEN"]);
   assert.equal(restored.actionPoints, 1);
 });
 
-test("v9의 하루 전체 AP 저장은 v13의 3 AP로 마이그레이션된다", () => {
+test("v9의 하루 전체 AP 저장은 v14의 3 AP로 마이그레이션된다", () => {
   const legacy = JSON.parse(serializeGameState(createInitialGameState()));
   legacy.version = 9;
   legacy.actionPoints = 2;
@@ -99,11 +99,11 @@ test("v9의 하루 전체 AP 저장은 v13의 3 AP로 마이그레이션된다",
   delete legacy.foodRationPolicy;
   delete legacy.powerAllocation;
   const restored = restoreGameState(JSON.stringify(legacy));
-  assert.deepEqual({ version: restored.version, actionPoints: restored.actionPoints, maxActionPoints: restored.maxActionPoints }, { version: 13, actionPoints: 3, maxActionPoints: 3 });
+  assert.deepEqual({ version: restored.version, actionPoints: restored.actionPoints, maxActionPoints: restored.maxActionPoints }, { version: 14, actionPoints: 3, maxActionPoints: 3 });
   assert.equal(restored.foodRationPolicy, "NORMAL");
 });
 
-test("v9에서 일부 사용한 AP는 v13 마이그레이션 후에도 그대로 유지된다", () => {
+test("v9에서 일부 사용한 AP는 v14 마이그레이션 후에도 그대로 유지된다", () => {
   const legacy = JSON.parse(serializeGameState(createInitialGameState()));
   legacy.version = 9;
   legacy.actionPoints = 1;
