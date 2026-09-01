@@ -28,6 +28,13 @@ test("컷신 ID와 스토리 선택 트리거는 고유하며 야간·스토리 
   assert.ok(storyCutscenes.every((cutscene) => STORY_CHOICE_EVENTS.some((event) => event.id === cutscene.triggerStoryEventId && event.choices.some((choice) => choice.id === cutscene.triggerStoryChoiceId))));
 });
 
+test("Mr. White의 THE DOOR 최종 선택은 서로 다른 전용 원화와 장면을 소유한다", () => {
+  const scenes = CUTSCENES.filter((cutscene) => cutscene.triggerStoryEventId === "white-answer");
+  assert.deepEqual(scenes.map((scene) => scene.triggerStoryChoiceId).sort((a, b) => String(a).localeCompare(String(b))), ["no", "yes"]);
+  assert.equal(new Set(scenes.map((scene) => scene.image)).size, 2);
+  assert.ok(scenes.every((scene) => scene.imageAlt.includes("Mr. White")));
+});
+
 test("DAY 0 프롤로그는 출발 원화에서 빈 프런트와 첫 노크로 전환된다", () => {
   assert.equal(PROLOGUE_BEATS.length, 4);
   assert.ok(PROLOGUE_BEATS.slice(0, 3).every((beat) => beat.image.endsWith("father-departure-v1.png")));

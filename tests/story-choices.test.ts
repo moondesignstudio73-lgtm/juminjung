@@ -229,6 +229,33 @@ test("Mr. White를 받아들이면 THE DOOR 응답과 비인간 단서가 남는
   assert.equal(result.state.flags.the_door_answer_yes, true);
   assert.ok(white.discoveredTraits.includes("NonHumanPossible"));
   assert.equal(result.state.flags.monster_threat, 20);
+  assert.equal(result.state.activeCutsceneId, "white_door_accepted");
+  assert.equal(getCutscene(result.state.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/white-door-accepted-v1.png");
+  assert.equal(restoreGameState(serializeGameState(result.state)).activeCutsceneId, "white_door_accepted");
+});
+
+test("Mr. White를 추방하면 다른 전용 컷씬과 안전 우선 결과가 남는다", () => {
+  const result = applyStoryChoice(resolutionState("white"), "white-answer", "no");
+  assert.equal(result.state.flags.the_door_answer_no, true);
+  assert.equal(result.state.flags.white_banished, true);
+  assert.equal(result.state.flags.monster_threat, 0);
+  assert.equal(result.state.activeCutsceneId, "white_banished");
+  assert.equal(getCutscene(result.state.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/white-banished-v1.png");
+  assert.equal(restoreGameState(serializeGameState(result.state)).activeCutsceneId, "white_banished");
+});
+
+test("Mr. White의 두 최종 선택 컷씬은 다른 장면 뒤에 큐로 저장되어 유실되지 않는다", () => {
+  for (const [choiceId, cutsceneId] of [["yes", "white_door_accepted"], ["no", "white_banished"]] as const) {
+    const state = resolutionState("white");
+    state.activeCutsceneId = "first_night";
+    const resolved = applyStoryChoice(state, "white-answer", choiceId).state;
+    assert.equal(resolved.activeCutsceneId, "first_night");
+    assert.deepEqual(resolved.queuedCutsceneIds, [cutsceneId]);
+    const restored = restoreGameState(serializeGameState(resolved));
+    const advanced = dismissCutscene(restored);
+    assert.equal(advanced.activeCutsceneId, cutsceneId);
+    assert.deepEqual(advanced.queuedCutsceneIds, []);
+  }
 });
 
 test("선택형 결말은 야간 자동 진행으로 건너뛰지 않는다", () => {
