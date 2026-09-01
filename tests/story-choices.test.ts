@@ -223,6 +223,51 @@ test("Owen의 탈출 경로는 자치 방위대의 공성 완화와 전용 컷�
   assert.equal(result.activeCutsceneId,null);
 });
 
+test("Daniel이 Mia의 선택권을 존중하면 가족 경로와 전용 컷씬이 열린다", () => {
+  const result = applyStoryChoice(resolutionState("daniel"), "daniel-family", "let_choose");
+  const daniel = result.state.guests.find((guest) => guest.id === "daniel")!;
+  assert.equal(result.state.flags.daniel_respects_mia, true);
+  assert.equal(result.state.flags.family_routes_complete, true);
+  assert.equal(daniel.relationships.find((relation) => relation.targetId === "mia")?.value, 25);
+  assert.equal(result.state.activeCutsceneId, "daniel_mia_choice");
+  assert.equal(getCutscene(result.state.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/daniel-mia-choice-v1.png");
+  assert.equal(restoreGameState(serializeGameState(result.state)).activeCutsceneId, "daniel_mia_choice");
+});
+
+test("Daniel과 Mia의 안전지대 출발은 식량 비용과 전용 컷씬을 함께 기록한다", () => {
+  const state = resolutionState("daniel");
+  const result = applyStoryChoice(state, "daniel-family", "escort");
+  assert.equal(result.state.resources.food, state.resources.food - 2);
+  assert.equal(result.state.flags.carter_family_departed, true);
+  assert.equal(result.state.activeCutsceneId, "carter_safe_passage");
+  assert.equal(getCutscene(result.state.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/carter-safe-passage-v1.png");
+  assert.equal(restoreGameState(serializeGameState(result.state)).activeCutsceneId, "carter_safe_passage");
+});
+
+test("식량이 부족하면 Carter 가족 출발과 컷씬을 선택할 수 없다", () => {
+  const state = resolutionState("daniel");
+  state.resources.food = 1;
+  const choice = getPendingStoryChoice(state)!.choices.find((item) => item.id === "escort")!;
+  assert.equal(canChooseStoryChoice(state, choice), false);
+  assert.throws(() => applyStoryChoice(state, "daniel-family", "escort"), /자원이 부족합니다/);
+  assert.equal(state.activeCutsceneId, null);
+  assert.equal(state.flags.carter_family_departed, undefined);
+});
+
+test("Daniel의 두 가족 결말 컷씬은 다른 장면 뒤에 큐로 저장되어 유실되지 않는다", () => {
+  for (const [choiceId, cutsceneId] of [["let_choose", "daniel_mia_choice"], ["escort", "carter_safe_passage"]] as const) {
+    const state = resolutionState("daniel");
+    state.activeCutsceneId = "first_night";
+    const resolved = applyStoryChoice(state, "daniel-family", choiceId).state;
+    assert.equal(resolved.activeCutsceneId, "first_night");
+    assert.deepEqual(resolved.queuedCutsceneIds, [cutsceneId]);
+    const restored = restoreGameState(serializeGameState(resolved));
+    const advanced = dismissCutscene(restored);
+    assert.equal(advanced.activeCutsceneId, cutsceneId);
+    assert.deepEqual(advanced.queuedCutsceneIds, []);
+  }
+});
+
 test("Mr. White를 받아들이면 THE DOOR 응답과 비인간 단서가 남는다", () => {
   const result = applyStoryChoice(resolutionState("white"), "white-answer", "yes");
   const white = result.state.guests.find((guest) => guest.id === "white")!;

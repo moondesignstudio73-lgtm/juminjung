@@ -28,6 +28,13 @@ test("컷신 ID와 스토리 선택 트리거는 고유하며 야간·스토리 
   assert.ok(storyCutscenes.every((cutscene) => STORY_CHOICE_EVENTS.some((event) => event.id === cutscene.triggerStoryEventId && event.choices.some((choice) => choice.id === cutscene.triggerStoryChoiceId))));
 });
 
+test("Daniel의 가족 결말 선택은 서로 다른 전용 원화와 장면을 소유한다", () => {
+  const scenes = CUTSCENES.filter((cutscene) => cutscene.triggerStoryEventId === "daniel-family");
+  assert.deepEqual(scenes.map((scene) => scene.triggerStoryChoiceId).sort((a, b) => String(a).localeCompare(String(b))), ["escort", "let_choose"]);
+  assert.equal(new Set(scenes.map((scene) => scene.image)).size, 2);
+  assert.ok(scenes.every((scene) => scene.imageAlt.includes("Daniel Carter") && scene.imageAlt.includes("Mia Carter")));
+});
+
 test("Mr. White의 THE DOOR 최종 선택은 서로 다른 전용 원화와 장면을 소유한다", () => {
   const scenes = CUTSCENES.filter((cutscene) => cutscene.triggerStoryEventId === "white-answer");
   assert.deepEqual(scenes.map((scene) => scene.triggerStoryChoiceId).sort((a, b) => String(a).localeCompare(String(b))), ["no", "yes"]);
