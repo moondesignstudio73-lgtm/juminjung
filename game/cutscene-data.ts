@@ -110,6 +110,18 @@ export const CUTSCENES: CutsceneDefinition[] = [
     imageAlt: "오웬 밀러가 JUJU HOTEL 로비에서 계급장을 내려놓고 주민들과 출입로 지도와 역할표를 점검하며 객실 문짝과 철제 선반으로 방어선을 준비하는 장면.",
   },
   {
+    id: "owen_escape_route",
+    triggerStoryEventId: "owen-future",
+    triggerStoryChoiceId: "escape",
+    priority: 169,
+    kicker: "JUJU HOTEL · ESCAPE ROUTE",
+    title: "방어선 밖의 길",
+    body: "오웬 밀러는 군번줄을 셔츠 안으로 밀어 넣고, 망가진 소총과 작은 가방만 챙겨 호텔 후문에 섰다. 황동등 아래에는 그가 끝내 완성하지 않은 로비 방어 지도와 빈 의자가 남았다. 빗속의 탐조등이 골목 반대편을 훑는 사이 문이 열렸고, 그는 호텔의 불빛을 한 번 돌아본 뒤 차가운 통로로 몸을 옮겼다. 그가 나간 뒤 후문은 안에서 다시 봉쇄됐다. 그를 쫓는 군 차량의 소음도, 그 소리에 몰린 괴물도 호텔에서 멀어질 것이다. 그러나 공성이 닥치는 날, 그가 짜던 교대선과 후퇴 경로를 대신 완성할 사람은 없다.",
+    quote: "제가 남으면 전쟁이 이 문을 찾아옵니다. 떠나면, 적어도 오늘 밤은 빗나가겠죠.",
+    image: "/juminjung/assets/cutscenes/owen-escape-route-v1.png",
+    imageAlt: "오웬 밀러가 낡은 가방과 손상된 소총을 들고 따뜻한 호텔 후문을 마지막으로 돌아본 뒤 빗속 탐조등이 훑는 차가운 골목으로 떠나며, 안쪽 탁자에는 미완성 방어 지도와 빈 의자가 남은 장면.",
+  },
+  {
     id: "vale_behavior_map",
     triggerStoryEventId: "vale-research",
     triggerStoryChoiceId: "complete",

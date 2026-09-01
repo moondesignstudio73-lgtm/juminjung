@@ -1,6 +1,10 @@
 import { completeEventStage } from "./story-event-manager.ts";
 import { queueStoryChoiceCutscene } from "./cutscene-manager.ts";
 import { STORY_CHOICE_EVENTS } from "./story-choice-data.ts";
+import { recalculateRoomEffects } from "./aura-effect-manager.ts";
+import { checkoutGuest } from "./room-manager.ts";
+import { pruneStaffAssignments } from "./staff-operation-manager.ts";
+import { updateVisitorFinalState } from "./visitor-queue-manager.ts";
 import type { GameState, HotelLogEntry, StoryChoice, StoryChoiceEvent } from "./types.ts";
 
 const clamp = (value: number) => Math.max(0, Math.min(100, value));
@@ -46,8 +50,11 @@ export function applyStoryChoice(state: GameState, eventId: string, choiceId: st
     return { ...guest, trust: clamp(guest.trust + Number(effect.trust ?? 0)), stress: clamp(guest.stress + Number(effect.stress ?? 0)), health: clamp(guest.health + Number(effect.health ?? 0)), discoveredTraits: effect.discoverTrait ? [...new Set([...guest.discoveredTraits, effect.discoverTrait])] : guest.discoveredTraits, relationships: effectiveRelationship ? guest.relationships.map((relation) => relation.targetId === effectiveRelationship.targetId ? { ...relation, value: relation.value + effectiveRelationship.delta } : relation) : guest.relationships, storyFlags: { ...guest.storyFlags, [`choice_${event.stage.toLowerCase()}`]: choice.id } };
   });
   const completed = completeEventStage(guests, event.guestId, event.stage);
+  const departure = effect.departure;
+  const resolvedGuests = departure ? completed.guests.map((guest) => guest.id === event.guestId ? { ...guest, status: "CHECKED_OUT" as const, currentRoomNumber: null, remainingNights: 0, revisitPolicy: "NEVER" as const, endingState: departure.endingState, storyFlags: { ...guest.storyFlags, last_checked_out_day: state.day, story_departed_day: state.day } } : guest) : completed.guests;
+  const rooms = departure ? recalculateRoomEffects(checkoutGuest(state.rooms, event.guestId), resolvedGuests) : state.rooms;
   const resources = add(state.resources, effect.resources);
-  const entry: HotelLogEntry = { day: state.day, type: "EVENT", message: `NPC 사건 · ${event.title} · ${choice.label}`, relationshipChanges: effectiveRelationship ? [{ sourceId: event.guestId, targetId: effectiveRelationship.targetId, delta: effectiveRelationship.delta }] : undefined };
-  const next: GameState = { ...state, guests: completed.guests, resources, hotelStats: add(state.hotelStats, effect.hotelStats), reputations: add(state.reputations, effect.reputations), flags: { ...state.flags, ...effect.flags, monster_threat: clamp(Number(state.flags.monster_threat ?? 0) + Number(effect.threat ?? 0)) }, fatherStoryProgress: clamp(state.fatherStoryProgress + Number(effect.fatherStoryProgress ?? 0)), pendingStoryEventId: null, eventHistory: [...state.eventHistory, entry] };
+  const entry: HotelLogEntry = { day: state.day, type: "EVENT", message: `NPC 사건 · ${event.title} · ${choice.label}${departure ? " · 호텔 출발" : ""}`, relationshipChanges: effectiveRelationship ? [{ sourceId: event.guestId, targetId: effectiveRelationship.targetId, delta: effectiveRelationship.delta }] : undefined };
+  const next: GameState = { ...state, guests: resolvedGuests, rooms, resources, hotelStats: add(state.hotelStats, effect.hotelStats), reputations: add(state.reputations, effect.reputations), flags: { ...state.flags, ...effect.flags, monster_threat: clamp(Number(state.flags.monster_threat ?? 0) + Number(effect.threat ?? 0)) }, fatherStoryProgress: clamp(state.fatherStoryProgress + Number(effect.fatherStoryProgress ?? 0)), pendingStoryEventId: null, staffAssignments: departure ? pruneStaffAssignments(state.staffAssignments, resolvedGuests) : state.staffAssignments, visitorHistory: departure ? updateVisitorFinalState(state.visitorHistory, event.guestId, departure.finalState, `DAY ${state.day} · 스토리 출발 · ${choice.label}`) : state.visitorHistory, eventHistory: [...state.eventHistory, entry] };
   return { state: queueStoryChoiceCutscene(next, event.id, choice.id), event, choice, entry };
 }

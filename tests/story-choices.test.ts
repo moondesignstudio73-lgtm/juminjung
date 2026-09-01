@@ -8,7 +8,11 @@ import { STORY_CHOICE_EVENTS } from "../game/story-choice-data.ts";
 import { createGuests } from "../game/guest-data.ts";
 import { dismissCutscene, queueStoryChoiceCutscene } from "../game/cutscene-manager.ts";
 import { getCutscene } from "../game/cutscene-data.ts";
-import { selectNightEvent } from "../game/night-event-manager.ts";
+import { getEffectiveNightChoice, selectNightEvent } from "../game/night-event-manager.ts";
+import { assignGuest } from "../game/room-manager.ts";
+import { recalculateRoomEffects } from "../game/aura-effect-manager.ts";
+import { getEligibleVisitor } from "../game/visitor-manager.ts";
+import { recordVisitorDecision } from "../game/visitor-queue-manager.ts";
 
 function conflictState(guestId: string) {
   const state = createInitialGameState();
@@ -263,10 +267,16 @@ test("손상된 컷신 대기열은 알 수 없는 ID·중복·이미 본 장면
 });
 
 test("Owen의 방어대는 군사 저항 성공 조건과 전용 컷씬을 기록하고 저장한다", () => {
-  const result = applyStoryChoice(resolutionState("owen"), "owen-future", "resistance");
+  const state = resolutionState("owen");
+  state.flags.owen_escaped = true;
+  const choice = STORY_CHOICE_EVENTS.find((event) => event.id === "owen-future")!.choices.find((candidate) => candidate.id === "resistance")!;
+  for (const term of ["Trust +10", "Security +8", "DAY 25", "보안 물자 6→4", "부품 3→2", "Health -20→-10", "Aura", "근무 배치", "되돌릴 수 없", "Monster Threat -5", "포기"]) assert.ok(choice.description.includes(term), term);
+  const result = applyStoryChoice(state, "owen-future", "resistance");
   assert.equal(result.state.flags.military_resistance_succeeded, true);
   assert.equal(result.state.flags.hotel_defense_force, true);
   assert.equal(result.state.flags.owen_siege_plan,true);
+  assert.equal(result.state.flags.owen_escaped,false);
+  assert.equal(result.state.guests.find((guest) => guest.id === "owen")?.status,"STAYING");
   assert.equal(result.state.activeCutsceneId,"owen_defense_force");
   assert.equal(getCutscene(result.state.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/owen-defense-force-v1.png");
   const restored=restoreGameState(serializeGameState(result.state));
@@ -275,11 +285,53 @@ test("Owen의 방어대는 군사 저항 성공 조건과 전용 컷씬을 기�
   assert.equal(restored.activeCutsceneId,"owen_defense_force");
 });
 
-test("Owen의 탈출 경로는 자치 방위대의 공성 완화와 전용 컷씬을 열지 않는다", () => {
-  const result=applyStoryChoice(resolutionState("owen"),"owen-future","escape").state;
-  assert.equal(result.flags.hotel_defense_force,undefined);
-  assert.equal(result.flags.owen_siege_plan,undefined);
-  assert.equal(result.activeCutsceneId,null);
+test("Owen의 탈출은 객실·Aura·근무·재방문을 정리하고 공성 완화를 닫는 전용 컷씬을 연다", () => {
+  let state = resolutionState("owen");
+  state.flags.monster_threat = 20;
+  Object.assign(state.flags, { military_resistance_succeeded: true, hotel_defense_force: true, owen_siege_plan: true });
+  state.rooms = recalculateRoomEffects(assignGuest(state.rooms,301,"owen"),state.guests);
+  state.staffAssignments.SECURITY = "owen";
+  state = recordVisitorDecision(state,"owen","ACCEPTED",301);
+  assert.ok(state.rooms.some((room) => room.temporaryEffects.some((effect) => effect.sourceGuestId === "owen")));
+  const choice = STORY_CHOICE_EVENTS.find((event) => event.id === "owen-future")!.choices.find((candidate) => candidate.id === "escape")!;
+  for (const term of ["군 추격대", "Monster Threat -5", "humanitarian 평판 +4", "military 평판 -10 손실을 피", "영구 출발", "Aura", "근무 배치", "재방문하지 않습니다", "Trust +10", "Security +8", "refugee 평판 +8", "DAY 25", "Health -20→-10", "포기", "다른 주민이 만든 방위 효과는 유지"]) assert.ok(choice.description.includes(term), term);
+  const resolved = applyStoryChoice(state,"owen-future","escape");
+  const result = resolved.state;
+  const owen = result.guests.find((guest) => guest.id === "owen")!;
+  assert.deepEqual({ status:owen.status, room:owen.currentRoomNumber, nights:owen.remainingNights, revisit:owen.revisitPolicy, ending:owen.endingState },{ status:"CHECKED_OUT", room:null, nights:0, revisit:"NEVER", ending:"ESCAPED" });
+  assert.equal(owen.storyFlags.story_departed_day,state.day);
+  assert.equal(result.rooms.find((room) => room.roomNumber === 301)?.status,"EMPTY");
+  assert.ok(result.rooms.every((room) => room.temporaryEffects.every((effect) => effect.sourceGuestId !== "owen")));
+  assert.equal(result.staffAssignments.SECURITY,undefined);
+  assert.equal(result.visitorHistory.find((entry) => entry.visitorId === "owen")?.finalState,"STORY_ESCAPED");
+  assert.equal(result.flags.military_resistance_succeeded,false);
+  assert.equal(result.flags.owen_siege_plan,false);
+  assert.equal(result.flags.hotel_defense_force,true);
+  assert.equal(result.flags.owen_escaped,true);
+  assert.equal(result.flags.monster_threat,15);
+  assert.equal(result.activeCutsceneId,"owen_escape_route");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/owen-escape-route-v1.png");
+  assert.match(resolved.entry.message,/호텔 출발$/);
+  const restored = restoreGameState(serializeGameState(result));
+  assert.equal(restored.guests.find((guest) => guest.id === "owen")?.revisitPolicy,"NEVER");
+  assert.equal(getEligibleVisitor(restored.guests.filter((guest) => guest.id === "owen"),100,restored.flags),null);
+  assert.equal(restored.activeCutsceneId,"owen_escape_route");
+  const siegeState = { ...restored, day:25, worldState:"CRITICAL" as const, hotelStats:{...restored.hotelStats,security:60}, resources:{...restored.resources,security:10,parts:10}, flags:{...restored.flags,monster_threat:50}, guests:restored.guests.map((guest) => guest.id === "walter" ? { ...guest, status:"STAYING" as const, currentRoomNumber:302 } : guest) };
+  const hold = selectNightEvent(siegeState).choices.find((candidate) => candidate.id === "hold_lobby")!;
+  assert.deepEqual(getEffectiveNightChoice(siegeState,hold).requiredResources,{security:6,parts:3});
+  assert.equal(getEffectiveNightChoice(siegeState,hold).effect.targetGuestHealth,-20);
+});
+
+test("Owen의 두 결말 컷씬은 다른 장면 뒤에 큐로 저장되어 유실되지 않는다", () => {
+  for (const [choiceId, cutsceneId] of [["resistance", "owen_defense_force"], ["escape", "owen_escape_route"]] as const) {
+    const state = resolutionState("owen");
+    state.activeCutsceneId = "first_night";
+    const resolved = applyStoryChoice(state,"owen-future",choiceId).state;
+    assert.equal(resolved.activeCutsceneId,"first_night");
+    assert.deepEqual(resolved.queuedCutsceneIds,[cutsceneId]);
+    const advanced = dismissCutscene(restoreGameState(serializeGameState(resolved)));
+    assert.equal(advanced.activeCutsceneId,cutsceneId);
+  }
 });
 
 test("Daniel이 Mia의 선택권을 존중하면 가족 경로와 전용 컷씬이 열린다", () => {

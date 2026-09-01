@@ -77,6 +77,13 @@ test("Eleanor의 최종 진료 선택은 상설 진료소와 순회 진료의 �
   assert.ok(scenes.every((scene) => scene.imageAlt.includes("엘리너 리드")));
 });
 
+test("Owen의 최종 선택은 자치 방위대와 영구 탈출의 서로 다른 전용 원화를 소유한다", () => {
+  const scenes = CUTSCENES.filter((cutscene) => cutscene.triggerStoryEventId === "owen-future");
+  assert.deepEqual(scenes.map((scene) => scene.triggerStoryChoiceId).sort(), ["escape", "resistance"]);
+  assert.equal(new Set(scenes.map((scene) => scene.image)).size, 2);
+  assert.ok(scenes.every((scene) => scene.imageAlt.includes("오웬 밀러")));
+});
+
 test("Walter의 최종 열쇠 선택은 기록실 개방과 영구 봉인의 서로 다른 전용 원화를 소유한다", () => {
   const scenes = CUTSCENES.filter((cutscene) => cutscene.triggerStoryEventId === "walter-key");
   assert.deepEqual(scenes.map((scene) => scene.triggerStoryChoiceId).sort((a, b) => String(a).localeCompare(String(b))), ["hide_key", "use_key"]);
