@@ -254,6 +254,18 @@ export const CUTSCENES: CutsceneDefinition[] = [
     imageAlt: "엘리너 리드가 낡은 JUJU HOTEL 객실을 개조한 작은 상설 진료소에서 약품과 진료 장부를 정리하고, 따뜻한 황동 램프 아래 붕대를 감은 환자를 살피는 장면.",
   },
   {
+    id: "eleanor_mobile_rounds",
+    triggerStoryEventId: "eleanor-standard",
+    triggerStoryChoiceId: "mobile",
+    priority: 165,
+    kicker: "JUJU HOTEL · MOBILE ROUNDS",
+    title: "진료소가 없는 복도",
+    body: "엘리너 리드는 남은 약을 한 객실에 쌓아 두는 대신 낡은 왕진 가방에 나누어 담았다. 황동 램프 하나와 금속 쟁반을 복도 바닥에 내려놓고 가장 위급한 주민의 붕대를 다시 감는 동안, 닫힌 문 너머에서는 다음 차례를 기다리는 기침과 발소리가 이어졌다. 오늘 밤에도 한 사람은 확실히 나아질 것이다. 그러나 고정된 진료실도, 호텔 전체의 발병을 미리 막을 장비도 없었다. 그녀가 호텔을 떠나는 날에는 이 복도 진료도 함께 끝날 것이다.",
+    quote: "모두를 한 방에 부를 수 없다면, 너무 늦기 전에 제가 찾아가야죠.",
+    image: "/juminjung/assets/cutscenes/eleanor-mobile-rounds-v1.png",
+    imageAlt: "엘리너 리드가 낡은 왕진 가방과 황동 램프를 호텔 복도에 내려놓고 부상자의 붕대를 갈며, 뒤로 닫힌 여러 객실 문이 이어지는 장면.",
+  },
+  {
     id: "walter_archive_opened",
     triggerStoryEventId: "walter-key",
     triggerStoryChoiceId: "use_key",

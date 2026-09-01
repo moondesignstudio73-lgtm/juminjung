@@ -122,6 +122,7 @@ export function resolveDay(state: GameState): GameState {
     ...staffDutyResults.map((result):HotelLogEntry=>({day:state.day,type:"EVENT",message:`근무 정산 · ${result.guestName} · ${result.effect}`})),
     ...(auraNight.sickGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`객실 질병 발생 · ${auraNight.sickGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
     ...(auraNight.clinicPreventedGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`상설 진료소 예방 · ${auraNight.clinicPreventedGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
+    ...(auraNight.mobileMedicGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`순회 진료 회복 · ${auraNight.mobileMedicGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
     ...(appliedAlarmThreatReduction ? [{day:state.day,type:"EVENT" as const,message:`외곽 조기경보망 가동 · Monster Threat 보정 -${appliedAlarmThreatReduction}`}] : []),
     ...(appliedPathfinderThreatReduction ? [{day:state.day,type:"EVENT" as const,message:`안전 통로 정찰 · Monster Threat 보정 -${appliedPathfinderThreatReduction}`}] : []),
     ...(appliedResearchPredictionThreatReduction ? [{day:state.day,type:"EVENT" as const,message:`괴물 행동 예측 · Monster Threat 보정 -${appliedResearchPredictionThreatReduction}`}] : []),

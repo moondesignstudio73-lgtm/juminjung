@@ -98,28 +98,57 @@ test("선택형 갈등은 야간 자동 진행으로 건너뛰지 않는다", ()
   assert.equal(eleanor.eventChain.find((event) => event.stage === "RESOLUTION")?.completed, false);
 });
 
-test("Eleanor의 상설 진료 선택은 약품과 의료 엔딩 조건을 연결한다", () => {
+test("Eleanor의 상설 진료 선택은 약품과 전 호텔 질병 예방을 연결한다", () => {
   const state = resolutionState("eleanor");
+  state.flags.eleanor_mobile_medic = true;
+  const choice = STORY_CHOICE_EVENTS.find((event) => event.id === "eleanor-standard")!.choices.find((candidate) => candidate.id === "clinic")!;
+  for (const term of ["의약품 3", "Trust +10", "community 평판 +8", "humanitarian 평판 +8", "떠난 뒤에도", "NORMAL_DISEASE", "누적되지 않는 -5%p", "Health +5", "refugee 평판 +5", "포기"]) assert.ok(choice.description.includes(term), term);
   const result = applyStoryChoice(state, "eleanor-standard", "clinic");
   const eleanor = result.state.guests.find((guest) => guest.id === "eleanor")!;
   assert.equal(result.state.resources.medicine, state.resources.medicine - 3);
   assert.equal(result.state.flags.eleanor_clinic_established, true);
   assert.equal(result.state.flags.medical_network_active, true);
+  assert.equal(result.state.flags.eleanor_mobile_medic, false);
   assert.equal(result.state.activeCutsceneId, "eleanor_clinic_opened");
   assert.equal(getCutscene(result.state.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/eleanor-hotel-clinic-v1.png");
   assert.equal(eleanor.storyFlags.choice_resolution, "clinic");
   assert.equal(eleanor.eventChain.find((event) => event.stage === "RESOLUTION")?.completed, true);
   const restored = restoreGameState(serializeGameState(result.state));
   assert.equal(restored.flags.eleanor_clinic_established, true);
+  assert.equal(restored.flags.eleanor_mobile_medic, false);
   assert.equal(restored.activeCutsceneId, "eleanor_clinic_opened");
 });
 
-test("Eleanor의 순회 진료 선택은 상설 진료 효과와 전용 컷신을 열지 않는다", () => {
-  const result = applyStoryChoice(resolutionState("eleanor"), "eleanor-standard", "mobile");
+test("Eleanor의 순회 진료는 비축분을 보존하고 단일 부상자 회복과 전용 컷씬을 연다", () => {
+  const state = resolutionState("eleanor");
+  Object.assign(state.flags, { eleanor_clinic_established: true, medical_network_active: true });
+  const choice = STORY_CHOICE_EVENTS.find((event) => event.id === "eleanor-standard")!.choices.find((candidate) => candidate.id === "mobile")!;
+  for (const term of ["의약품 비축", "Trust +5", "refugee 평판 +5", "투숙 중", "Eleanor 자신을 제외", "Health가 가장 낮은 한 명", "+5 회복", "NORMAL_DISEASE", "-5%p", "영구적으로 포기"]) assert.ok(choice.description.includes(term), term);
+  const result = applyStoryChoice(state, "eleanor-standard", "mobile");
+  assert.equal(result.state.resources.medicine, state.resources.medicine);
   assert.equal(result.state.flags.eleanor_mobile_medic, true);
-  assert.equal(result.state.flags.eleanor_clinic_established, undefined);
-  assert.equal(result.state.flags.medical_network_active, undefined);
-  assert.equal(result.state.activeCutsceneId, null);
+  assert.equal(result.state.flags.eleanor_clinic_established, false);
+  assert.equal(result.state.flags.medical_network_active, false);
+  assert.equal(result.state.activeCutsceneId, "eleanor_mobile_rounds");
+  assert.equal(getCutscene(result.state.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/eleanor-mobile-rounds-v1.png");
+  const restored = restoreGameState(serializeGameState(result.state));
+  assert.equal(restored.flags.eleanor_mobile_medic, true);
+  assert.equal(restored.flags.eleanor_clinic_established, false);
+  assert.equal(restored.activeCutsceneId, "eleanor_mobile_rounds");
+});
+
+test("Eleanor의 두 진료 결말 컷씬은 다른 장면 뒤에 큐로 저장되어 유실되지 않는다", () => {
+  for (const [choiceId, cutsceneId] of [["clinic", "eleanor_clinic_opened"], ["mobile", "eleanor_mobile_rounds"]] as const) {
+    const state = resolutionState("eleanor");
+    state.activeCutsceneId = "first_night";
+    const resolved = applyStoryChoice(state, "eleanor-standard", choiceId).state;
+    assert.equal(resolved.activeCutsceneId, "first_night");
+    assert.deepEqual(resolved.queuedCutsceneIds, [cutsceneId]);
+    const restored = restoreGameState(serializeGameState(resolved));
+    const advanced = dismissCutscene(restored);
+    assert.equal(advanced.activeCutsceneId, cutsceneId);
+    assert.deepEqual(advanced.queuedCutsceneIds, []);
+  }
 });
 
 test("Walter의 열쇠 사용은 아버지 비밀과 괴물 기원 단서를 연다", () => {

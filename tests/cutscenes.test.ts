@@ -70,6 +70,13 @@ test("Lily의 최종 진실 선택은 공개 방송과 암호화 보관의 서�
   assert.ok(scenes.every((scene) => scene.imageAlt.includes("릴리 포스터")));
 });
 
+test("Eleanor의 최종 진료 선택은 상설 진료소와 순회 진료의 서로 다른 전용 원화를 소유한다", () => {
+  const scenes = CUTSCENES.filter((cutscene) => cutscene.triggerStoryEventId === "eleanor-standard");
+  assert.deepEqual(scenes.map((scene) => scene.triggerStoryChoiceId).sort(), ["clinic", "mobile"]);
+  assert.equal(new Set(scenes.map((scene) => scene.image)).size, 2);
+  assert.ok(scenes.every((scene) => scene.imageAlt.includes("엘리너 리드")));
+});
+
 test("Walter의 최종 열쇠 선택은 기록실 개방과 영구 봉인의 서로 다른 전용 원화를 소유한다", () => {
   const scenes = CUTSCENES.filter((cutscene) => cutscene.triggerStoryEventId === "walter-key");
   assert.deepEqual(scenes.map((scene) => scene.triggerStoryChoiceId).sort((a, b) => String(a).localeCompare(String(b))), ["hide_key", "use_key"]);

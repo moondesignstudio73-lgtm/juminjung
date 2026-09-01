@@ -13,6 +13,7 @@ export type AuraNightResolution = {
   tradeBonus:{food:number;parts:number};
   sickGuestIds:string[];
   clinicPreventedGuestIds:string[];
+  mobileMedicGuestIds:string[];
   perimeterAlarmThreatReduction:number;
   pathfinderThreatReduction:number;
   researchPredictionThreatReduction:number;
@@ -30,6 +31,7 @@ const additiveValue = (room:Room|undefined, metric:AuraMetric) => effectsFor(roo
 const diseaseBaseChance:Record<WorldState,number> = {STABLE:2,UNREST:6,COLLAPSE:12,CRITICAL:20,END_STAGE:28};
 const stableGuestSeed = (guestId:string) => [...guestId].reduce((seed,character)=>(seed*31+character.charCodeAt(0))%100,0);
 export const ELEANOR_CLINIC_DISEASE_REDUCTION = 5;
+export const ELEANOR_MOBILE_MEDIC_HEALTH_RECOVERY = 5;
 export const PERIMETER_ALARM_THREAT_REDUCTION = 3;
 export const COMMUNITY_KITCHEN_FOOD_SAVING = 1;
 export const CIVIL_GUARD_SECURITY_GAIN = 2;
@@ -79,9 +81,11 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
   let tradeScore = 0;
   const sickGuestIds:string[] = [];
   const clinicPreventedGuestIds:string[] = [];
+  const mobileMedicGuestIds:string[] = [];
   const careTeamGuestIds:string[] = [];
   const nurseryGuestIds:string[] = [];
   const clinicActive = flags.eleanor_clinic_established === true;
+  const mobileMedicActive = flags.eleanor_mobile_medic === true&&staying.some((guest)=>guest.id==="eleanor");
   const perimeterAlarmActive = flags.perimeter_alarm === true;
   const pathfinderActive = flags.eli_pathfinder === true;
   const civilGuardActive = flags.samuel_civil_guard === true;
@@ -106,6 +110,16 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
       health,
     }] as const;
   }));
+
+  const mobileMedicTarget = mobileMedicActive ? staying
+    .filter((guest)=>guest.id!=="eleanor")
+    .map((guest)=>({guest,stats:adjustedStats.get(guest.id)!}))
+    .filter(({stats})=>stats.health<100)
+    .sort((a,b)=>a.stats.health-b.stats.health||(a.guest.currentRoomNumber??0)-(b.guest.currentRoomNumber??0)||a.guest.id.localeCompare(b.guest.id))[0] : undefined;
+  if (mobileMedicTarget) {
+    adjustedStats.set(mobileMedicTarget.guest.id,{...mobileMedicTarget.stats,health:clamp(mobileMedicTarget.stats.health+ELEANOR_MOBILE_MEDIC_HEALTH_RECOVERY)});
+    mobileMedicGuestIds.push(mobileMedicTarget.guest.id);
+  }
 
   const updatedById = new Map(staying.map((guest)=>{
     const room = rooms.find((candidate)=>candidate.roomNumber===guest.currentRoomNumber);
@@ -152,6 +166,7 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
     tradeBonus:{food:Math.floor(Math.max(0,tradeScore)/20),parts:Math.floor(Math.max(0,tradeScore)/40)},
     sickGuestIds,
     clinicPreventedGuestIds,
+    mobileMedicGuestIds,
     perimeterAlarmThreatReduction:threatWithoutAlarm-threatAfterAlarm,
     pathfinderThreatReduction:threatAfterAlarm-threatAfterPathfinder,
     researchPredictionThreatReduction:threatAfterPathfinder-threatDelta,
