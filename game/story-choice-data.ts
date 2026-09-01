@@ -34,8 +34,8 @@ export const STORY_CHOICE_EVENTS: StoryChoiceEvent[] = [
     { id: "mobile", label: "순회 진료만 허용한다", description: "비축분을 지키면서 Eleanor가 필요한 방만 찾아가도록 합니다.", effect: { trust: 5, reputations: { refugee: 5 }, flags: { eleanor_mobile_medic: true } } },
   ] },
   { id: "walter-key", guestId: "walter", stage: "RESOLUTION", title: "아버지가 남긴 열쇠", description: "Walter가 낡은 황동 열쇠를 내밉니다. 호텔 지하의 봉인된 기록실에 맞는 열쇠입니다.", quote: "‘네 아버지는 진실을 숨긴 게 아니라, 견딜 사람을 기다린 거다.’", choices: [
-    { id: "use_key", label: "지금 기록실을 연다", description: "아버지의 비밀과 괴물의 기원에 다가가지만 호텔의 잠든 위협도 깨웁니다.", effect: { fatherStoryProgress: 30, threat: 8, flags: { father_secret_discovered: true, monster_origin_clue_1: true, basement_key_used: true } } },
-    { id: "hide_key", label: "열쇠를 숨겨 둔다", description: "당장의 안전을 위해 기록실을 봉인하고 때를 기다립니다.", effect: { fatherStoryProgress: 10, hotelStats: { security: 4 }, flags: { basement_key_hidden: true } } },
+    { id: "use_key", label: "지금 기록실을 연다", description: "아버지의 비밀과 괴물 기원 단서, DAY 20의 91.3MHz 신호를 열지만 Monster Threat가 8 증가하고 봉인 유지로 얻을 Security 4를 포기합니다.", effect: { fatherStoryProgress: 30, threat: 8, flags: { father_secret_discovered: true, monster_origin_clue_1: true, basement_key_used: true, basement_key_hidden: false } } },
+    { id: "hide_key", label: "열쇠를 숨겨 둔다", description: "기록실을 영구 봉인해 Security를 4 높이지만, 아버지의 비밀과 괴물 기원 단서, DAY 20의 91.3MHz 신호 및 THE TRUTH 경로를 포기합니다.", effect: { fatherStoryProgress: 10, hotelStats: { security: 4 }, flags: { father_secret_discovered: false, monster_origin_clue_1: false, basement_key_hidden: true, basement_key_used: false } } },
   ] },
   { id: "mia-family", guestId: "mia", stage: "RESOLUTION", title: "가족이 되는 방법", description: "확인된 기억과 상처 앞에서 Mia와 Daniel의 관계를 어떻게 이어 갈지 결정해야 합니다.", quote: "‘가족이면… 무서워도 같이 있어야 하는 거야?’", choices: [
     { id: "reunite", label: "두 사람의 재회를 돕는다", description: "감시 아래 함께 지낼 길을 열고 흩어진 가족들의 이동로를 공유합니다.", effect: { trust: 5, stress: -10, flags: { family_routes_complete: true, mia_reunited: true }, relationship: { targetId: "daniel", delta: 25 } } },

@@ -70,6 +70,13 @@ test("Lily의 최종 진실 선택은 공개 방송과 암호화 보관의 서�
   assert.ok(scenes.every((scene) => scene.imageAlt.includes("릴리 포스터")));
 });
 
+test("Walter의 최종 열쇠 선택은 기록실 개방과 영구 봉인의 서로 다른 전용 원화를 소유한다", () => {
+  const scenes = CUTSCENES.filter((cutscene) => cutscene.triggerStoryEventId === "walter-key");
+  assert.deepEqual(scenes.map((scene) => scene.triggerStoryChoiceId).sort((a, b) => String(a).localeCompare(String(b))), ["hide_key", "use_key"]);
+  assert.equal(new Set(scenes.map((scene) => scene.image)).size, 2);
+  assert.ok(scenes.every((scene) => scene.imageAlt.includes("월터 브릭스")));
+});
+
 test("DAY 0 프롤로그는 출발 원화에서 빈 프런트와 첫 노크로 전환된다", () => {
   assert.equal(PROLOGUE_BEATS.length, 4);
   assert.ok(PROLOGUE_BEATS.slice(0, 3).every((beat) => beat.image.endsWith("father-departure-v1.png")));

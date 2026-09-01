@@ -123,25 +123,41 @@ test("Eleanor의 순회 진료 선택은 상설 진료 효과와 전용 컷신�
 });
 
 test("Walter의 열쇠 사용은 아버지 비밀과 괴물 기원 단서를 연다", () => {
+  const choice = STORY_CHOICE_EVENTS.find((event) => event.id === "walter-key")!.choices.find((candidate) => candidate.id === "use_key")!;
+  assert.ok(choice.description.includes("Monster Threat") && choice.description.includes("Security 4") && choice.description.includes("91.3MHz"));
   const result = applyStoryChoice(resolutionState("walter"), "walter-key", "use_key");
   assert.equal(result.state.flags.father_secret_discovered, true);
   assert.equal(result.state.flags.monster_origin_clue_1, true);
   assert.equal(result.state.fatherStoryProgress, 30);
   assert.equal(result.state.flags.monster_threat, 8);
   assert.equal(result.state.flags.basement_key_used, true);
-  assert.equal(result.state.flags.basement_key_hidden, undefined);
+  assert.equal(result.state.flags.basement_key_hidden, false);
   assert.equal(result.state.activeCutsceneId, "walter_archive_opened");
   assert.equal(getCutscene(result.state.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/walter-basement-archive-v1.png");
+  assert.ok(getCutscene(result.state.activeCutsceneId)?.body.includes("기억 반응을 모사한 조직 샘플"));
+  assert.ok(getCutscene(result.state.activeCutsceneId)?.body.includes("봉인을 지시한 서명"));
 });
 
-test("Walter가 열쇠를 숨기면 기록실 컷신과 기원 단서가 열리지 않는다", () => {
-  const result = applyStoryChoice(resolutionState("walter"), "walter-key", "hide_key");
-  assert.equal(result.state.activeCutsceneId, null);
-  assert.equal(result.state.flags.father_secret_discovered, undefined);
-  assert.equal(result.state.flags.monster_origin_clue_1, undefined);
+test("Walter가 열쇠를 숨기면 안전을 얻고 아버지 기록 경로를 닫는 전용 컷신을 연다", () => {
+  const choice = STORY_CHOICE_EVENTS.find((event) => event.id === "walter-key")!.choices.find((candidate) => candidate.id === "hide_key")!;
+  assert.ok(choice.description.includes("Security") && choice.description.includes("91.3MHz") && choice.description.includes("THE TRUTH") && choice.description.includes("포기"));
+  const starting = resolutionState("walter");
+  Object.assign(starting.flags, { father_secret_discovered: true, monster_origin_clue_1: true, basement_key_used: true, monster_origin_clue_2: true, vale_research_complete: true, lily_documents_decoded: true });
+  const beforeSecurity = starting.hotelStats.security;
+  const result = applyStoryChoice(starting, "walter-key", "hide_key");
+  assert.equal(result.state.activeCutsceneId, "walter_key_hidden");
+  assert.equal(getCutscene(result.state.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/walter-key-hidden-v1.png");
+  assert.equal(result.state.flags.father_secret_discovered, false);
+  assert.equal(result.state.flags.monster_origin_clue_1, false);
   assert.equal(result.state.flags.basement_key_hidden, true);
-  assert.equal(result.state.flags.basement_key_used, undefined);
+  assert.equal(result.state.flags.basement_key_used, false);
   assert.equal(result.state.flags.monster_threat, 0);
+  assert.equal(result.state.hotelStats.security, beforeSecurity + 4);
+  assert.notEqual(selectNightEvent({ ...result.state, day: 20 }).id, "father_radio_signal");
+  assert.ok(!evaluateEndings(result.state).available.includes("THE_TRUTH"));
+  const restored = restoreGameState(serializeGameState(result.state));
+  assert.equal(restored.flags.basement_key_hidden, true);
+  assert.equal(restored.activeCutsceneId, "walter_key_hidden");
 });
 
 test("Walter의 기록실 개방은 DAY 20의 91.3MHz 신호로 이어지고 컷신은 반복되지 않는다", () => {
@@ -152,6 +168,20 @@ test("Walter의 기록실 개방은 DAY 20의 91.3MHz 신호로 이어지고 컷
   assert.ok(restored.seenCutsceneIds.includes("walter_archive_opened"));
   assert.equal(restored.activeCutsceneId, null);
   assert.equal(selectNightEvent(restored).id, "father_radio_signal");
+});
+
+test("Walter의 두 열쇠 결말 컷씬은 다른 장면 뒤에 큐로 저장되어 유실되지 않는다", () => {
+  for (const [choiceId, cutsceneId] of [["use_key", "walter_archive_opened"], ["hide_key", "walter_key_hidden"]] as const) {
+    const state = resolutionState("walter");
+    state.activeCutsceneId = "first_night";
+    const resolved = applyStoryChoice(state, "walter-key", choiceId).state;
+    assert.equal(resolved.activeCutsceneId, "first_night");
+    assert.deepEqual(resolved.queuedCutsceneIds, [cutsceneId]);
+    const restored = restoreGameState(serializeGameState(resolved));
+    const advanced = dismissCutscene(restored);
+    assert.equal(advanced.activeCutsceneId, cutsceneId);
+    assert.deepEqual(advanced.queuedCutsceneIds, []);
+  }
 });
 
 test("Mia의 재회는 가족 경로와 Daniel 관계를 완성한다", () => {
