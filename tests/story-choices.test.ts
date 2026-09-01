@@ -421,26 +421,67 @@ test("Lily의 두 진실 결말 컷씬은 다른 장면 뒤에 큐로 저장되�
 test("Vale의 연구 완성은 Lily 관계와 THE TRUTH 핵심 플래그를 기록한다", () => {
   const state = resolutionState("vale");
   state.flags.vale_sample_stabilized = true;
+  state.flags.vale_research_destroyed = true;
+  const choice = STORY_CHOICE_EVENTS.find((event) => event.id === "vale-research")!.choices.find((entry) => entry.id === "complete")!;
+  assert.match(choice.description, /THE TRUTH/);
+  assert.match(choice.description, /Monster Threat/);
+  assert.match(choice.description, /12/);
+  assert.match(choice.description, /humanitarian/);
   const result = applyStoryChoice(state, "vale-research", "complete");
   const vale = result.state.guests.find((guest) => guest.id === "vale")!;
   assert.equal(result.state.flags.vale_research_complete, true);
   assert.equal(result.state.flags.lily_vale_research_shared, true);
+  assert.equal(result.state.flags.vale_research_destroyed, false);
   assert.equal(vale.relationships.find((relation) => relation.targetId === "lily")?.value, 45);
   assert.ok(vale.discoveredTraits.includes("PreOutbreakResearch"));
-  assert.equal(result.state.activeCutsceneId,"vale_behavior_map");
-  assert.equal(getCutscene(result.state.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/vale-lily-research-v1.png");
-  const restored=restoreGameState(serializeGameState(result.state));
-  assert.equal(restored.flags.lily_vale_research_shared,true);
-  assert.equal(restored.activeCutsceneId,"vale_behavior_map");
+  assert.equal(result.state.activeCutsceneId, "vale_behavior_map");
+  assert.equal(getCutscene(result.state.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/vale-lily-research-v1.png");
+  const restored = restoreGameState(serializeGameState(result.state));
+  assert.equal(restored.flags.lily_vale_research_shared, true);
+  assert.equal(restored.flags.vale_research_destroyed, false);
+  assert.equal(restored.activeCutsceneId, "vale_behavior_map");
 });
 
-test("Vale가 연구를 소각하면 행동 예측과 연구 완성 컷씬이 활성화되지 않는다", () => {
-  const state=resolutionState("vale");
-  state.flags.vale_sample_stabilized=true;
-  const result=applyStoryChoice(state,"vale-research","destroy").state;
-  assert.equal(result.flags.vale_research_complete,undefined);
-  assert.equal(result.flags.lily_vale_research_shared,undefined);
-  assert.equal(result.activeCutsceneId,null);
+test("Vale가 연구를 소각하면 즉시 안전을 얻고 THE TRUTH와 행동 예측을 닫는 전용 컷씬을 연다", () => {
+  const state = resolutionState("vale");
+  state.flags.vale_sample_stabilized = true;
+  Object.assign(state.flags, { vale_research_complete: true, lily_vale_research_shared: true, father_secret_discovered: true, monster_origin_clue_1: true, monster_origin_clue_2: true, lily_documents_decoded: true, monster_threat: 20 });
+  const choice = STORY_CHOICE_EVENTS.find((event) => event.id === "vale-research")!.choices.find((entry) => entry.id === "destroy")!;
+  for (const term of ["Monster Threat", "humanitarian", "에이드리언 베일 박사의 Trust 10", "THE TRUTH", "매일 Monster Threat 2", "영구히"]) assert.ok(choice.description.includes(term), term);
+  const beforeVale = state.guests.find((guest) => guest.id === "vale")!;
+  const beforeThreat = Number(state.flags.monster_threat);
+  const beforeHumanitarian = state.reputations.humanitarian;
+  const result = applyStoryChoice(state, "vale-research", "destroy").state;
+  const vale = result.guests.find((guest) => guest.id === "vale")!;
+  assert.equal(result.flags.vale_research_destroyed, true);
+  assert.equal(result.flags.vale_research_complete, false);
+  assert.equal(result.flags.lily_vale_research_shared, false);
+  assert.equal(Number(result.flags.monster_threat), Math.max(0, beforeThreat - 12));
+  assert.equal(vale.trust, beforeVale.trust - 10);
+  assert.equal(result.reputations.humanitarian, beforeHumanitarian + 4);
+  assert.equal(result.activeCutsceneId, "vale_research_destroyed");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/vale-research-destroyed-v1.png");
+  assert.ok(!evaluateEndings(result).available.includes("THE_TRUTH"));
+  const restored = restoreGameState(serializeGameState(result));
+  assert.equal(restored.flags.vale_research_destroyed, true);
+  assert.equal(restored.flags.vale_research_complete, false);
+  assert.equal(restored.flags.lily_vale_research_shared, false);
+  assert.equal(restored.activeCutsceneId, "vale_research_destroyed");
+});
+
+test("Vale의 두 연구 결말 컷씬은 다른 장면 뒤에 큐로 저장되어 유실되지 않는다", () => {
+  for (const [choiceId, cutsceneId] of [["complete", "vale_behavior_map"], ["destroy", "vale_research_destroyed"]] as const) {
+    const state = resolutionState("vale");
+    state.flags.vale_sample_stabilized = true;
+    state.activeCutsceneId = "first_night";
+    const resolved = applyStoryChoice(state, "vale-research", choiceId).state;
+    assert.equal(resolved.activeCutsceneId, "first_night");
+    assert.deepEqual(resolved.queuedCutsceneIds, [cutsceneId]);
+    const restored = restoreGameState(serializeGameState(resolved));
+    const advanced = dismissCutscene(restored);
+    assert.equal(advanced.activeCutsceneId, cutsceneId);
+    assert.deepEqual(advanced.queuedCutsceneIds, []);
+  }
 });
 
 test("Lily와 Vale의 실제 선택 결과가 THE TRUTH를 해금한다", () => {

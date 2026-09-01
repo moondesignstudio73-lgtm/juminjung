@@ -77,6 +77,13 @@ test("Walter의 최종 열쇠 선택은 기록실 개방과 영구 봉인의 서
   assert.ok(scenes.every((scene) => scene.imageAlt.includes("월터 브릭스")));
 });
 
+test("Vale의 최종 연구 선택은 행동 지도 완성과 연구 소각의 서로 다른 전용 원화를 소유한다", () => {
+  const scenes = CUTSCENES.filter((cutscene) => cutscene.triggerStoryEventId === "vale-research");
+  assert.deepEqual(scenes.map((scene) => scene.triggerStoryChoiceId).sort((a, b) => String(a).localeCompare(String(b))), ["complete", "destroy"]);
+  assert.equal(new Set(scenes.map((scene) => scene.image)).size, 2);
+  assert.ok(scenes.every((scene) => scene.imageAlt.includes("에이드리언 베일 박사") && scene.imageAlt.includes("릴리 포스터")));
+});
+
 test("DAY 0 프롤로그는 출발 원화에서 빈 프런트와 첫 노크로 전환된다", () => {
   assert.equal(PROLOGUE_BEATS.length, 4);
   assert.ok(PROLOGUE_BEATS.slice(0, 3).every((beat) => beat.image.endsWith("father-departure-v1.png")));
