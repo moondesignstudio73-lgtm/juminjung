@@ -131,26 +131,26 @@ test("손상 저장의 문자열·미래 날짜와 중복 Codex 항목은 현재
   assert.deepEqual(restored.monsterCodex[0].insightIds, ["TRIPLE_CLAW_PATTERN", "SHIFTING_GAIT"]);
 });
 
-test("Save v14는 진술과 Codex 원천을 보존하고 변조된 파생 insight를 다시 계산한다", () => {
+test("Save v15는 진술과 Codex 원천을 보존하고 변조된 파생 insight를 다시 계산한다", () => {
   let state = recordVisitorStatement({ ...createInitialGameState(), day: 15 }, "ruth", "ruth-scratch", ["bandage"]).state;
   state = recordVisitorStatement(state, "hazel", "hazel-tracks", ["traps"]).state;
   const raw = JSON.parse(serializeGameState(state));
   raw.monsterCodex[0].insightIds = ["INTERIOR_EXIT_ROUTE", "INVALID"];
   raw.monsterCodex[0].sourceIds.push("INVALID_SOURCE");
   const restored = restoreGameState(JSON.stringify(raw));
-  assert.equal(restored.version, 14);
+  assert.equal(restored.version, 15);
   assert.deepEqual(restored.visitorStatements.map((record) => record.statementId), ["RUTH_SCRATCH_CLAIM", "HAZEL_TRACKS_TESTIMONY"]);
   assert.deepEqual(restored.monsterCodex[0].insightIds, ["TRIPLE_CLAW_PATTERN", "SHIFTING_GAIT"]);
   assert.equal(hasMonsterCountermeasure(restored, "MIMIC_STALKER"), true);
 });
 
-test("v13의 올바른 Room 207 결론은 v14에서 실내 이탈 경로 지식으로 이관된다", () => {
+test("v13의 올바른 Room 207 결론은 v15에서 실내 이탈 경로 지식으로 이관된다", () => {
   const raw = JSON.parse(serializeGameState({ ...createInitialGameState(), day: 13, flags: { ...createInitialGameState().flags, room_207_case_correctly_solved: true } }));
   raw.version = 13;
   delete raw.visitorStatements;
   delete raw.monsterCodex;
   const restored = restoreGameState(JSON.stringify(raw));
-  assert.equal(restored.version, 14);
+  assert.equal(restored.version, 15);
   assert.deepEqual(restored.monsterCodex[0].sourceIds, ["ROOM_207_MONSTER_CONCLUSION"]);
   assert.deepEqual(restored.monsterCodex[0].insightIds, ["INTERIOR_EXIT_ROUTE"]);
 });

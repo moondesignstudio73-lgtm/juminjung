@@ -111,11 +111,11 @@ test("핵심 잔류물 없이 괴물 결론을 고르면 추정은 기록되지�
   assert.match(result.message,/미확인/);
 });
 
-test("Save v14는 조사 진척과 증거를 보존하고 결론 뒤 재조사를 막는다",()=>{
+test("Save v15는 조사 진척과 증거를 보존하고 결론 뒤 재조사를 막는다",()=>{
   let state=collectMonsterEvidence();
   state=concludeInvestigationCase(state,"ROOM_207","MONSTER_ENTRY").state;
   const restored=restoreGameState(serializeGameState(state));
-  assert.equal(restored.version,14);
+  assert.equal(restored.version,15);
   assert.deepEqual(restored.investigationCases,state.investigationCases);
   assert.equal(canInvestigateCasePoint(restored,"ROOM_207","ROOM_207_LUGGAGE"),false);
 });
@@ -127,7 +127,7 @@ test("v12의 기존 207호 조사 플래그는 증거를 날조하지 않고 열
   legacy.flags.room_207_investigated=true;
   delete legacy.investigationCases;
   const restored=restoreGameState(JSON.stringify(legacy));
-  assert.equal(restored.version,14);
+  assert.equal(restored.version,15);
   assert.deepEqual(restored.investigationCases,[{caseId:"ROOM_207",status:"OPEN",openedDay:14,inspectedPointIds:[],collectedEvidenceIds:[],conclusionId:null,resolvedDay:null}]);
 });
 

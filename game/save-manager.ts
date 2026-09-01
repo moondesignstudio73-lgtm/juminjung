@@ -9,6 +9,8 @@ import { CUTSCENES } from "./cutscene-data.ts";
 import { pruneStaffAssignments, SCAVENGE_MISSIONS } from "./staff-operation-manager.ts";
 import { getInvestigationEvidenceFlags, normalizeInvestigationCases } from "./investigation-manager.ts";
 import { normalizeMonsterCodex, normalizeVisitorStatements } from "./monster-codex-manager.ts";
+import { DEFAULT_NIGHT_PREPARATION } from "./night-preparation-data.ts";
+import { normalizeNightPreparation } from "./night-preparation-manager.ts";
 import type { FacilityId, GameState, Guest, Room, StaffAssignments } from "./types.ts";
 
 export const SAVE_KEY = "juju-hotel-save-v2";
@@ -108,14 +110,14 @@ function normalizeOccupancy(savedRooms: Room[], guests: Guest[]): { rooms: Room[
 }
 
 export function createInitialGameState(): GameState {
-  return { version: 14, phase: "title", day: 0, rooms: createRooms(), guests: createGuests(), resources: createResources(), flags: createEventFlags(), asked: [], inspected: [], negotiated: false, held: false, decision: null, assignmentMode: null, selectedRoomNumber: null, eventHistory: [], lastDaySummary: null, worldState: "STABLE", hotelStats: { hotelCondition: 60, security: 35, foodSustainability: 0, waterSustainability: 0, crime: 0, survivorPopulation: 0, averageTrust: 0, resources: 40 }, reputations: { community: 0, military: 0, refugee: 0, merchant: 0, humanitarian: 0 }, facilities: {}, availableEndings: [], completedEndingFlags: [], endingProgress: {}, fatherStoryProgress: 0, endingRelatedFlags: {}, activeEndingId: null, endingSceneIndex: 0, actionPoints: 3, maxActionPoints: 3, foodRationPolicy: "NORMAL", powerAllocation: ["SECURITY", "CLINIC", "KITCHEN"], selectedNightEventId: null, selectedNightChoiceId: null, lastNightEventId: null, pendingStoryEventId: null, pendingVisitorReactionId: null, visitorSeed: Math.floor(Math.random() * 0x7fffffff) || 1, visitorQueueDay: 0, dailyVisitorQueue: [], dailyVisitorIndex: 0, visitorHistory: [], staffAssignments: {}, lastScavengeDay: 0, lastScavengeReport: null, investigationCases: [], visitorStatements: [], monsterCodex: [], activeCutsceneId: null, queuedCutsceneIds: [], seenCutsceneIds: [] };
+  return { version: 15, phase: "title", day: 0, rooms: createRooms(), guests: createGuests(), resources: createResources(), flags: createEventFlags(), asked: [], inspected: [], negotiated: false, held: false, decision: null, assignmentMode: null, selectedRoomNumber: null, eventHistory: [], lastDaySummary: null, worldState: "STABLE", hotelStats: { hotelCondition: 60, security: 35, foodSustainability: 0, waterSustainability: 0, crime: 0, survivorPopulation: 0, averageTrust: 0, resources: 40 }, reputations: { community: 0, military: 0, refugee: 0, merchant: 0, humanitarian: 0 }, facilities: {}, availableEndings: [], completedEndingFlags: [], endingProgress: {}, fatherStoryProgress: 0, endingRelatedFlags: {}, activeEndingId: null, endingSceneIndex: 0, actionPoints: 3, maxActionPoints: 3, foodRationPolicy: "NORMAL", powerAllocation: ["SECURITY", "CLINIC", "KITCHEN"], nightPreparation: { ...DEFAULT_NIGHT_PREPARATION }, selectedNightEventId: null, selectedNightChoiceId: null, lastNightEventId: null, pendingStoryEventId: null, pendingVisitorReactionId: null, visitorSeed: Math.floor(Math.random() * 0x7fffffff) || 1, visitorQueueDay: 0, dailyVisitorQueue: [], dailyVisitorIndex: 0, visitorHistory: [], staffAssignments: {}, lastScavengeDay: 0, lastScavengeReport: null, investigationCases: [], visitorStatements: [], monsterCodex: [], activeCutsceneId: null, queuedCutsceneIds: [], seenCutsceneIds: [] };
 }
 
 export function restoreGameState(raw: string | null): GameState {
   if (!raw) return createInitialGameState();
   try {
     const decoded = JSON.parse(raw) as { version?: number; rooms?: unknown; guests?: unknown };
-    if (![2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].includes(decoded.version ?? 0) || !Array.isArray(decoded.rooms) || !Array.isArray(decoded.guests)) return createInitialGameState();
+    if (![2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].includes(decoded.version ?? 0) || !Array.isArray(decoded.rooms) || !Array.isArray(decoded.guests)) return createInitialGameState();
     const parsed = decoded as unknown as Partial<GameState>;
     const base = createInitialGameState();
     const savedGuests = parsed.guests!;
@@ -146,6 +148,7 @@ export function restoreGameState(raw: string | null): GameState {
     const knownPowerCircuits = new Set(base.powerAllocation);
     const powerAllocation = Array.isArray(parsed.powerAllocation) ? [...new Set(parsed.powerAllocation)].filter((id) => knownPowerCircuits.has(id)) : base.powerAllocation;
     const foodRationPolicy = ["NORMAL", "LIMITED", "SEVERE"].includes(parsed.foodRationPolicy ?? "") ? parsed.foodRationPolicy! : base.foodRationPolicy;
+    const nightPreparation = normalizeNightPreparation(parsed.nightPreparation);
     const legacyFullActionPoints = (decoded.version ?? 0) < 10 && parsed.actionPoints === parsed.maxActionPoints;
     const actionPoints = legacyFullActionPoints ? base.maxActionPoints : Math.max(0, Math.min(base.maxActionPoints, Math.trunc(Number(parsed.actionPoints ?? base.maxActionPoints))));
     const visitorSeed = Number.isFinite(Number(parsed.visitorSeed)) && Number(parsed.visitorSeed) > 0 ? Math.trunc(Number(parsed.visitorSeed)) : base.visitorSeed;
@@ -166,7 +169,7 @@ export function restoreGameState(raw: string | null): GameState {
     const currentDay = Math.max(0,Math.trunc(Number(parsed.day??0)));
     const visitorStatements = normalizeVisitorStatements(parsed.visitorStatements,currentDay);
     const monsterCodex = normalizeMonsterCodex(parsed.monsterCodex,visitorStatements,flags,currentDay);
-    const state = { ...base, ...parsed, version: 14, phase, resources: { ...base.resources, ...parsed.resources }, flags, hotelStats: { ...base.hotelStats, ...parsed.hotelStats }, reputations: { ...base.reputations, ...parsed.reputations }, facilities, endingRelatedFlags: { ...base.endingRelatedFlags, ...parsed.endingRelatedFlags }, rooms: occupancy.rooms, guests: occupancy.guests, eventHistory: parsed.eventHistory ?? [], lastDaySummary: parsed.lastDaySummary ?? null, availableEndings: parsed.availableEndings ?? [], completedEndingFlags, endingProgress: parsed.endingProgress ?? {}, activeEndingId, endingSceneIndex, actionPoints, maxActionPoints: base.maxActionPoints, foodRationPolicy, powerAllocation, selectedNightEventId: parsed.selectedNightEventId ?? null, selectedNightChoiceId: parsed.selectedNightChoiceId ?? null, lastNightEventId: parsed.lastNightEventId ?? null, pendingStoryEventId: parsed.pendingStoryEventId ?? null, pendingVisitorReactionId: parsed.pendingVisitorReactionId ?? null, visitorSeed, visitorQueueDay, dailyVisitorQueue, dailyVisitorIndex, visitorHistory, staffAssignments, lastScavengeDay, lastScavengeReport, investigationCases, visitorStatements, monsterCodex, activeCutsceneId, queuedCutsceneIds, seenCutsceneIds } as GameState;
+    const state = { ...base, ...parsed, version: 15, phase, resources: { ...base.resources, ...parsed.resources }, flags, hotelStats: { ...base.hotelStats, ...parsed.hotelStats }, reputations: { ...base.reputations, ...parsed.reputations }, facilities, endingRelatedFlags: { ...base.endingRelatedFlags, ...parsed.endingRelatedFlags }, rooms: occupancy.rooms, guests: occupancy.guests, eventHistory: parsed.eventHistory ?? [], lastDaySummary: parsed.lastDaySummary ?? null, availableEndings: parsed.availableEndings ?? [], completedEndingFlags, endingProgress: parsed.endingProgress ?? {}, activeEndingId, endingSceneIndex, actionPoints, maxActionPoints: base.maxActionPoints, foodRationPolicy, powerAllocation, nightPreparation, selectedNightEventId: parsed.selectedNightEventId ?? null, selectedNightChoiceId: parsed.selectedNightChoiceId ?? null, lastNightEventId: parsed.lastNightEventId ?? null, pendingStoryEventId: parsed.pendingStoryEventId ?? null, pendingVisitorReactionId: parsed.pendingVisitorReactionId ?? null, visitorSeed, visitorQueueDay, dailyVisitorQueue, dailyVisitorIndex, visitorHistory, staffAssignments, lastScavengeDay, lastScavengeReport, investigationCases, visitorStatements, monsterCodex, activeCutsceneId, queuedCutsceneIds, seenCutsceneIds } as GameState;
     return { ...state, rooms: recalculateRoomEffects(state.rooms, state.guests) };
   } catch { return createInitialGameState(); }
 }

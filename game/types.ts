@@ -131,6 +131,11 @@ export type Resources = {
 
 export type FoodRationPolicy = "NORMAL" | "LIMITED" | "SEVERE";
 export type PowerCircuitId = "SECURITY" | "CLINIC" | "KITCHEN";
+export type NightPreparationCategory = "PATROL" | "ISOLATION" | "EXTERIOR_LIGHT" | "NOISE";
+export type NightPreparationOptionId = "STANDARD_WATCH" | "ROVING_PATROL" | "OPEN_FLOORS" | "SEALED_WINGS" | "DARK_PERIMETER" | "EXTERIOR_LIGHTS" | "NORMAL_HOURS" | "SILENCE_PROTOCOL";
+export type NightPreparationConfig = Record<NightPreparationCategory, NightPreparationOptionId>;
+export type NightPreparationEffect = { fuelCost?: number; hotelStats?: Partial<Pick<HotelStats, "security" | "crime" | "hotelCondition">>; threat?: number; allGuestStress?: number; diseaseChance?: number };
+export type NightPreparationOptionDefinition = { id: NightPreparationOptionId; category: NightPreparationCategory; name: string; description: string; tradeoff: string; requiresPowerCircuit?: PowerCircuitId; effect: NightPreparationEffect };
 export type DailyPriority = "URGENT" | "RECOMMENDED" | "OPTIONAL";
 export type DailyObjective = {
   id: string;
@@ -158,6 +163,7 @@ export type DaySummary = {
   inactiveFacilities?: FacilityId[];
   staffFoodSaving?: number;
   staffDutyResults?: StaffDutyResult[];
+  nightPreparationOptionIds?: NightPreparationOptionId[];
   checkedOutGuestIds: string[];
 };
 
@@ -243,7 +249,7 @@ export type GamePhase =
   | "ending";
 
 export type GameState = {
-  version: 14;
+  version: 15;
   phase: GamePhase;
   day: number;
   rooms: Room[];
@@ -274,6 +280,7 @@ export type GameState = {
   maxActionPoints: number;
   foodRationPolicy: FoodRationPolicy;
   powerAllocation: PowerCircuitId[];
+  nightPreparation: NightPreparationConfig;
   selectedNightEventId: string | null;
   selectedNightChoiceId: string | null;
   lastNightEventId: string | null;

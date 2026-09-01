@@ -72,14 +72,14 @@ test("World State는 날짜뿐 아니라 자원과 호텔 안정화 수치의 �
   assert.notEqual(determineWorldState(scarce), determineWorldState(safe));
 });
 
-test("구버전 DAY 30 ending 저장은 v14 report로 복원되어 즉시 종료되지 않는다", () => {
+test("구버전 DAY 30 ending 저장은 v15 report로 복원되어 즉시 종료되지 않는다", () => {
   const old = JSON.parse(serializeGameState(createInitialGameState()));
   old.version = 4;
   old.day = 30;
   old.phase = "ending";
   delete old.activeEndingId;
   const restored = restoreGameState(JSON.stringify(old));
-  assert.equal(restored.version, 14);
+  assert.equal(restored.version, 15);
   assert.equal(restored.phase, "report");
   assert.equal(restored.day, 30);
 });

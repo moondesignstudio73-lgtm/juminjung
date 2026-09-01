@@ -78,7 +78,7 @@ test("DAY 정산은 호텔 로그에 자원 소비와 자동 체크아웃을 남
 test("DAY 2 저장 복원 후 남은 숙박과 자원, 로그가 유지된다", () => {
   const day2 = resolveDay(checkedInState());
   const restored = restoreGameState(serializeGameState(day2));
-  assert.equal(restored.version, 14);
+  assert.equal(restored.version, 15);
   assert.equal(restored.day, 2);
   assert.equal(restored.guests[0].remainingNights, 1);
   assert.equal(restored.resources.food, 47);

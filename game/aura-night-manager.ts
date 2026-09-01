@@ -67,7 +67,7 @@ export function getNightWaterDemand(guests:Guest[], flags:EventFlags={}):{demand
   return {demand:residentCount-saving,saving};
 }
 
-export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, worldState:WorldState, baseDiseaseChance=diseaseBaseChance[worldState], flags:EventFlags={}):AuraNightResolution {
+export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, worldState:WorldState, baseDiseaseChance=diseaseBaseChance[worldState], flags:EventFlags={}, diseaseChanceAdjustment=0):AuraNightResolution {
   const staying = guests.filter((guest)=>guest.status==="STAYING"&&guest.currentRoomNumber!==null);
   const guestById = new Map(guests.map((guest)=>[guest.id,guest]));
   const food = getNightFoodDemand(rooms,guests,flags);
@@ -116,8 +116,9 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
     crimeScore += effectsFor(room,"theftRisk").reduce((sum,effect)=>sum+(((adjustedStats.get(effect.sourceGuestId)?.trust??guestById.get(effect.sourceGuestId)?.trust??100)<50)?effect.value:0),0);
 
     const {stress,trust,health} = adjustedStats.get(guest.id)!;
-    const unprotectedChance = room ? clamp(getDiseaseChance(room,"NORMAL_DISEASE",baseDiseaseChance)) : clamp(baseDiseaseChance);
-    const clinicBaseChance = clinicActive ? clamp(baseDiseaseChance-ELEANOR_CLINIC_DISEASE_REDUCTION) : clamp(baseDiseaseChance);
+    const preparedBaseChance = clamp(baseDiseaseChance+diseaseChanceAdjustment);
+    const unprotectedChance = room ? clamp(getDiseaseChance(room,"NORMAL_DISEASE",preparedBaseChance)) : preparedBaseChance;
+    const clinicBaseChance = clinicActive ? clamp(preparedBaseChance-ELEANOR_CLINIC_DISEASE_REDUCTION) : preparedBaseChance;
     const chance = room ? clamp(getDiseaseChance(room,"NORMAL_DISEASE",clinicBaseChance)) : clinicBaseChance;
     const roll = (day*37+(guest.currentRoomNumber??0)*13+stableGuestSeed(guest.id))%100;
     const becomesSick = guest.infectionState==="HEALTHY"&&roll<chance;
