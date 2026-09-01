@@ -2,10 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createGuests } from "../game/guest-data.ts";
 import { concludeInvestigationCase, investigateCasePoint, openInvestigationCase } from "../game/investigation-manager.ts";
-import { MONSTER_CODEX, MONSTER_KNOWLEDGE_SOURCES, VISITOR_STATEMENTS } from "../game/monster-codex-data.ts";
+import { MONSTER_CERTAINTY_WEIGHTS, MONSTER_CODEX, MONSTER_KNOWLEDGE_SOURCES, VISITOR_STATEMENTS } from "../game/monster-codex-data.ts";
 import {
   applyMonsterKnowledgeSource,
+  getMonsterEvidenceScore,
   getMonsterCodexState,
+  getMonsterKnowledgeSourceDefinition,
+  getMonsterSourceWeight,
   hasMonsterCountermeasure,
   recordVisitorStatement,
 } from "../game/monster-codex-manager.ts";
@@ -25,7 +28,12 @@ test("진술·지식 원천·Codex 정의는 실제 NPC 질문과 물품에 연�
     const entry = MONSTER_CODEX.find((candidate) => candidate.id === source.entryId);
     assert.ok(entry, source.entryId);
     assert.ok(entry.insights.some((insight) => insight.id === source.insightId), source.insightId);
+    assert.ok(getMonsterSourceWeight(source.id) > 0, source.id);
   }
+  assert.deepEqual(MONSTER_CERTAINTY_WEIGHTS, { RUMOR: 0.5, CORROBORATED: 1, VERIFIED: 1.5 });
+  assert.ok(MONSTER_CODEX.every((entry) => entry.minimumSources >= 2));
+  const preparationOptions = MONSTER_CODEX.flatMap((entry) => entry.preparationCountermeasure ? [entry.preparationCountermeasure.optionId] : []);
+  assert.equal(new Set(preparationOptions).size, preparationOptions.length);
 });
 
 test("Ruth의 상처 진술은 붕대 조사 전에는 Codex 기록을 만들지 않는다", () => {
@@ -57,6 +65,32 @@ test("Hazel의 덫과 보행 진술은 바뀌는 보행 지식을 확인한다",
   const result = recordVisitorStatement({ ...createInitialGameState(), day: 15 }, "hazel", "hazel-tracks", ["traps"]);
   assert.equal(result.record?.assessment, "CORROBORATED");
   assert.deepEqual(result.state.monsterCodex[0].insightIds, ["SHIFTING_GAIT"]);
+});
+
+test("White의 거짓 목소리 경고는 신호 잠식체의 미확인 제보로만 기록된다", () => {
+  const result = recordVisitorStatement({ ...createInitialGameState(), day: 11 }, "white", "white-origin", []);
+  const entry = getMonsterCodexState(result.state, "SIGNAL_PARASITE");
+  assert.equal(result.record?.assessment, "RECORDED");
+  assert.deepEqual(entry?.insightIds, ["BORROWED_VOICE"]);
+  assert.equal(getMonsterKnowledgeSourceDefinition("WHITE_FALSE_VOICE_WARNING")?.certainty, "RUMOR");
+  assert.equal(getMonsterEvidenceScore(result.state, "SIGNAL_PARASITE"), 0.5);
+  assert.equal(hasMonsterCountermeasure(result.state, "SIGNAL_PARASITE"), false);
+});
+
+test("신호 잠식체는 미확인 제보만으로 대응책을 열지 않고 검증 근거와 합쳐야 한다", () => {
+  let state = applyMonsterKnowledgeSource(createInitialGameState(), "WHITE_FALSE_VOICE_WARNING");
+  state = applyMonsterKnowledgeSource(state, "RADIO_SURVIVOR_CHORUS");
+  assert.equal(getMonsterEvidenceScore(state, "SIGNAL_PARASITE"), 1.5);
+  assert.equal(hasMonsterCountermeasure(state, "SIGNAL_PARASITE"), false);
+  state = applyMonsterKnowledgeSource(state, "FATHER_RELAY_TRACE");
+  assert.equal(getMonsterEvidenceScore(state, "SIGNAL_PARASITE"), 3);
+  assert.equal(hasMonsterCountermeasure(state, "SIGNAL_PARASITE"), true);
+});
+
+test("다른 개체의 원천 ID가 손상 상태에 섞여도 신뢰도에 더하지 않는다", () => {
+  const state = { ...createInitialGameState(), monsterCodex: [{ entryId: "SIGNAL_PARASITE" as const, sourceIds: ["ROOM_207_MONSTER_CONCLUSION" as const], insightIds: [], updatedDay: 1 }] };
+  assert.equal(getMonsterEvidenceScore(state, "SIGNAL_PARASITE"), 0);
+  assert.equal(hasMonsterCountermeasure(state, "SIGNAL_PARASITE"), false);
 });
 
 test("Room 207의 지지된 괴물 결론은 실내 이탈 경로를 Codex에 합친다", () => {
@@ -153,4 +187,14 @@ test("v13의 올바른 Room 207 결론은 v15에서 실내 이탈 경로 지식�
   assert.equal(restored.version, 15);
   assert.deepEqual(restored.monsterCodex[0].sourceIds, ["ROOM_207_MONSTER_CONCLUSION"]);
   assert.deepEqual(restored.monsterCodex[0].insightIds, ["INTERIOR_EXIT_ROUTE"]);
+});
+
+test("기존 플래그 저장은 신호 잠식체의 라디오·중계기 근거로 복구된다", () => {
+  const raw = JSON.parse(serializeGameState(createInitialGameState()));
+  raw.monsterCodex = [];
+  raw.flags.survivor_testimonies_verified = true;
+  raw.flags.father_signal_traced = true;
+  const restored = restoreGameState(JSON.stringify(raw));
+  assert.deepEqual(getMonsterCodexState(restored, "SIGNAL_PARASITE")?.sourceIds, ["RADIO_SURVIVOR_CHORUS", "FATHER_RELAY_TRACE"]);
+  assert.equal(hasMonsterCountermeasure(restored, "SIGNAL_PARASITE"), true);
 });

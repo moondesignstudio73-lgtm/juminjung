@@ -5,6 +5,7 @@ import { applyNightChoice, canChooseNightChoice, getEffectiveNightChoice, PUBLIC
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
 import { dismissCutscene, queueNightEventCutscene } from "../game/cutscene-manager.ts";
 import { evaluateEndings } from "../game/ending-manager.ts";
+import { getMonsterCodexState } from "../game/monster-codex-manager.ts";
 
 function withGuest() {
   const state = createInitialGameState();
@@ -470,6 +471,7 @@ test("되돌아온 증언을 검증하면 연료를 쓰고 보강 단서·위협
   assert.equal(result.state.flags.monster_origin_clue_2, true);
   assert.equal(result.state.flags.monster_threat, 5);
   assert.equal(result.state.fatherStoryProgress, 45);
+  assert.deepEqual(getMonsterCodexState(result.state, "SIGNAL_PARASITE")?.sourceIds, ["RADIO_SURVIVOR_CHORUS"]);
   assert.match(result.entry.message, /증언이 돌아오는 주파수/);
   const restored = restoreGameState(serializeGameState(result.state));
   assert.equal(restored.flags.survivor_testimonies_verified, true);
@@ -514,6 +516,7 @@ test("아버지 신호 역추적은 자원과 위험을 감수해 THE TRUTH 대�
   assert.equal(resolved.resources.fuel, before.fuel - 3);
   assert.equal(resolved.resources.parts, before.parts - 1);
   assert.equal(resolved.fatherStoryProgress, before.progress + 15);
+  assert.deepEqual(getMonsterCodexState(resolved, "SIGNAL_PARASITE")?.sourceIds, ["FATHER_RELAY_TRACE"]);
   assert.ok(evaluateEndings(resolved).available.includes("THE_TRUTH"));
 });
 

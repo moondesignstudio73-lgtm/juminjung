@@ -112,7 +112,7 @@ export function resolveDay(state: GameState): GameState {
     { day: state.day, type: "RESOURCE", message: `식량 ${consumed.food}, 물 ${consumed.water}, 연료 ${consumed.fuel} 소비` },
     { day: state.day, type: "RESOURCE", message: `${rationName} · 식량 수요 ${baseFoodDemand}${appliedStaffFoodSaving?` → 근무 ${staffAdjustedFoodDemand}`:""} → 배급 ${demand.food}${rationSaving ? ` · 배급 ${rationSaving} 절감` : ""}` },
     { day: state.day, type: "RESOURCE", message: `전력 배분 · ${powerPlan.activeCircuits.length ? powerPlan.activeCircuits.join(" · ") : "전체 정지"} · ${powerPlan.activeCircuits.length}/${powerPlan.capacity} 회로` },
-    { day: state.day, type: "EVENT", message: `야간 준비 · ${preparationPlan.active.map((option) => option.name).join(" · ")}${preparationPlan.codexApplied ? " · CODEX 외곽 대응" : ""}` },
+    { day: state.day, type: "EVENT", message: `야간 준비 · ${preparationPlan.active.map((option) => option.name).join(" · ")}${preparationPlan.codexApplied ? ` · CODEX ${preparationPlan.codexAppliedNames.join(" · ")}` : ""}` },
     ...powerPlan.warnings.map((message): HotelLogEntry => ({ day: state.day, type: "EVENT", message })),
     ...preparationPlan.warnings.map((message): HotelLogEntry => ({ day: state.day, type: "EVENT", message })),
     ...(microgridActive ? [{day:state.day,type:"RESOURCE" as const,message:`독립 마이크로그리드 · 기본 발전기 연료 ${BASE_GENERATOR_FUEL_DEMAND} 절감`}] : []),

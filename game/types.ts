@@ -16,10 +16,11 @@ export type InvestigationConclusionId = "VOLUNTARY_EXIT" | "HUMAN_ATTACK" | "MON
 export type InvestigationCaseStatus = "OPEN" | "INVESTIGATING" | "SOLVED" | "UNRESOLVED";
 export type EvidenceAssessment = "UNKNOWN" | "SUPPORTED" | "CONTRADICTED";
 export type VisitorStatementAssessment = "RECORDED" | "CORROBORATED" | "CONTRADICTED";
-export type VisitorStatementId = "RUTH_SCRATCH_CLAIM" | "HAZEL_TRACKS_TESTIMONY";
-export type MonsterCodexEntryId = "MIMIC_STALKER";
-export type MonsterInsightId = "TRIPLE_CLAW_PATTERN" | "SHIFTING_GAIT" | "INTERIOR_EXIT_ROUTE";
-export type MonsterKnowledgeSourceId = "RUTH_SCRATCH_CONTRADICTION" | "HAZEL_TRACKS_TESTIMONY" | "ROOM_207_MONSTER_CONCLUSION";
+export type VisitorStatementId = "RUTH_SCRATCH_CLAIM" | "HAZEL_TRACKS_TESTIMONY" | "WHITE_FALSE_VOICE_WARNING";
+export type MonsterCodexEntryId = "MIMIC_STALKER" | "SIGNAL_PARASITE";
+export type MonsterInsightId = "TRIPLE_CLAW_PATTERN" | "SHIFTING_GAIT" | "INTERIOR_EXIT_ROUTE" | "BORROWED_VOICE" | "SYNCHRONIZED_CALLS" | "RELAY_ECHO";
+export type MonsterKnowledgeSourceId = "RUTH_SCRATCH_CONTRADICTION" | "HAZEL_TRACKS_TESTIMONY" | "ROOM_207_MONSTER_CONCLUSION" | "WHITE_FALSE_VOICE_WARNING" | "RADIO_SURVIVOR_CHORUS" | "FATHER_RELAY_TRACE";
+export type MonsterKnowledgeCertainty = "RUMOR" | "CORROBORATED" | "VERIFIED";
 
 export type Position = { x: number; y: number };
 
@@ -215,7 +216,7 @@ export type HotelActionId = "repair_hotel" | "community_outreach" | "security_pa
 export type FacilityLevelDefinition = { level: 1 | 2 | 3; name: string; description: string; cost: Partial<Resources>; production?: Partial<Resources>; upkeep?: Partial<Resources>; statChanges: Partial<HotelStats>; reputationChanges: Partial<Reputations> };
 export type FacilityDefinition = { id: FacilityId; name: string; description: string; levels: FacilityLevelDefinition[] };
 export type NightEventCondition = { worldStates?: WorldState[]; minimumDay?: number; dayModulo?: number; minimumThreat?: number; maximumSecurity?: number; maximumResource?: Partial<Resources>; shortage?: "food" | "water"; requiresGuests?: boolean; requiredEmptyRoomNumber?: number; requiredFlags?: EventFlags; forbiddenFlags?: string[]; relationship?: { sourceId: string; targetId: string; minimumWeightedValue?: number; maximumWeightedValue?: number } };
-export type NightEventEffect = { resources?: Partial<Resources>; hotelStats?: Partial<HotelStats>; reputations?: Partial<Reputations>; flags?: EventFlags; threat?: number; fatherStoryProgress?: number; allGuestStress?: number; targetGuestHealth?: number; targetGuestHealthMinimum?: number; roomChange?: { roomNumber: number; status: "DAMAGED" | "LOCKED"; roomCondition: number }; openCaseId?: InvestigationCaseId; guestEffects?: { guestId: string; trust?: number; stress?: number; health?: number }[]; relationshipChanges?: RelationshipChange[] };
+export type NightEventEffect = { resources?: Partial<Resources>; hotelStats?: Partial<HotelStats>; reputations?: Partial<Reputations>; flags?: EventFlags; threat?: number; fatherStoryProgress?: number; allGuestStress?: number; targetGuestHealth?: number; targetGuestHealthMinimum?: number; roomChange?: { roomNumber: number; status: "DAMAGED" | "LOCKED"; roomCondition: number }; openCaseId?: InvestigationCaseId; monsterKnowledgeSourceIds?: MonsterKnowledgeSourceId[]; guestEffects?: { guestId: string; trust?: number; stress?: number; health?: number }[]; relationshipChanges?: RelationshipChange[] };
 export type NightEventChoice = { id: string; label: string; description: string; requiredResources?: Partial<Resources>; effect: NightEventEffect };
 export type NightEventDefinition = { id: string; title: string; description: string; quote: string; priority: number; condition: NightEventCondition; choices: NightEventChoice[] };
 export type StoryChoiceEffect = { resources?: Partial<Resources>; hotelStats?: Partial<HotelStats>; reputations?: Partial<Reputations>; flags?: EventFlags; trust?: number; stress?: number; health?: number; threat?: number; fatherStoryProgress?: number; relationship?: { targetId: string; delta: number }; discoverTrait?: string };
@@ -233,8 +234,8 @@ export type InvestigationCaseState = { caseId: InvestigationCaseId; status: Inve
 export type VisitorStatementDefinition = { id: VisitorStatementId; guestId: string; questionId: string; claim: string; finding: string; assessment: VisitorStatementAssessment; requiredInspectedItemId?: string; knowledgeSourceId: MonsterKnowledgeSourceId };
 export type VisitorStatementRecord = { statementId: VisitorStatementId; guestId: string; questionId: string; recordedDay: number; assessment: VisitorStatementAssessment };
 export type MonsterInsightDefinition = { id: MonsterInsightId; name: string; description: string };
-export type MonsterCodexEntryDefinition = { id: MonsterCodexEntryId; name: string; classification: string; description: string; tacticalThreshold: number; countermeasure: string; insights: MonsterInsightDefinition[] };
-export type MonsterKnowledgeSourceDefinition = { id: MonsterKnowledgeSourceId; entryId: MonsterCodexEntryId; insightId: MonsterInsightId };
+export type MonsterCodexEntryDefinition = { id: MonsterCodexEntryId; name: string; classification: string; description: string; tacticalThreshold: number; minimumSources: number; countermeasure: string; preparationCountermeasure?: { optionId: NightPreparationOptionId; effect: Omit<NightPreparationEffect, "fuelCost"> }; insights: MonsterInsightDefinition[] };
+export type MonsterKnowledgeSourceDefinition = { id: MonsterKnowledgeSourceId; entryId: MonsterCodexEntryId; insightId: MonsterInsightId; name: string; certainty: MonsterKnowledgeCertainty };
 export type MonsterCodexEntryState = { entryId: MonsterCodexEntryId; sourceIds: MonsterKnowledgeSourceId[]; insightIds: MonsterInsightId[]; updatedDay: number };
 
 export type GamePhase =

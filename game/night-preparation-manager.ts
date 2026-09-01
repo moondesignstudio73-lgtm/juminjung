@@ -1,11 +1,23 @@
 import { getActivePowerCircuits, calculatePowerPlan } from "./daily-survival-manager.ts";
+import { MONSTER_CODEX } from "./monster-codex-data.ts";
 import { DEFAULT_NIGHT_PREPARATION, NIGHT_PREPARATION_OPTIONS } from "./night-preparation-data.ts";
 import { hasMonsterCountermeasure } from "./monster-codex-manager.ts";
-import type { GameState, NightPreparationCategory, NightPreparationConfig, NightPreparationOptionDefinition, NightPreparationOptionId } from "./types.ts";
+import type { GameState, NightPreparationCategory, NightPreparationConfig, NightPreparationEffect, NightPreparationOptionDefinition, NightPreparationOptionId } from "./types.ts";
 
-export const CODEX_EXTERIOR_LIGHT_THREAT_REDUCTION = 2;
+export const CODEX_EXTERIOR_LIGHT_THREAT_REDUCTION = Math.abs(MONSTER_CODEX.find((entry) => entry.id === "MIMIC_STALKER")?.preparationCountermeasure?.effect.threat ?? 0);
 
 const optionById = new Map(NIGHT_PREPARATION_OPTIONS.map((option) => [option.id, option]));
+
+function combineNightPreparationEffects(effects: ReadonlyArray<NightPreparationEffect>) {
+  return effects.reduce((total, effect) => ({
+    securityDelta: total.securityDelta + Number(effect.hotelStats?.security ?? 0),
+    crimeDelta: total.crimeDelta + Number(effect.hotelStats?.crime ?? 0),
+    hotelConditionDelta: total.hotelConditionDelta + Number(effect.hotelStats?.hotelCondition ?? 0),
+    threatDelta: total.threatDelta + Number(effect.threat ?? 0),
+    guestStressDelta: total.guestStressDelta + Number(effect.allGuestStress ?? 0),
+    diseaseChanceDelta: total.diseaseChanceDelta + Number(effect.diseaseChance ?? 0),
+  }), { securityDelta: 0, crimeDelta: 0, hotelConditionDelta: 0, threatDelta: 0, guestStressDelta: 0, diseaseChanceDelta: 0 });
+}
 
 export function getNightPreparationOption(id: NightPreparationOptionId): NightPreparationOptionDefinition | undefined {
   return optionById.get(id);
@@ -50,18 +62,21 @@ export function getNightPreparationPlan(state: GameState, powerContext?: NightPr
     reservedFuel += fuelCost;
     active.push(option);
   }
-  const codexApplied = active.some((option) => option.id === "EXTERIOR_LIGHTS") && hasMonsterCountermeasure(state, "MIMIC_STALKER");
+  const activeOptionIds = new Set(active.map((option) => option.id));
+  const codexCountermeasures = MONSTER_CODEX.filter((definition) => {
+    const response = definition.preparationCountermeasure;
+    return Boolean(response && activeOptionIds.has(response.optionId) && hasMonsterCountermeasure(state, definition.id));
+  });
+  const codexEffects = codexCountermeasures.map((definition) => definition.preparationCountermeasure!.effect);
+  const combinedEffects = combineNightPreparationEffects([...active.map((option) => option.effect), ...codexEffects]);
   return {
     selected,
     active,
     warnings,
     fuelCost: reservedFuel,
-    securityDelta: active.reduce((sum, option) => sum + Number(option.effect.hotelStats?.security ?? 0), 0),
-    crimeDelta: active.reduce((sum, option) => sum + Number(option.effect.hotelStats?.crime ?? 0), 0),
-    hotelConditionDelta: active.reduce((sum, option) => sum + Number(option.effect.hotelStats?.hotelCondition ?? 0), 0),
-    threatDelta: active.reduce((sum, option) => sum + Number(option.effect.threat ?? 0), 0) - (codexApplied ? CODEX_EXTERIOR_LIGHT_THREAT_REDUCTION : 0),
-    guestStressDelta: active.reduce((sum, option) => sum + Number(option.effect.allGuestStress ?? 0), 0),
-    diseaseChanceDelta: active.reduce((sum, option) => sum + Number(option.effect.diseaseChance ?? 0), 0),
-    codexApplied,
+    ...combinedEffects,
+    codexApplied: codexCountermeasures.length > 0,
+    codexAppliedEntryIds: codexCountermeasures.map((definition) => definition.id),
+    codexAppliedNames: codexCountermeasures.map((definition) => definition.name),
   };
 }

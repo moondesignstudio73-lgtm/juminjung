@@ -96,6 +96,45 @@ test("Mimic Stalker 대응 지식은 가동 중인 외곽 조명의 위협 감�
   assert.equal(getNightPreparationPlan(state).codexApplied, false);
 });
 
+test("신호 잠식체 대응 지식은 완전 정숙의 위협 감소를 강화하고 스트레스 비용을 낮춘다", () => {
+  let state = configureNightPreparation(createOccupiedNight(), "NOISE", "SILENCE_PROTOCOL").state;
+  const ordinary = getNightPreparationPlan(state);
+  state = applyMonsterKnowledgeSource(state, "RADIO_SURVIVOR_CHORUS");
+  state = applyMonsterKnowledgeSource(state, "FATHER_RELAY_TRACE");
+  const informed = getNightPreparationPlan(state);
+  assert.deepEqual(informed.codexAppliedEntryIds, ["SIGNAL_PARASITE"]);
+  assert.deepEqual(informed.codexAppliedNames, ["신호 잠식체"]);
+  assert.equal(informed.threatDelta, ordinary.threatDelta - 3);
+  assert.equal(informed.guestStressDelta, ordinary.guestStressDelta - 2);
+  state = configureNightPreparation(state, "NOISE", "NORMAL_HOURS").state;
+  assert.equal(getNightPreparationPlan(state).codexApplied, false);
+});
+
+test("두 Codex 대응책은 외곽 조명과 완전 정숙이 함께 가동될 때 누적된다", () => {
+  let state = configureDefensivePlan(createOccupiedNight());
+  state = applyMonsterKnowledgeSource(state, "RUTH_SCRATCH_CONTRADICTION");
+  state = applyMonsterKnowledgeSource(state, "HAZEL_TRACKS_TESTIMONY");
+  state = applyMonsterKnowledgeSource(state, "RADIO_SURVIVOR_CHORUS");
+  state = applyMonsterKnowledgeSource(state, "FATHER_RELAY_TRACE");
+  const plan = getNightPreparationPlan(state);
+  assert.deepEqual(plan.codexAppliedEntryIds, ["MIMIC_STALKER", "SIGNAL_PARASITE"]);
+  assert.equal(plan.threatDelta, -12);
+  assert.equal(plan.guestStressDelta, 8);
+});
+
+test("두 Codex 대응책은 실제 하루 정산과 호텔 로그에도 같은 효과를 남긴다", () => {
+  const ordinary = resolveDay(configureDefensivePlan(createOccupiedNight()));
+  let informedState = configureDefensivePlan(createOccupiedNight());
+  informedState = applyMonsterKnowledgeSource(informedState, "RUTH_SCRATCH_CONTRADICTION");
+  informedState = applyMonsterKnowledgeSource(informedState, "HAZEL_TRACKS_TESTIMONY");
+  informedState = applyMonsterKnowledgeSource(informedState, "RADIO_SURVIVOR_CHORUS");
+  informedState = applyMonsterKnowledgeSource(informedState, "FATHER_RELAY_TRACE");
+  const informed = resolveDay(informedState);
+  assert.equal(Number(informed.flags.monster_threat), Number(ordinary.flags.monster_threat) - 5);
+  assert.equal(informed.guests[0].stress, ordinary.guests[0].stress - 2);
+  assert.ok(informed.eventHistory.some((entry) => entry.message.includes("CODEX 문턱 추적자 · 신호 잠식체")));
+});
+
 test("구역 격리의 질병 확률 보정은 같은 밤 판정에서 감염을 예방한다", () => {
   const state = createOccupiedNight();
   const guest = state.guests[0];

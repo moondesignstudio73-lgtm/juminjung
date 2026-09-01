@@ -2,7 +2,7 @@ import { NIGHT_EVENTS } from "./night-event-data.ts";
 import { getNightFoodDemand } from "./aura-night-manager.ts";
 import { getActiveRelationships } from "./relationship-manager.ts";
 import { openInvestigationCase } from "./investigation-manager.ts";
-import { hasMonsterCountermeasure } from "./monster-codex-manager.ts";
+import { applyMonsterKnowledgeSource, hasMonsterCountermeasure } from "./monster-codex-manager.ts";
 import type { GameState, HotelLogEntry, NightEventChoice, NightEventDefinition } from "./types.ts";
 
 const clamp = (value: number) => Math.max(0, Math.min(100, value));
@@ -143,5 +143,6 @@ export function applyNightChoice(state: GameState, eventId: string, choiceId: st
   const rooms = effect.roomChange ? state.rooms.map((room) => room.roomNumber === effect.roomChange!.roomNumber ? { ...room, occupied: false, guestId: null, status: effect.roomChange!.status, roomCondition: clamp(effect.roomChange!.roomCondition), temporaryEffects: [] } : room) : state.rooms;
   const next = { ...state, guests, rooms, resources: addRecord(state.resources, effect.resources), hotelStats: addRecord(state.hotelStats, effect.hotelStats), reputations: addRecord(state.reputations, effect.reputations), flags: { ...state.flags, ...effect.flags, monster_threat: threat }, fatherStoryProgress: clamp(state.fatherStoryProgress + Number(effect.fatherStoryProgress ?? 0)), selectedNightEventId: event.id, selectedNightChoiceId: choice.id };
   const withCase = effect.openCaseId ? openInvestigationCase(next,effect.openCaseId) : next;
-  return { state: withCase, event, choice, entry: { day: state.day, type: "EVENT", message: `야간 사건 · ${event.title} · ${choice.label}`, relationshipChanges: effectiveRelationshipChanges } };
+  const withKnowledge = (effect.monsterKnowledgeSourceIds ?? []).reduce((current, sourceId) => applyMonsterKnowledgeSource(current, sourceId), withCase);
+  return { state: withKnowledge, event, choice, entry: { day: state.day, type: "EVENT", message: `야간 사건 · ${event.title} · ${choice.label}`, relationshipChanges: effectiveRelationshipChanges } };
 }

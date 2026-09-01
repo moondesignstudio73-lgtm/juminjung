@@ -1,4 +1,4 @@
-import { MONSTER_CODEX, MONSTER_KNOWLEDGE_SOURCES, VISITOR_STATEMENTS } from "./monster-codex-data.ts";
+import { MONSTER_CERTAINTY_WEIGHTS, MONSTER_CODEX, MONSTER_KNOWLEDGE_SOURCES, VISITOR_STATEMENTS } from "./monster-codex-data.ts";
 import type {
   EventFlags,
   GameState,
@@ -22,6 +22,15 @@ export function getVisitorStatementDefinition(statementId: VisitorStatementId) {
 
 export function getMonsterCodexDefinition(entryId: MonsterCodexEntryId) {
   return MONSTER_CODEX.find((entry) => entry.id === entryId) ?? null;
+}
+
+export function getMonsterKnowledgeSourceDefinition(sourceId: MonsterKnowledgeSourceId) {
+  return MONSTER_KNOWLEDGE_SOURCES.find((entry) => entry.id === sourceId) ?? null;
+}
+
+export function getMonsterSourceWeight(sourceId: MonsterKnowledgeSourceId): number {
+  const source = getMonsterKnowledgeSourceDefinition(sourceId);
+  return source ? MONSTER_CERTAINTY_WEIGHTS[source.certainty] : 0;
 }
 
 export function getMonsterCodexState(state: Pick<GameState, "monsterCodex">, entryId: MonsterCodexEntryId) {
@@ -54,7 +63,11 @@ function sourceIdsFromStatements(statements: VisitorStatementRecord[]): MonsterK
 
 export function normalizeMonsterCodex(value: unknown, statements: VisitorStatementRecord[], flags: EventFlags, currentDay: number): MonsterCodexEntryState[] {
   const raw = Array.isArray(value) ? value : [];
-  const migratedSources: MonsterKnowledgeSourceId[] = flags.room_207_case_correctly_solved === true ? ["ROOM_207_MONSTER_CONCLUSION"] : [];
+  const migratedSources: MonsterKnowledgeSourceId[] = [
+    ...(flags.room_207_case_correctly_solved === true ? ["ROOM_207_MONSTER_CONCLUSION" as const] : []),
+    ...(flags.survivor_testimonies_verified === true ? ["RADIO_SURVIVOR_CHORUS" as const] : []),
+    ...(flags.father_signal_traced === true ? ["FATHER_RELAY_TRACE" as const] : []),
+  ];
   const savedSources = raw.flatMap((entry) => entry && typeof entry === "object" && Array.isArray((entry as Partial<MonsterCodexEntryState>).sourceIds) ? (entry as Partial<MonsterCodexEntryState>).sourceIds! : []);
   const validSources = MONSTER_KNOWLEDGE_SOURCES.filter((source) => getMonsterCodexDefinition(source.entryId)?.insights.some((insight) => insight.id === source.insightId));
   const knownSources = new Set(validSources.map((source) => source.id));
@@ -117,5 +130,16 @@ export function recordVisitorStatement(state: GameState, guestId: string, questi
 export function hasMonsterCountermeasure(state: Pick<GameState, "monsterCodex">, entryId: MonsterCodexEntryId): boolean {
   const definition = getMonsterCodexDefinition(entryId);
   const entry = getMonsterCodexState(state, entryId);
-  return Boolean(definition && entry && entry.insightIds.length >= definition.tacticalThreshold);
+  if (!definition || !entry) return false;
+  const validSourceCount = entry.sourceIds.filter((sourceId) => getMonsterKnowledgeSourceDefinition(sourceId)?.entryId === entryId).length;
+  return validSourceCount >= definition.minimumSources && getMonsterEvidenceScore(state, entryId) >= definition.tacticalThreshold;
+}
+
+export function getMonsterEvidenceScore(state: Pick<GameState, "monsterCodex">, entryId: MonsterCodexEntryId): number {
+  const entry = getMonsterCodexState(state, entryId);
+  if (!entry) return 0;
+  return entry.sourceIds.reduce((score, sourceId) => {
+    const source = getMonsterKnowledgeSourceDefinition(sourceId);
+    return score + (source?.entryId === entryId ? getMonsterSourceWeight(sourceId) : 0);
+  }, 0);
 }
