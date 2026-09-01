@@ -98,6 +98,13 @@ test("Ruth의 최종 돌봄 선택은 공동 돌봄팀과 순회 간호대의 �
   assert.ok(scenes.every((scene)=>scene.imageAlt.includes("루스 벨")));
 });
 
+test("Samuel의 최종 임무 선택은 민간 경비대와 구조 순찰의 서로 다른 전용 원화를 소유한다",()=>{
+  const scenes=CUTSCENES.filter((cutscene)=>cutscene.triggerStoryEventId==="samuel-duty");
+  assert.deepEqual(scenes.map((scene)=>scene.triggerStoryChoiceId).sort(),["search","watch"]);
+  assert.equal(new Set(scenes.map((scene)=>scene.image)).size,2);
+  assert.ok(scenes.every((scene)=>scene.imageAlt.includes("새뮤얼 프라이스")));
+});
+
 test("Claire의 최종 거처 선택은 안전 육아실과 의료 거점 출발의 서로 다른 전용 원화를 소유한다", () => {
   const scenes=CUTSCENES.filter((cutscene)=>cutscene.triggerStoryEventId==="claire-future");
   assert.deepEqual(scenes.map((scene)=>scene.triggerStoryChoiceId).sort(),["nursery","safe_passage"]);

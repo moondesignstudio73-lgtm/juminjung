@@ -3,6 +3,8 @@ import type { EventFlags, GameState, Guest, Resources, VisitorDecision, VisitorH
 import { getNextRevisitDay, REVISIT_REFUSAL_DELAY_DAYS } from "./visitor-manager.ts";
 import { getActiveVisitorRadioExposureSources, type VisitorRadioExposureSource } from "./visitor-queue-data.ts";
 import { applyVisitorArrivalMedicalSupport, getArrivalMedicalSupportHistoryEvent } from "./visitor-health-manager.ts";
+import { getPendingStoryVisitorArrival } from "./story-visitor-arrival-data.ts";
+import { applyStoryVisitorArrival, completeStoryVisitorArrival, getStoryVisitorArrivalHistoryEvent } from "./story-visitor-arrival-manager.ts";
 
 export const VISITOR_COUNT_WEIGHTS = [
   { count:2, weight:15 },
@@ -130,23 +132,35 @@ export function prepareDailyVisitorQueue(state:GameState):GameState {
   let returnSlot=returningNormal?Math.floor(random()*count):-1;
   if (returningNormal&&returnSlot===mainSlot) returnSlot=(returnSlot+1)%count;
   const generated:Guest[]=[];
+  const storyArrival=getPendingStoryVisitorArrival(state.flags,state.day);
+  let storyArrivalUsed=false;
   const queue=slots.map((slot)=>{
     if (slot===mainSlot) return main!.id;
     if (slot===returnSlot) return returningNormal!.id;
-    const guest=applyVisitorArrivalMedicalSupport(createNormalVisitor(state.visitorSeed,state.day,slot),state.flags,state.day);
+    let guest=createNormalVisitor(state.visitorSeed,state.day,slot);
+    if (storyArrival&&!storyArrivalUsed) {
+      guest=applyStoryVisitorArrival(guest,storyArrival,state.day);
+      storyArrivalUsed=true;
+    }
+    guest=applyVisitorArrivalMedicalSupport(guest,state.flags,state.day);
     generated.push(guest);
     return guest.id;
   });
+  const storyArrivalGuest=generated.find((guest)=>guest.storyFlags.story_visitor_arrival_id===storyArrival?.id)??null;
   const medicallySupported=generated.filter((guest)=>guest.storyFlags.ruth_field_nurse_treated===true);
   const stabilizedCount=medicallySupported.filter((guest)=>guest.storyFlags.ruth_field_nurse_sickness_stabilized===true).length;
+  const flags=storyArrival&&storyArrivalGuest?completeStoryVisitorArrival(state.flags,storyArrival,state.day):state.flags;
+  const storyArrivalEntries=storyArrival&&storyArrivalGuest?[{day:state.day,type:"EVENT" as const,message:`${storyArrival.journalLabel} · ${storyArrivalGuest.name}`}]:[];
+  const medicalEntries=medicallySupported.length?[{day:state.day,type:"EVENT" as const,message:`루스 순회 간호대 · 새 방문자 ${medicallySupported.length}명 사전 처치${stabilizedCount?` · 발열 안정 ${stabilizedCount}명`:""}`}]:[];
   return {
     ...state,
     guests:[...state.guests,...generated],
+    flags,
     visitorQueueDay:state.day,
     dailyVisitorQueue:queue,
     dailyVisitorIndex:0,
     asked:[],inspected:[],negotiated:false,held:false,decision:null,pendingVisitorReactionId:null,
-    eventHistory:medicallySupported.length?[...state.eventHistory,{day:state.day,type:"EVENT",message:`루스 순회 간호대 · 새 방문자 ${medicallySupported.length}명 사전 처치${stabilizedCount?` · 발열 안정 ${stabilizedCount}명`:""}`}]:state.eventHistory,
+    eventHistory:[...state.eventHistory,...storyArrivalEntries,...medicalEntries],
   };
 }
 
@@ -172,8 +186,9 @@ export function recordVisitorDecision(state:GameState,guestId:string,decision:Vi
   const guest=state.guests.find((entry)=>entry.id===guestId);
   if (!guest) return state;
   const event=decision==="ACCEPTED"?`DAY ${state.day} · CHECK IN${roomNumber?` · ${roomNumber}호`:""}`:`DAY ${state.day} · REFUSED`;
+  const storyArrivalEvent=getStoryVisitorArrivalHistoryEvent(guest,state.day);
   const medicalEvent=getArrivalMedicalSupportHistoryEvent(guest,state.day);
-  const visitEvents=medicalEvent?[medicalEvent,event]:[event];
+  const visitEvents=[storyArrivalEvent,medicalEvent,event].filter((entry):entry is string=>Boolean(entry));
   const record:VisitorHistoryRecord=existing?{
     ...existing,lastVisitDay:state.day,
     acceptedCount:existing.acceptedCount+Number(decision==="ACCEPTED"),

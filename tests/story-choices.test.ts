@@ -796,11 +796,29 @@ test("Samuel의 민간 경비대는 지속 순찰과 전용 컷신을 열고 저
   assert.equal(restored.activeCutsceneId,"samuel_civil_guard");
 });
 
-test("Samuel의 구조대 경로는 민간 경비대 효과와 전용 컷신을 열지 않는다", () => {
-  const result=applyStoryChoice(resolutionState("samuel"),"samuel-duty","search").state;
+test("Samuel의 구조대 경로는 다음 DAY 구조 방문과 전용 컷신을 예약한다", () => {
+  const state=resolutionState("samuel");
+  state.flags.samuel_civil_guard=true;
+  const result=applyStoryChoice(state,"samuel-duty","search").state;
   assert.equal(result.flags.samuel_rescue_patrol,true);
-  assert.equal(result.flags.samuel_civil_guard,undefined);
-  assert.equal(result.activeCutsceneId,null);
+  assert.equal(result.flags.samuel_civil_guard,false);
+  assert.equal(result.flags.samuel_rescue_survivor_due_day,state.day+1);
+  assert.equal(result.flags.samuel_rescue_survivor_arrived,false);
+  assert.equal(result.activeCutsceneId,"samuel_rescue_patrol");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/samuel-rescue-patrol-v1.png");
+  const restored=restoreGameState(serializeGameState(result));
+  assert.equal(restored.flags.samuel_rescue_survivor_due_day,state.day+1);
+  assert.equal(restored.activeCutsceneId,"samuel_rescue_patrol");
+});
+
+test("Samuel의 두 임무 결말 컷씬은 다른 장면 뒤에 큐로 저장되어 유실되지 않는다",()=>{
+  for(const [choiceId,cutsceneId] of [["watch","samuel_civil_guard"],["search","samuel_rescue_patrol"]] as const){
+    const state=resolutionState("samuel");
+    state.activeCutsceneId="first_night";
+    const resolved=applyStoryChoice(state,"samuel-duty",choiceId).state;
+    assert.deepEqual(resolved.queuedCutsceneIds,[cutsceneId]);
+    assert.equal(dismissCutscene(restoreGameState(serializeGameState(resolved))).activeCutsceneId,cutsceneId);
+  }
 });
 
 test("Ruth의 공동 돌봄팀은 지속 돌봄과 전용 컷신을 열고 저장된다", () => {

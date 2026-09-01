@@ -5,6 +5,7 @@ import { recalculateRoomEffects } from "./aura-effect-manager.ts";
 import { checkoutGuest } from "./room-manager.ts";
 import { pruneStaffAssignments } from "./staff-operation-manager.ts";
 import { updateVisitorFinalState } from "./visitor-queue-manager.ts";
+import { scheduleStoryVisitorArrival } from "./story-visitor-arrival-manager.ts";
 import type { GameState, HotelLogEntry, StoryChoice, StoryChoiceEvent } from "./types.ts";
 
 const clamp = (value: number) => Math.max(0, Math.min(100, value));
@@ -55,6 +56,10 @@ export function applyStoryChoice(state: GameState, eventId: string, choiceId: st
   const rooms = departure ? recalculateRoomEffects(checkoutGuest(state.rooms, event.guestId), resolvedGuests) : state.rooms;
   const resources = add(state.resources, effect.resources);
   const entry: HotelLogEntry = { day: state.day, type: "EVENT", message: `NPC 사건 · ${event.title} · ${choice.label}${departure ? " · 호텔 출발" : ""}`, relationshipChanges: effectiveRelationship ? [{ sourceId: event.guestId, targetId: effectiveRelationship.targetId, delta: effectiveRelationship.delta }] : undefined };
-  const next: GameState = { ...state, guests: resolvedGuests, rooms, resources, hotelStats: add(state.hotelStats, effect.hotelStats), reputations: add(state.reputations, effect.reputations), flags: { ...state.flags, ...effect.flags, monster_threat: clamp(Number(state.flags.monster_threat ?? 0) + Number(effect.threat ?? 0)) }, fatherStoryProgress: clamp(state.fatherStoryProgress + Number(effect.fatherStoryProgress ?? 0)), pendingStoryEventId: null, staffAssignments: departure ? pruneStaffAssignments(state.staffAssignments, resolvedGuests) : state.staffAssignments, visitorHistory: departure ? updateVisitorFinalState(state.visitorHistory, event.guestId, departure.finalState, `DAY ${state.day} · 스토리 출발 · ${choice.label}`) : state.visitorHistory, eventHistory: [...state.eventHistory, entry] };
+  const effectedFlags = { ...state.flags, ...effect.flags, monster_threat: clamp(Number(state.flags.monster_threat ?? 0) + Number(effect.threat ?? 0)) };
+  const flags = effect.scheduledVisitorArrival
+    ? scheduleStoryVisitorArrival(effectedFlags, effect.scheduledVisitorArrival.id, state.day, effect.scheduledVisitorArrival.delayDays)
+    : effectedFlags;
+  const next: GameState = { ...state, guests: resolvedGuests, rooms, resources, hotelStats: add(state.hotelStats, effect.hotelStats), reputations: add(state.reputations, effect.reputations), flags, fatherStoryProgress: clamp(state.fatherStoryProgress + Number(effect.fatherStoryProgress ?? 0)), pendingStoryEventId: null, staffAssignments: departure ? pruneStaffAssignments(state.staffAssignments, resolvedGuests) : state.staffAssignments, visitorHistory: departure ? updateVisitorFinalState(state.visitorHistory, event.guestId, departure.finalState, `DAY ${state.day} · 스토리 출발 · ${choice.label}`) : state.visitorHistory, eventHistory: [...state.eventHistory, entry] };
   return { state: queueStoryChoiceCutscene(next, event.id, choice.id), event, choice, entry };
 }
