@@ -931,23 +931,81 @@ test("Claire의 두 미래 결말 컷씬은 다른 장면 뒤에 큐로 저장�
   }
 });
 
-test("Grace의 공동 구호조는 지속 보수와 전용 컷신을 열고 저장된다", () => {
-  const result=applyStoryChoice(resolutionState("grace"),"grace-faith","mutual_aid").state;
+test("Grace의 공동 구호조는 지속 보수·객실 Aura·근무와 전용 컷씬을 유지한다", () => {
+  const state=resolutionState("grace");
+  Object.assign(state.flags,{grace_pilgrimage:true,safe_routes_mapped:true});
+  state.rooms=recalculateRoomEffects(assignGuest(state.rooms,301,"grace"),state.guests);
+  state.staffAssignments.MAINTENANCE="grace";
+  const choice=STORY_CHOICE_EVENTS.find((event)=>event.id==="grace-faith")!.choices.find((candidate)=>candidate.id==="mutual_aid")!;
+  for(const term of ["Trust +10","Hotel Condition +8","community 평판 +8","humanitarian 평판 +4","객실 Faith Aura","배정된 근무가 있다면 그대로","매일 Hotel Condition을 1 회복","식량 2는 보존","Monster Threat -3","refugee 평판 +5","순례로 떠나지 않습니다","다른 주민이 만든 안전 통로는 유지","되돌릴 수 없습니다","포기"]) assert.ok(choice.description.includes(term),term);
+  const result=applyStoryChoice(state,"grace-faith","mutual_aid").state;
+  const grace=result.guests.find((guest)=>guest.id==="grace")!;
   assert.equal(result.flags.grace_mutual_aid,true);
+  assert.equal(result.flags.grace_pilgrimage,false);
+  assert.equal(result.flags.safe_routes_mapped,true);
+  assert.equal(grace.status,"STAYING");
+  assert.equal(grace.currentRoomNumber,301);
+  assert.equal(result.staffAssignments.MAINTENANCE,"grace");
+  assert.ok(result.rooms.some((room)=>room.temporaryEffects.some((effect)=>effect.sourceGuestId==="grace")));
   assert.equal(result.activeCutsceneId,"grace_mutual_aid");
   assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/grace-mutual-aid-v1.png");
   const restored=restoreGameState(serializeGameState(result));
   assert.equal(restored.flags.grace_mutual_aid,true);
+  assert.equal(restored.flags.grace_pilgrimage,false);
   assert.equal(restored.activeCutsceneId,"grace_mutual_aid");
 });
 
-test("Grace의 순례 경로는 호텔 공동 보수와 전용 컷신을 열지 않는다", () => {
-  const state=resolutionState("grace");
+test("Grace의 순례는 식량을 쓰고 객실·Aura·근무·재방문을 정리하는 영구 출발이다", () => {
+  let state=resolutionState("grace");
   state.resources.food=2;
-  const result=applyStoryChoice(state,"grace-faith","pilgrimage").state;
+  Object.assign(state.flags,{grace_mutual_aid:true,monster_threat:10});
+  state.rooms=recalculateRoomEffects(assignGuest(state.rooms,301,"grace"),state.guests);
+  state.staffAssignments.MAINTENANCE="grace";
+  state=recordVisitorDecision(state,"grace","ACCEPTED",301);
+  assert.ok(state.rooms.some((room)=>room.temporaryEffects.some((effect)=>effect.sourceGuestId==="grace")));
+  const choice=STORY_CHOICE_EVENTS.find((event)=>event.id==="grace-faith")!.choices.find((candidate)=>candidate.id==="pilgrimage")!;
+  for(const term of ["식량 2","Trust +6","Monster Threat -3","refugee 평판 +5","안전 통로를 확보","이미 안전 통로가 있다면 그대로 유지","자발적으로 합류한","영구 출발","객실 Faith Aura","배정된 근무","재방문하지 않습니다","Hotel Condition +8","community 평판 +8","humanitarian 평판 +4","매일 Hotel Condition 1 회복","되돌릴 수 없습니다","포기"]) assert.ok(choice.description.includes(term),term);
+  const resolved=applyStoryChoice(state,"grace-faith","pilgrimage");
+  const result=resolved.state;
+  const grace=result.guests.find((guest)=>guest.id==="grace")!;
+  assert.equal(result.resources.food,0);
+  assert.equal(result.flags.monster_threat,7);
+  assert.deepEqual({status:grace.status,room:grace.currentRoomNumber,nights:grace.remainingNights,revisit:grace.revisitPolicy,ending:grace.endingState},{status:"CHECKED_OUT",room:null,nights:0,revisit:"NEVER",ending:"PILGRIMAGE"});
+  assert.equal(grace.storyFlags.story_departed_day,state.day);
+  assert.equal(result.rooms.find((room)=>room.roomNumber===301)?.status,"EMPTY");
+  assert.ok(result.rooms.every((room)=>room.temporaryEffects.every((effect)=>effect.sourceGuestId!=="grace")));
+  assert.equal(result.staffAssignments.MAINTENANCE,undefined);
+  assert.equal(result.visitorHistory.find((entry)=>entry.visitorId==="grace")?.finalState,"STORY_PILGRIMAGE");
   assert.equal(result.flags.grace_pilgrimage,true);
-  assert.equal(result.flags.grace_mutual_aid,undefined);
-  assert.equal(result.activeCutsceneId,null);
+  assert.equal(result.flags.grace_mutual_aid,false);
+  assert.equal(result.flags.safe_routes_mapped,true);
+  assert.equal(result.activeCutsceneId,"grace_pilgrimage");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/grace-pilgrimage-v1.png");
+  assert.match(resolved.entry.message,/호텔 출발$/);
+  const restored=restoreGameState(serializeGameState(result));
+  assert.equal(restored.guests.find((guest)=>guest.id==="grace")?.revisitPolicy,"NEVER");
+  assert.equal(getEligibleVisitor(restored.guests.filter((guest)=>guest.id==="grace"),100,restored.flags),null);
+  assert.equal(restored.activeCutsceneId,"grace_pilgrimage");
+});
+
+test("Grace의 순례는 식량이 2 미만이면 상태를 바꾸지 않는다", () => {
+  const state=resolutionState("grace");
+  state.resources.food=1;
+  const choice=STORY_CHOICE_EVENTS.find((event)=>event.id==="grace-faith")!.choices.find((candidate)=>candidate.id==="pilgrimage")!;
+  const before=serializeGameState(state);
+  assert.equal(canChooseStoryChoice(state,choice),false);
+  assert.throws(()=>applyStoryChoice(state,"grace-faith","pilgrimage"),/자원이 부족합니다/);
+  assert.equal(serializeGameState(state),before);
+});
+
+test("Grace의 두 믿음 결말 컷씬은 다른 장면 뒤에 큐로 저장되어 유실되지 않는다", () => {
+  for(const [choiceId,cutsceneId] of [["mutual_aid","grace_mutual_aid"],["pilgrimage","grace_pilgrimage"]] as const){
+    const state=resolutionState("grace");
+    state.activeCutsceneId="first_night";
+    const resolved=applyStoryChoice(state,"grace-faith",choiceId).state;
+    assert.deepEqual(resolved.queuedCutsceneIds,[cutsceneId]);
+    assert.equal(dismissCutscene(restoreGameState(serializeGameState(resolved))).activeCutsceneId,cutsceneId);
+  }
 });
 
 test("Hazel의 외곽 경계대는 지속 경보망과 전용 컷신을 열고 저장된다", () => {
