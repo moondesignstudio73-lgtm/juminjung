@@ -804,20 +804,41 @@ test("Samuel의 구조대 경로는 민간 경비대 효과와 전용 컷신을 
 });
 
 test("Ruth의 공동 돌봄팀은 지속 돌봄과 전용 컷신을 열고 저장된다", () => {
-  const result=applyStoryChoice(resolutionState("ruth"),"ruth-home","care_team").state;
+  const state=resolutionState("ruth");
+  state.flags.ruth_field_nurse=true;
+  const result=applyStoryChoice(state,"ruth-home","care_team").state;
   assert.equal(result.flags.ruth_care_team,true);
+  assert.equal(result.flags.ruth_field_nurse,false);
   assert.equal(result.activeCutsceneId,"ruth_care_team");
   assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/ruth-community-care-v1.png");
   const restored=restoreGameState(serializeGameState(result));
   assert.equal(restored.flags.ruth_care_team,true);
+  assert.equal(restored.flags.ruth_field_nurse,false);
   assert.equal(restored.activeCutsceneId,"ruth_care_team");
 });
 
-test("Ruth의 순회 간호대는 호텔 공동 돌봄 효과와 전용 컷신을 열지 않는다", () => {
-  const result=applyStoryChoice(resolutionState("ruth"),"ruth-home","field_nurse").state;
+test("Ruth의 순회 간호대는 신규 방문자 사전 처치와 전용 컷씬을 열고 저장된다", () => {
+  const state=resolutionState("ruth");
+  state.flags.ruth_care_team=true;
+  const result=applyStoryChoice(state,"ruth-home","field_nurse").state;
   assert.equal(result.flags.ruth_field_nurse,true);
-  assert.equal(result.flags.ruth_care_team,undefined);
-  assert.equal(result.activeCutsceneId,null);
+  assert.equal(result.flags.ruth_care_team,false);
+  assert.equal(result.activeCutsceneId,"ruth_field_nurse");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/ruth-field-nurse-v1.png");
+  const restored=restoreGameState(serializeGameState(result));
+  assert.equal(restored.flags.ruth_field_nurse,true);
+  assert.equal(restored.flags.ruth_care_team,false);
+  assert.equal(restored.activeCutsceneId,"ruth_field_nurse");
+});
+
+test("Ruth의 두 돌봄 결말 컷씬은 다른 장면 뒤에 큐로 저장되어 유실되지 않는다",()=>{
+  for(const [choiceId,cutsceneId] of [["care_team","ruth_care_team"],["field_nurse","ruth_field_nurse"]] as const){
+    const state=resolutionState("ruth");
+    state.activeCutsceneId="first_night";
+    const resolved=applyStoryChoice(state,"ruth-home",choiceId).state;
+    assert.deepEqual(resolved.queuedCutsceneIds,[cutsceneId]);
+    assert.equal(dismissCutscene(restoreGameState(serializeGameState(resolved))).activeCutsceneId,cutsceneId);
+  }
 });
 
 test("Rosa의 공동 생활조는 지속 배급과 전용 컷신을 열고 저장된다", () => {

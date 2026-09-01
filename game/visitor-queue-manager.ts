@@ -2,6 +2,7 @@ import { createNormalVisitor } from "./normal-visitor-data.ts";
 import type { EventFlags, GameState, Guest, Resources, VisitorDecision, VisitorHistoryRecord, WorldState } from "./types.ts";
 import { getNextRevisitDay, REVISIT_REFUSAL_DELAY_DAYS } from "./visitor-manager.ts";
 import { getActiveVisitorRadioExposureSources, type VisitorRadioExposureSource } from "./visitor-queue-data.ts";
+import { applyVisitorArrivalMedicalSupport, getArrivalMedicalSupportHistoryEvent } from "./visitor-health-manager.ts";
 
 export const VISITOR_COUNT_WEIGHTS = [
   { count:2, weight:15 },
@@ -132,10 +133,12 @@ export function prepareDailyVisitorQueue(state:GameState):GameState {
   const queue=slots.map((slot)=>{
     if (slot===mainSlot) return main!.id;
     if (slot===returnSlot) return returningNormal!.id;
-    const guest=createNormalVisitor(state.visitorSeed,state.day,slot);
+    const guest=applyVisitorArrivalMedicalSupport(createNormalVisitor(state.visitorSeed,state.day,slot),state.flags,state.day);
     generated.push(guest);
     return guest.id;
   });
+  const medicallySupported=generated.filter((guest)=>guest.storyFlags.ruth_field_nurse_treated===true);
+  const stabilizedCount=medicallySupported.filter((guest)=>guest.storyFlags.ruth_field_nurse_sickness_stabilized===true).length;
   return {
     ...state,
     guests:[...state.guests,...generated],
@@ -143,6 +146,7 @@ export function prepareDailyVisitorQueue(state:GameState):GameState {
     dailyVisitorQueue:queue,
     dailyVisitorIndex:0,
     asked:[],inspected:[],negotiated:false,held:false,decision:null,pendingVisitorReactionId:null,
+    eventHistory:medicallySupported.length?[...state.eventHistory,{day:state.day,type:"EVENT",message:`루스 순회 간호대 · 새 방문자 ${medicallySupported.length}명 사전 처치${stabilizedCount?` · 발열 안정 ${stabilizedCount}명`:""}`}]:state.eventHistory,
   };
 }
 
@@ -168,14 +172,16 @@ export function recordVisitorDecision(state:GameState,guestId:string,decision:Vi
   const guest=state.guests.find((entry)=>entry.id===guestId);
   if (!guest) return state;
   const event=decision==="ACCEPTED"?`DAY ${state.day} · CHECK IN${roomNumber?` · ${roomNumber}호`:""}`:`DAY ${state.day} · REFUSED`;
+  const medicalEvent=getArrivalMedicalSupportHistoryEvent(guest,state.day);
+  const visitEvents=medicalEvent?[medicalEvent,event]:[event];
   const record:VisitorHistoryRecord=existing?{
     ...existing,lastVisitDay:state.day,
     acceptedCount:existing.acceptedCount+Number(decision==="ACCEPTED"),
     refusedCount:existing.refusedCount+Number(decision==="REFUSED"),
     roomsStayed:roomNumber?[...new Set([...existing.roomsStayed,roomNumber])]:existing.roomsStayed,
     itemsPaid:decision==="ACCEPTED"?addResources(existing.itemsPaid,itemsPaid):existing.itemsPaid,
-    events:[...existing.events,event],finalState:decision==="ACCEPTED"?"STAYING":"REFUSED",
-  }:{visitorId:guestId,firstVisitDay:state.day,lastVisitDay:state.day,acceptedCount:Number(decision==="ACCEPTED"),refusedCount:Number(decision==="REFUSED"),roomsStayed:roomNumber?[roomNumber]:[],itemsPaid:decision==="ACCEPTED"?{...itemsPaid}:{},events:[event],finalState:decision==="ACCEPTED"?"STAYING":"REFUSED"};
+    events:[...existing.events,...visitEvents.filter((entry)=>!existing.events.includes(entry))],finalState:decision==="ACCEPTED"?"STAYING":"REFUSED",
+  }:{visitorId:guestId,firstVisitDay:state.day,lastVisitDay:state.day,acceptedCount:Number(decision==="ACCEPTED"),refusedCount:Number(decision==="REFUSED"),roomsStayed:roomNumber?[roomNumber]:[],itemsPaid:decision==="ACCEPTED"?{...itemsPaid}:{},events:visitEvents,finalState:decision==="ACCEPTED"?"STAYING":"REFUSED"};
   return {...state,visitorHistory:[...state.visitorHistory.filter((entry)=>entry.visitorId!==guestId),record]};
 }
 
