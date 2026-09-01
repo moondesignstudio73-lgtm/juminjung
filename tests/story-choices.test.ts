@@ -554,15 +554,39 @@ test("Victor의 두 시장 결말 컷씬은 다른 장면 뒤에 큐로 저장�
   }
 });
 
-test("Jack의 독점 거래는 공정 교환 컷신과 연료 절감 계약을 열지 않는다", () => {
+test("Jack의 독점 거래는 공정 계약을 닫고 전용 독점 시장 컷신을 연다", () => {
   const starting = resolutionState("jack");
   starting.flags.jack_fair_market = true;
   starting.flags.trade_network_active = true;
+  const beforeResources = { ...starting.resources };
+  const beforeVictorRelationship = starting.guests.find((guest) => guest.id === "jack")!.relationships.find((relation) => relation.targetId === "victor")!.value;
   const state = applyStoryChoice(starting, "jack-market", "monopoly").state;
   assert.equal(state.flags.jack_monopoly, true);
+  assert.equal(state.flags.ruin_market_controlled, true);
   assert.equal(state.flags.jack_fair_market, false);
   assert.equal(state.flags.trade_network_active, false);
-  assert.equal(state.activeCutsceneId, null);
+  assert.equal(state.resources.food, beforeResources.food + 4);
+  assert.equal(state.resources.fuel, beforeResources.fuel + 2);
+  assert.equal(state.guests.find((guest) => guest.id === "jack")!.relationships.find((relation) => relation.targetId === "victor")!.value, beforeVictorRelationship + 25);
+  assert.equal(state.activeCutsceneId, "jack_monopoly_market");
+  assert.equal(getCutscene(state.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/jack-monopoly-market-v1.png");
+  const restored = restoreGameState(serializeGameState(state));
+  assert.equal(restored.flags.jack_monopoly, true);
+  assert.equal(restored.activeCutsceneId, "jack_monopoly_market");
+});
+
+test("Jack의 두 시장 결말 컷씬은 다른 장면 뒤에 큐로 저장되어 유실되지 않는다", () => {
+  for (const [choiceId, cutsceneId] of [["fair_market", "jack_fair_exchange"], ["monopoly", "jack_monopoly_market"]] as const) {
+    const state = resolutionState("jack");
+    state.activeCutsceneId = "first_night";
+    const resolved = applyStoryChoice(state, "jack-market", choiceId).state;
+    assert.equal(resolved.activeCutsceneId, "first_night");
+    assert.deepEqual(resolved.queuedCutsceneIds, [cutsceneId]);
+    const restored = restoreGameState(serializeGameState(resolved));
+    const advanced = dismissCutscene(restored);
+    assert.equal(advanced.activeCutsceneId, cutsceneId);
+    assert.deepEqual(advanced.queuedCutsceneIds, []);
+  }
 });
 
 test("남은 NPC 선택도 관계·위협·시설·후속 플래그에 연결된다", () => {
