@@ -1,0 +1,97 @@
+import type { EvidenceDefinition, InvestigationCaseDefinition } from "./types.ts";
+
+export const EVIDENCE_CATALOG: ReadonlyArray<EvidenceDefinition> = [
+  {
+    id: "ROOM_207_INTERIOR_KEY",
+    name: "문 안쪽의 황동 열쇠",
+    type: "PHYSICAL",
+    source: "207호 출입문",
+    description: "마스터키와 다른 황동 열쇠가 잠긴 문 안쪽 바닥에 놓여 있습니다. 외부에서 강제로 들어온 흔적은 없습니다.",
+    relatedRoom: 207,
+    storyFlag: "evidence_room_207_interior_key",
+  },
+  {
+    id: "ROOM_207_WINDOW_TRACE",
+    name: "안쪽에서 열린 창문",
+    type: "PHYSICAL",
+    source: "207호 창틀",
+    description: "창문 걸쇠는 안쪽에서 풀렸고, 검은 흔적은 방 안에서 빗물받이 쪽으로 이어집니다.",
+    relatedRoom: 207,
+    storyFlag: "evidence_room_207_window_trace",
+  },
+  {
+    id: "ROOM_207_BLACK_RESIDUE",
+    name: "검은 점액 잔류물",
+    type: "PHYSICAL",
+    source: "207호 바닥",
+    description: "말라붙은 흔적은 사람의 피가 아니며, 침대가 아니라 창가 방향으로 길게 끌려 있습니다.",
+    relatedRoom: 207,
+    storyFlag: "evidence_room_207_black_residue",
+  },
+  {
+    id: "ROOM_207_GUEST_LEDGER",
+    name: "등록되지 않은 투숙 기록",
+    type: "RECORD",
+    source: "낡은 여행 가방",
+    description: "시신의 이름은 현재 장부에 없지만, 가방 안 영수증에는 호텔이 폐쇄되기 전의 207호 열쇠 번호가 적혀 있습니다.",
+    relatedRoom: 207,
+    storyFlag: "evidence_room_207_guest_ledger",
+  },
+];
+
+export const INVESTIGATION_CASES: ReadonlyArray<InvestigationCaseDefinition> = [
+  {
+    id: "ROOM_207",
+    title: "207호의 신원 미상 시신",
+    summary: "잠긴 빈방에서 발견된 시신과 검은 흔적이 어디서 왔는지 조사합니다.",
+    relatedRoom: 207,
+    minimumEvidenceToConclude: 3,
+    correctConclusionId: "MONSTER_ENTRY",
+    correctFlag: "room_207_case_correctly_solved",
+    points: [
+      { id: "ROOM_207_DOOR", name: "출입문과 열쇠", description: "문틀, 잠금장치, 바닥의 황동 열쇠를 대조합니다.", finding: "외부 침입 흔적 없이 열쇠가 문 안쪽에 남아 있습니다.", evidenceId: "ROOM_207_INTERIOR_KEY", actionCost: 1 },
+      { id: "ROOM_207_WINDOW", name: "창문과 빗물받이", description: "창틀과 빗물받이에 남은 이동 흔적을 확인합니다.", finding: "창문은 안쪽에서 열렸고 흔적은 방 밖으로 이어집니다.", evidenceId: "ROOM_207_WINDOW_TRACE", actionCost: 1 },
+      { id: "ROOM_207_FLOOR", name: "바닥의 검은 흔적", description: "시신 주변과 창가의 잔류물을 채취합니다.", finding: "검은 잔류물은 사람의 혈액과 다른 조직 반응을 보입니다.", evidenceId: "ROOM_207_BLACK_RESIDUE", actionCost: 1 },
+      { id: "ROOM_207_LUGGAGE", name: "낡은 여행 가방", description: "시신 옆 가방과 과거 객실 장부를 대조합니다.", finding: "현재 투숙객이 아닌 누군가가 오래전 207호 열쇠를 가지고 있었습니다.", evidenceId: "ROOM_207_GUEST_LEDGER", actionCost: 1 },
+    ],
+    conclusions: [
+      {
+        id: "VOLUNTARY_EXIT",
+        label: "투숙객이 스스로 빠져나가려 했다",
+        description: "과거 투숙객의 흔적이라고 보고 방을 일반 실종 사건으로 분류합니다.",
+        supportedBy: ["ROOM_207_GUEST_LEDGER"],
+        contradictedBy: ["ROOM_207_BLACK_RESIDUE", "ROOM_207_WINDOW_TRACE"],
+        minimumSupport: 1,
+        effect: { hotelStats: { security: -2 }, reputations: { community: -2 }, flags: { room_207_case_solved: true, room_207_voluntary_exit_concluded: true }, threat: 4 },
+      },
+      {
+        id: "HUMAN_ATTACK",
+        label: "호텔 안의 다른 생존자가 공격했다",
+        description: "내부 범죄 가능성을 선언하고 투숙객 통제를 강화합니다.",
+        supportedBy: ["ROOM_207_INTERIOR_KEY", "ROOM_207_GUEST_LEDGER"],
+        contradictedBy: ["ROOM_207_BLACK_RESIDUE"],
+        minimumSupport: 2,
+        effect: { hotelStats: { security: 4, crime: -2 }, reputations: { community: -5 }, flags: { room_207_case_solved: true, room_207_human_attack_concluded: true }, threat: 2 },
+      },
+      {
+        id: "MONSTER_ENTRY",
+        label: "괴물이 207호를 드나들었다",
+        description: "잠긴 문, 비인간 잔류물, 창가 이동 흔적을 하나의 출입 경로로 연결합니다.",
+        supportedBy: ["ROOM_207_INTERIOR_KEY", "ROOM_207_WINDOW_TRACE", "ROOM_207_BLACK_RESIDUE"],
+        contradictedBy: [],
+        minimumSupport: 3,
+        supportedOnlyFlags: ["monster_room_entry_clue"],
+        effect: { hotelStats: { security: 2 }, reputations: { community: 3 }, flags: { room_207_case_solved: true, room_207_monster_entry_concluded: true, monster_room_entry_clue: true }, threat: -3 },
+      },
+      {
+        id: "UNRESOLVED",
+        label: "사건을 미해결로 봉인한다",
+        description: "수집한 증거를 보관하지만 추가 현장 조사를 끝내고 미해결 사건으로 닫습니다.",
+        supportedBy: [],
+        contradictedBy: [],
+        minimumSupport: 1,
+        effect: { reputations: { community: 1 }, flags: { room_207_case_unresolved: true }, threat: 1 },
+      },
+    ],
+  },
+];

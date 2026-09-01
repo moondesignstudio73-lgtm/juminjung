@@ -114,15 +114,15 @@ test("상태 상한·위협 하한에서는 적용되지 않은 근무 효과를
   assert.equal(resolved.eventHistory.some((entry)=>entry.message.includes("근무 정산 · 월터")),false);
 });
 
-test("Save v12는 근무 배치와 마지막 탐색 보고서를 보존하고 v11에는 안전한 기본값을 준다",()=>{
+test("Save v13은 근무 배치와 마지막 탐색 보고서를 보존하고 v11에는 안전한 기본값을 준다",()=>{
   let state=activate(["hazel"]);
   state=assignStaffDuty(state,"SCAVENGE","hazel").state;
   state=runScavengeMission(state,"NEARBY_BLOCK").state;
   const restored=restoreGameState(serializeGameState(state));
-  assert.equal(restored.version,12);
+  assert.equal(restored.version,13);
   assert.deepEqual(restored.staffAssignments,{SCAVENGE:"hazel"});
   assert.deepEqual(restored.lastScavengeReport,state.lastScavengeReport);
   const legacy=JSON.parse(serializeGameState(state)); legacy.version=11; delete legacy.staffAssignments; delete legacy.lastScavengeDay; delete legacy.lastScavengeReport;
   const migrated=restoreGameState(JSON.stringify(legacy));
-  assert.deepEqual({version:migrated.version,assignments:migrated.staffAssignments,day:migrated.lastScavengeDay,report:migrated.lastScavengeReport},{version:12,assignments:{},day:0,report:null});
+  assert.deepEqual({version:migrated.version,assignments:migrated.staffAssignments,day:migrated.lastScavengeDay,report:migrated.lastScavengeReport},{version:13,assignments:{},day:0,report:null});
 });

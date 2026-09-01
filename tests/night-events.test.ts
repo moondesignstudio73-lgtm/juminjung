@@ -362,7 +362,7 @@ test("207호에 깨진 guestId 흔적이 남아 있으면 빈 객실 사건으�
   assert.notEqual(selectNightEvent(state).id, "room_body_discovery");
 });
 
-test("207호 조사 선택은 괴물 침입 단서와 전용 컷신을 남긴다", () => {
+test("207호 조사 선택은 사건 파일과 전용 컷신을 열지만 결론 전에는 괴물 침입을 확정하지 않는다", () => {
   const state = withGuest();
   state.day = 12;
   state.phase = "night";
@@ -374,7 +374,8 @@ test("207호 조사 선택은 괴물 침입 단서와 전용 컷신을 남긴다
   assert.equal(resolved.activeCutsceneId, "room_body_discovery");
   assert.equal(resolved.flags.room_body_discovery_resolved, true);
   assert.equal(resolved.flags.room_207_investigated, true);
-  assert.equal(resolved.flags.monster_room_entry_clue, true);
+  assert.equal(resolved.flags.monster_room_entry_clue, undefined);
+  assert.deepEqual(resolved.investigationCases.map((entry)=>({id:entry.caseId,status:entry.status})),[{id:"ROOM_207",status:"OPEN"}]);
   assert.equal(resolved.flags.monster_threat, 15);
   assert.equal(resolved.rooms.find((room) => room.roomNumber === 207)?.status, "DAMAGED");
   assert.equal(resolved.rooms.find((room) => room.roomNumber === 207)?.roomCondition, 35);
@@ -804,13 +805,13 @@ test("야간 선택은 정산 로그와 마지막 사건으로 저장되고 임�
   assert.ok(resolved.eventHistory.some((entry) => entry.message.includes("긴 복도, 짧은 밤")));
 });
 
-test("Save v12는 야간 선택과 진행 중인 컷신을 복원한다", () => {
+test("Save v13은 야간 선택과 진행 중인 컷신을 복원한다", () => {
   const state = createInitialGameState();
   state.selectedNightEventId = "quiet_watch";
   state.selectedNightChoiceId = "patrol";
   state.activeCutsceneId = "first_monster_sighting";
   const restored = restoreGameState(serializeGameState(state));
-  assert.equal(restored.version, 12);
+  assert.equal(restored.version, 13);
   assert.equal(restored.selectedNightEventId, "quiet_watch");
   assert.equal(restored.selectedNightChoiceId, "patrol");
   assert.equal(restored.activeCutsceneId, "first_monster_sighting");

@@ -9,6 +9,12 @@ export type StaffDutyId = "MAINTENANCE" | "SECURITY" | "MEDICAL" | "KITCHEN" | "
 export type StaffAssignments = Partial<Record<StaffDutyId, string>>;
 export type ScavengeMissionId = "NEARBY_BLOCK" | "ABANDONED_PHARMACY" | "FUEL_DEPOT";
 export type ScavengeOutcome = "CLEAN_SUCCESS" | "SUCCESS" | "SETBACK";
+export type InvestigationCaseId = "ROOM_207";
+export type EvidenceId = "ROOM_207_INTERIOR_KEY" | "ROOM_207_WINDOW_TRACE" | "ROOM_207_BLACK_RESIDUE" | "ROOM_207_GUEST_LEDGER";
+export type InvestigationPointId = "ROOM_207_DOOR" | "ROOM_207_WINDOW" | "ROOM_207_FLOOR" | "ROOM_207_LUGGAGE";
+export type InvestigationConclusionId = "VOLUNTARY_EXIT" | "HUMAN_ATTACK" | "MONSTER_ENTRY" | "UNRESOLVED";
+export type InvestigationCaseStatus = "OPEN" | "INVESTIGATING" | "SOLVED" | "UNRESOLVED";
+export type EvidenceAssessment = "UNKNOWN" | "SUPPORTED" | "CONTRADICTED";
 
 export type Position = { x: number; y: number };
 
@@ -198,7 +204,7 @@ export type HotelActionId = "repair_hotel" | "community_outreach" | "security_pa
 export type FacilityLevelDefinition = { level: 1 | 2 | 3; name: string; description: string; cost: Partial<Resources>; production?: Partial<Resources>; upkeep?: Partial<Resources>; statChanges: Partial<HotelStats>; reputationChanges: Partial<Reputations> };
 export type FacilityDefinition = { id: FacilityId; name: string; description: string; levels: FacilityLevelDefinition[] };
 export type NightEventCondition = { worldStates?: WorldState[]; minimumDay?: number; dayModulo?: number; minimumThreat?: number; maximumSecurity?: number; maximumResource?: Partial<Resources>; shortage?: "food" | "water"; requiresGuests?: boolean; requiredEmptyRoomNumber?: number; requiredFlags?: EventFlags; forbiddenFlags?: string[]; relationship?: { sourceId: string; targetId: string; minimumWeightedValue?: number; maximumWeightedValue?: number } };
-export type NightEventEffect = { resources?: Partial<Resources>; hotelStats?: Partial<HotelStats>; reputations?: Partial<Reputations>; flags?: EventFlags; threat?: number; fatherStoryProgress?: number; allGuestStress?: number; targetGuestHealth?: number; targetGuestHealthMinimum?: number; roomChange?: { roomNumber: number; status: "DAMAGED" | "LOCKED"; roomCondition: number }; guestEffects?: { guestId: string; trust?: number; stress?: number; health?: number }[]; relationshipChanges?: RelationshipChange[] };
+export type NightEventEffect = { resources?: Partial<Resources>; hotelStats?: Partial<HotelStats>; reputations?: Partial<Reputations>; flags?: EventFlags; threat?: number; fatherStoryProgress?: number; allGuestStress?: number; targetGuestHealth?: number; targetGuestHealthMinimum?: number; roomChange?: { roomNumber: number; status: "DAMAGED" | "LOCKED"; roomCondition: number }; openCaseId?: InvestigationCaseId; guestEffects?: { guestId: string; trust?: number; stress?: number; health?: number }[]; relationshipChanges?: RelationshipChange[] };
 export type NightEventChoice = { id: string; label: string; description: string; requiredResources?: Partial<Resources>; effect: NightEventEffect };
 export type NightEventDefinition = { id: string; title: string; description: string; quote: string; priority: number; condition: NightEventCondition; choices: NightEventChoice[] };
 export type StoryChoiceEffect = { resources?: Partial<Resources>; hotelStats?: Partial<HotelStats>; reputations?: Partial<Reputations>; flags?: EventFlags; trust?: number; stress?: number; health?: number; threat?: number; fatherStoryProgress?: number; relationship?: { targetId: string; delta: number }; discoverTrait?: string };
@@ -208,6 +214,11 @@ export type CutsceneId = "first_night" | "first_monster_sighting" | "guest_attac
 export type CutsceneDefinition = { id: CutsceneId; triggerEventId?: string; triggerChoiceId?: string; triggerStoryEventId?: string; triggerStoryChoiceId?: string; priority: number; minimumCompletedDay?: number; maximumCompletedDay?: number; kicker: string; title: string; body: string; quote: string; image: string; imageAlt: string };
 export type ActiveRelationship = { sourceId: string; targetId: string; type: string; value: number; distanceMultiplier: 1 | 1.5 | 2; weightedValue: number };
 export type ActiveSynergy = { id: string; name: string; guestIds: string[]; affectedRoomNumbers: number[]; description: string };
+export type EvidenceDefinition = { id: EvidenceId; name: string; type: "PHYSICAL" | "RECORD"; source: string; description: string; relatedRoom: number; storyFlag: string };
+export type InvestigationPointDefinition = { id: InvestigationPointId; name: string; description: string; finding: string; evidenceId: EvidenceId; actionCost: 1 };
+export type InvestigationConclusionDefinition = { id: InvestigationConclusionId; label: string; description: string; supportedBy: EvidenceId[]; contradictedBy: EvidenceId[]; minimumSupport: number; supportedOnlyFlags?: string[]; effect: { hotelStats?: Partial<HotelStats>; reputations?: Partial<Reputations>; flags: EventFlags; threat: number } };
+export type InvestigationCaseDefinition = { id: InvestigationCaseId; title: string; summary: string; relatedRoom: number; minimumEvidenceToConclude: number; points: InvestigationPointDefinition[]; conclusions: InvestigationConclusionDefinition[]; correctConclusionId: InvestigationConclusionId; correctFlag: string };
+export type InvestigationCaseState = { caseId: InvestigationCaseId; status: InvestigationCaseStatus; openedDay: number; inspectedPointIds: InvestigationPointId[]; collectedEvidenceIds: EvidenceId[]; conclusionId: InvestigationConclusionId | null; resolvedDay: number | null };
 
 export type GamePhase =
   | "title"
@@ -221,7 +232,7 @@ export type GamePhase =
   | "ending";
 
 export type GameState = {
-  version: 12;
+  version: 13;
   phase: GamePhase;
   day: number;
   rooms: Room[];
@@ -265,6 +276,7 @@ export type GameState = {
   staffAssignments: StaffAssignments;
   lastScavengeDay: number;
   lastScavengeReport: ScavengeReport | null;
+  investigationCases: InvestigationCaseState[];
   activeCutsceneId: CutsceneId | null;
   queuedCutsceneIds: CutsceneId[];
   seenCutsceneIds: CutsceneId[];

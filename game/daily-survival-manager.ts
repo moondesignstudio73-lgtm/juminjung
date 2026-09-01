@@ -1,4 +1,5 @@
 import type { DailyObjective, FoodRationPolicy, GameState, Guest, PowerCircuitId } from "./types.ts";
+import { getInvestigationCaseDefinition, getOpenInvestigationCases } from "./investigation-manager.ts";
 
 export const POWER_CIRCUITS: ReadonlyArray<{ id: PowerCircuitId; name: string; description: string }> = [
   { id: "SECURITY", name: "방호 회로", description: "바리케이드 조명과 감시 장비를 유지합니다." },
@@ -91,6 +92,11 @@ export function getDailyObjectives(state: GameState): DailyObjective[] {
   if (threat >= 25) issues.push({ id: "monster_threat", priority: threat >= 45 ? "URGENT" : "RECOMMENDED", title: "외곽 위협 상승", description: `Monster Threat ${threat}`, actionHint: "경계 순찰 또는 방호 회로를 우선하십시오." });
   if (state.hotelStats.hotelCondition <= 50 || damagedRooms) issues.push({ id: "hotel_damage", priority: state.hotelStats.hotelCondition <= 35 ? "URGENT" : "RECOMMENDED", title: "호텔 손상 복구", description: `상태 ${state.hotelStats.hotelCondition} · 손상/봉쇄 객실 ${damagedRooms}`, actionHint: "부품 2와 AP 1로 가장 위험한 구역을 보수하십시오." });
   if (state.resources.medicine <= 3 && state.guests.some((guest) => guest.status === "STAYING" && guest.infectionState !== "HEALTHY")) issues.push({ id: "medicine_shortage", priority: "URGENT", title: "의약품 고갈 임박", description: `의약품 ${state.resources.medicine}`, actionHint: "진료 회로를 유지하고 교역 경로를 찾으십시오." });
+  const openCase=getOpenInvestigationCases(state)[0];
+  if (openCase) {
+    const definition=getInvestigationCaseDefinition(openCase.caseId)!;
+    issues.push({id:`investigation_${openCase.caseId.toLowerCase()}`,priority:"RECOMMENDED",title:`조사 미완료 · ${definition.title}`,description:`증거 ${openCase.collectedEvidenceIds.length}/${definition.points.length} · 결론에 필요한 증거 ${definition.minimumEvidenceToConclude}`,actionHint:"낮 행동 포인트를 사용해 사건 현장을 조사하고 직접 결론을 선택하십시오."});
+  }
   if (staying > 0 && !state.staffAssignments.SCAVENGE) issues.push({ id: "scout_unassigned", priority: "RECOMMENDED", title: "외부 정찰 담당자 없음", description: "탐색 능력이 있는 투숙객이 아직 외부 임무에 배치되지 않았습니다.", actionHint: "외부 정찰 담당자를 배치해 식량·의약품·연료 탐색을 준비하십시오." });
   if (!issues.length) issues.push({ id: "stable_operations", priority: "OPTIONAL", title: "호텔 운영 안정화", description: `행동 포인트 ${state.actionPoints}/${state.maxActionPoints}`, actionHint: "시설을 강화하거나 공동체 신뢰를 쌓으십시오." });
   const order = { URGENT: 0, RECOMMENDED: 1, OPTIONAL: 2 } as const;
