@@ -23,6 +23,7 @@ function meetsCondition(state: GameState, event: NightEventDefinition): boolean 
     if (state.resources[condition.shortage] >= demand) return false;
   }
   if (condition.requiredFlags && !Object.entries(condition.requiredFlags).every(([key, value]) => state.flags[key] === value || state.endingRelatedFlags[key] === value)) return false;
+  if (condition.requiredAnyFlags && !Object.entries(condition.requiredAnyFlags).some(([key, value]) => state.flags[key] === value || state.endingRelatedFlags[key] === value)) return false;
   if (condition.forbiddenFlags?.some((key) => Boolean(state.flags[key]) || Boolean(state.endingRelatedFlags[key]))) return false;
   if (condition.relationship) {
     const active = getActiveRelationships(state.rooms, state.guests).find((item) => item.sourceId === condition.relationship!.sourceId && item.targetId === condition.relationship!.targetId);

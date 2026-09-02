@@ -247,6 +247,18 @@ test("Walter가 열쇠를 숨기면 안전을 얻고 아버지 기록 경로를 
   assert.equal(restored.activeCutsceneId, "walter_key_hidden");
 });
 
+test("Walter가 기록실을 봉인해도 Lily가 별도로 복원한 이동 경로는 DAY 20 신호를 유지한다", () => {
+  const choice = STORY_CHOICE_EVENTS.find((event) => event.id === "walter-key")!.choices.find((item) => item.id === "hide_key")!;
+  assert.match(choice.description, /Lily/);
+  const starting = resolutionState("walter");
+  starting.flags.father_route_in_documents = true;
+  const hidden = applyStoryChoice(starting, "walter-key", "hide_key").state;
+  assert.equal(hidden.flags.father_secret_discovered, false);
+  assert.equal(hidden.flags.father_route_in_documents, true);
+  assert.equal(selectNightEvent({ ...hidden, day: 20 }).id, "father_radio_signal");
+  assert.ok(!evaluateEndings(hidden).available.includes("THE_TRUTH"));
+});
+
 test("Walter의 기록실 개방은 DAY 20의 91.3MHz 신호로 이어지고 컷신은 반복되지 않는다", () => {
   const opened = applyStoryChoice(resolutionState("walter"), "walter-key", "use_key").state;
   assert.notEqual(selectNightEvent({ ...opened, day: 19 }).id, "father_radio_signal");
@@ -495,6 +507,28 @@ test("오래된 사건 ID나 감당할 수 없는 선택은 조용히 대체되�
 test("Lily와 Dr. Vale의 조사 갈등은 자동 진행 대신 선택 장면으로 열린다", () => {
   assert.equal(getPendingStoryChoice(conflictState("lily"))?.id, "lily-redactions");
   assert.equal(getPendingStoryChoice(conflictState("vale"))?.id, "vale-sample");
+});
+
+test("Lily가 복원한 아버지 이동 경로는 저장 후 DAY 20의 91.3MHz 신호로 이어진다", () => {
+  const decodeChoice = STORY_CHOICE_EVENTS.find((event) => event.id === "lily-redactions")!.choices.find((choice) => choice.id === "decode")!;
+  assert.match(decodeChoice.description, /DAY 20/);
+  assert.match(decodeChoice.description, /Monster Threat.*6/);
+  const decoded = applyStoryChoice(conflictState("lily"), "lily-redactions", "decode").state;
+  assert.equal(decoded.flags.father_route_in_documents, true);
+  assert.notEqual(selectNightEvent({ ...decoded, day: 19 }).id, "father_radio_signal");
+  const restored = restoreGameState(serializeGameState({ ...decoded, day: 20 }));
+  assert.equal(restored.flags.father_route_in_documents, true);
+  assert.equal(restored.flags.father_secret_discovered, undefined);
+  assert.equal(selectNightEvent(restored).id, "father_radio_signal");
+});
+
+test("Lily가 원본을 숨기면 아버지 이동 경로와 DAY 20 신호는 열리지 않는다", () => {
+  const copyChoice = STORY_CHOICE_EVENTS.find((event) => event.id === "lily-redactions")!.choices.find((choice) => choice.id === "copy")!;
+  assert.match(copyChoice.description, /DAY 20/);
+  assert.match(copyChoice.description, /포기/);
+  const secured = applyStoryChoice(conflictState("lily"), "lily-redactions", "copy").state;
+  assert.equal(secured.flags.father_route_in_documents, undefined);
+  assert.notEqual(selectNightEvent({ ...secured, day: 20 }).id, "father_radio_signal");
 });
 
 test("Lily의 암호화 보관은 진실을 보존하고 외부 응답을 닫는 전용 컷신을 연다", () => {

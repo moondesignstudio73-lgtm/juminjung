@@ -426,7 +426,7 @@ test("207호 컷신은 사건 자체의 DAY 조건을 따르고 완료 날짜 �
   assert.equal(queueNightEventCutscene(createInitialGameState(), "room_body_discovery", "investigate_body", 9).activeCutsceneId, "room_body_discovery");
 });
 
-test("아버지 기록실 단서를 얻은 플레이만 DAY 20부터 91.3MHz 신호를 수신한다", () => {
+test("아버지 기록실 또는 Lily 문서 경로를 얻은 플레이만 DAY 20부터 91.3MHz 신호를 수신한다", () => {
   const state = withGuest();
   state.day = 19;
   state.flags.father_secret_discovered = true;
@@ -434,6 +434,9 @@ test("아버지 기록실 단서를 얻은 플레이만 DAY 20부터 91.3MHz 신
   state.day = 20;
   assert.equal(selectNightEvent(state).id, "father_radio_signal");
   state.flags.father_secret_discovered = false;
+  state.flags.father_route_in_documents = true;
+  assert.equal(selectNightEvent(state).id, "father_radio_signal");
+  state.flags.father_route_in_documents = false;
   assert.notEqual(selectNightEvent(state).id, "father_radio_signal");
 });
 
