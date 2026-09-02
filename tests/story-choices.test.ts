@@ -15,6 +15,7 @@ import { getNightFoodDemand } from "../game/aura-night-manager.ts";
 import { getEligibleVisitor } from "../game/visitor-manager.ts";
 import { getDailyVisitorCountBreakdown, prepareDailyVisitorQueue, recordVisitorDecision } from "../game/visitor-queue-manager.ts";
 import { resolveDay } from "../game/day-manager.ts";
+import { assignStaffDuty, getScavengeChance, runScavengeMission, SAFE_ROUTE_SCAVENGE_CHANCE_BONUS, SAFE_ROUTE_SCAVENGE_EXPOSURE_REDUCTION } from "../game/staff-operation-manager.ts";
 
 function conflictState(guestId: string) {
   const state = createInitialGameState();
@@ -912,20 +913,42 @@ test("Rosa의 두 가족 결말 컷씬은 다른 장면 뒤에 큐로 저장되�
   }
 });
 
-test("Eli의 길잡이 경로는 안전 통로와 지속 정찰·전용 컷신을 열고 저장된다", () => {
+test("Eli의 길잡이 경로는 저장 뒤에도 안전 통로 탐색 보정과 지속 정찰·전용 컷신을 연다", () => {
   const state=resolutionState("eli");
   state.flags.eli_quartermaster=true;
   const choice=STORY_CHOICE_EVENTS.find((event)=>event.id==="eli-keyring")!.choices.find((candidate)=>candidate.id==="pathfinder")!;
-  for(const term of ["Trust +10","Monster Threat -5","refugee 평판 +7","안전 통로","매일 실제 Monster Threat를 최대 1","추가 Trust +5","식량 +2","Security +3","community 평판 +5","시설 유지비 최대 1","영구히 포기","다른 주민이 만든 안전 통로는 유지"]) assert.ok(choice.description.includes(term),term);
-  const result=applyStoryChoice(state,"eli-keyring","pathfinder").state;
+  for(const term of ["Trust +10","Monster Threat -5","refugee 평판 +7","안전 통로","외부 탐색 성공률","10%","노출 위험","최대 2","매일 실제 Monster Threat를 최대 1","추가 Trust +5","식량 +2","Security +3","community 평판 +5","시설 유지비 최대 1","영구히 포기","다른 주민이 만든 안전 통로는 유지"]) assert.ok(choice.description.includes(term),term);
+  let result=applyStoryChoice(state,"eli-keyring","pathfinder").state;
   assert.equal(result.flags.eli_pathfinder,true);
   assert.equal(result.flags.eli_quartermaster,false);
   assert.equal(result.flags.safe_routes_mapped,true);
   assert.equal(result.activeCutsceneId,"eli_safe_passage");
   assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/eli-safe-passage-v1.png");
-  const restored=restoreGameState(serializeGameState(result));
+  result={...result,rooms:assignGuest(result.rooms,301,"eli")};
+  let restored=restoreGameState(serializeGameState(result));
   assert.equal(restored.flags.eli_pathfinder,true);
   assert.equal(restored.activeCutsceneId,"eli_safe_passage");
+  const eli=restored.guests.find((guest)=>guest.id==="eli")!;
+  const baseChance=getScavengeChance(eli,"FUEL_DEPOT");
+  restored=assignStaffDuty(restored,"SCAVENGE","eli").state;
+  const expedition=runScavengeMission(restored,"FUEL_DEPOT");
+  assert.equal(expedition.ok,true);
+  assert.equal(expedition.report?.chance,baseChance+SAFE_ROUTE_SCAVENGE_CHANCE_BONUS);
+  assert.equal(expedition.report?.routeChanceBonus,SAFE_ROUTE_SCAVENGE_CHANCE_BONUS);
+  assert.equal(expedition.report?.routeExposureReduction,SAFE_ROUTE_SCAVENGE_EXPOSURE_REDUCTION);
+  assert.match(expedition.report!.message,/안전 통로 성공 \+10% · 노출 -2/);
+  const effectiveExposure=4-SAFE_ROUTE_SCAVENGE_EXPOSURE_REDUCTION;
+  const expectedThreat=expedition.report?.outcome==="CLEAN_SUCCESS"?Math.max(0,effectiveExposure-2):expedition.report?.outcome==="SUCCESS"?effectiveExposure:effectiveExposure+3;
+  assert.equal(expedition.report?.threatDelta,expectedThreat);
+});
+
+test("공유 안전 통로를 생산하는 모든 결말은 같은 외부 탐색 계약을 공개한다", () => {
+  const producers=STORY_CHOICE_EVENTS.flatMap((event)=>event.choices.flatMap((choice)=>choice.effect.flags?.safe_routes_mapped===true?[{id:`${event.id}:${choice.id}`,choice}]:[]));
+  assert.deepEqual(producers.map(({id})=>id).sort(),["claire-future:safe_passage","eli-keyring:pathfinder","grace-faith:pilgrimage","thomas-grid:signal"]);
+  for (const {choice} of producers) {
+    assert.ok(choice.description.includes(`외부 탐색 성공률을 최대 ${SAFE_ROUTE_SCAVENGE_CHANCE_BONUS}%`));
+    assert.ok(choice.description.includes(`노출 위험을 최대 ${SAFE_ROUTE_SCAVENGE_EXPOSURE_REDUCTION} 낮춥니다`));
+  }
 });
 
 test("Eli의 창고 책임 경로는 시설 유지비를 실제 절감하고 전용 컷신·저장에 연결된다", () => {

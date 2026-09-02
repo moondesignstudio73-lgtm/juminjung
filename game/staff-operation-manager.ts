@@ -1,5 +1,5 @@
 import type {
-  GameState, Guest, GuestSkills, HotelLogEntry, Resources, ScavengeMissionId, ScavengeOutcome,
+  GameState, Guest, GuestSkills, Resources, ScavengeMissionId, ScavengeOutcome,
   ScavengeReport, StaffAssignments, StaffDutyId, StaffDutyResult,
 } from "./types.ts";
 
@@ -20,6 +20,18 @@ type ScavengeMissionDefinition = {
   rewards: Partial<Resources>;
   setbackHealth: number;
   exposure: number;
+};
+
+export type ScavengeRouteModifiers = {
+  active: boolean;
+  chanceBonus: number;
+  exposureReduction: number;
+};
+
+export type ScavengeChanceBreakdown = ScavengeRouteModifiers & {
+  baseChance: number;
+  appliedChanceBonus: number;
+  chance: number;
 };
 
 const RESOURCE_LABELS: Record<keyof Resources, string> = {
@@ -44,6 +56,9 @@ export const SCAVENGE_MISSIONS: ReadonlyArray<ScavengeMissionDefinition> = [
   { id: "ABANDONED_PHARMACY", name: "버려진 약국", description: "감염 흔적이 남은 약국에서 의약품을 회수합니다.", difficulty: 55, cost: { fuel: 1 }, rewards: { medicine: 4, food: 1 }, setbackHealth: 8, exposure: 2 },
   { id: "FUEL_DEPOT", name: "외곽 연료 저장소", description: "괴물 이동로 너머 저장소에서 연료와 부품을 회수합니다.", difficulty: 72, cost: { security: 2 }, rewards: { fuel: 7, parts: 3 }, setbackHealth: 12, exposure: 4 },
 ];
+
+export const SAFE_ROUTE_SCAVENGE_CHANCE_BONUS = 10;
+export const SAFE_ROUTE_SCAVENGE_EXPOSURE_REDUCTION = 2;
 
 const clamp = (value:number,min=0,max=100) => Math.max(min,Math.min(max,value));
 const isActiveStaff = (guest:Guest|null|undefined) => Boolean(guest?.alive&&guest.status==="STAYING"&&guest.currentRoomNumber!==null);
@@ -91,11 +106,28 @@ export function getAssignedStaff(state:Pick<GameState,"staffAssignments"|"guests
   return isActiveStaff(guest)?guest??null:null;
 }
 
-export function getScavengeChance(guest:Guest,missionId:ScavengeMissionId):number {
+export function getScavengeRouteModifiers(missionId:ScavengeMissionId,safeRoutesMapped:boolean):ScavengeRouteModifiers {
   const mission=SCAVENGE_MISSIONS.find((entry)=>entry.id===missionId);
-  if (!mission) return 0;
+  if (!mission||!safeRoutesMapped) return {active:false,chanceBonus:0,exposureReduction:0};
+  return {
+    active:true,
+    chanceBonus:SAFE_ROUTE_SCAVENGE_CHANCE_BONUS,
+    exposureReduction:Math.min(SAFE_ROUTE_SCAVENGE_EXPOSURE_REDUCTION,mission.exposure),
+  };
+}
+
+export function getScavengeChanceBreakdown(guest:Guest,missionId:ScavengeMissionId,safeRoutesMapped=false):ScavengeChanceBreakdown {
+  const mission=SCAVENGE_MISSIONS.find((entry)=>entry.id===missionId);
+  if (!mission) return {active:false,chanceBonus:0,exposureReduction:0,baseChance:0,appliedChanceBonus:0,chance:0};
   const fieldScore=guest.skills.scavenge*.65+guest.skills.work*.2+guest.skills.combat*.15;
-  return clamp(Math.round(55+fieldScore-mission.difficulty),15,95);
+  const route=getScavengeRouteModifiers(missionId,safeRoutesMapped);
+  const baseChance=clamp(Math.round(55+fieldScore-mission.difficulty),15,95);
+  const chance=clamp(baseChance+route.chanceBonus,15,95);
+  return {...route,baseChance,appliedChanceBonus:chance-baseChance,chance};
+}
+
+export function getScavengeChance(guest:Guest,missionId:ScavengeMissionId,safeRoutesMapped=false):number {
+  return getScavengeChanceBreakdown(guest,missionId,safeRoutesMapped).chance;
 }
 
 export function canRunScavengeMission(state:GameState,missionId:ScavengeMissionId):boolean {
@@ -113,20 +145,23 @@ export function runScavengeMission(state:GameState,missionId:ScavengeMissionId):
   if (state.actionPoints<1) return {state,ok:false,message:"오늘 사용할 행동 포인트가 없습니다.",report:null};
   if (scout.health<35||scout.infectionState==="INFECTED") return {state,ok:false,message:"정찰 담당자의 상태가 외부 임무를 감당할 수 없습니다.",report:null};
   if (!canAfford(state.resources,mission.cost)) return {state,ok:false,message:"탐색 준비 자원이 부족합니다.",report:null};
-  const chance=getScavengeChance(scout,mission.id);
+  const route=getScavengeChanceBreakdown(scout,mission.id,state.flags.safe_routes_mapped===true);
+  const chance=route.chance;
   const roll=randomRoll(state.visitorSeed,`${state.day}:${mission.id}:${scout.id}:${scout.storyFlags.visit_count??0}`);
   const outcome:ScavengeOutcome=roll<=Math.max(10,chance-30)?"CLEAN_SUCCESS":roll<=chance?"SUCCESS":"SETBACK";
   const rewardMultiplier=outcome==="CLEAN_SUCCESS"?1.5:outcome==="SUCCESS"?1:0;
   const rewards=Object.fromEntries(Object.entries(mission.rewards).map(([key,value])=>[key,Math.ceil(Number(value)*rewardMultiplier)]).filter(([,value])=>Number(value)>0)) as Partial<Resources>;
   const healthDelta=outcome==="SETBACK"?-mission.setbackHealth:0;
   const stressDelta=outcome==="CLEAN_SUCCESS"?3:outcome==="SUCCESS"?6:12;
-  const threatDelta=outcome==="CLEAN_SUCCESS"?Math.max(0,mission.exposure-2):outcome==="SUCCESS"?mission.exposure:mission.exposure+3;
+  const exposure=Math.max(0,mission.exposure-route.exposureReduction);
+  const threatDelta=outcome==="CLEAN_SUCCESS"?Math.max(0,exposure-2):outcome==="SUCCESS"?exposure:exposure+3;
   const outcomeLabel=outcome==="CLEAN_SUCCESS"?"완전 성공":outcome==="SUCCESS"?"성공":"철수";
   const rewardText=Object.entries(rewards)
     .map(([key,value])=>`${RESOURCE_LABELS[key as keyof Resources]} +${value}`)
     .join(" · ")||"회수품 없음";
-  const message=`탐색 ${outcomeLabel} · ${mission.name} · ${scout.name} · ${rewardText}${healthDelta?` · 체력 ${healthDelta}`:""} · 괴물 위협 +${threatDelta}`;
-  const report:ScavengeReport={day:state.day,missionId:mission.id,missionName:mission.name,guestId:scout.id,guestName:scout.name,chance,roll,outcome,resources:rewards,threatDelta,healthDelta,message};
+  const routeText=route.active?` · 안전 통로 ${route.appliedChanceBonus?`성공 +${route.appliedChanceBonus}%`:"성공률 상한"} · 노출 -${route.exposureReduction}`:"";
+  const message=`탐색 ${outcomeLabel} · ${mission.name} · ${scout.name}${routeText} · ${rewardText}${healthDelta?` · 체력 ${healthDelta}`:""} · 괴물 위협 +${threatDelta}`;
+  const report:ScavengeReport={day:state.day,missionId:mission.id,missionName:mission.name,guestId:scout.id,guestName:scout.name,chance,roll,outcome,resources:rewards,threatDelta,healthDelta,routeChanceBonus:route.appliedChanceBonus,routeExposureReduction:route.exposureReduction,message};
   const spent=changeResources(state.resources,Object.fromEntries(Object.entries(mission.cost).map(([key,value])=>[key,-Number(value)])) as Partial<Resources>);
   const resources=changeResources(spent,rewards);
   const guests=state.guests.map((guest)=>guest.id===scout.id?{...guest,health:clamp(guest.health+healthDelta),stress:clamp(guest.stress+stressDelta)}:guest);

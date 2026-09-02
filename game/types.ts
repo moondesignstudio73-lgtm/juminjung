@@ -184,6 +184,8 @@ export type ScavengeReport = {
   resources: Partial<Resources>;
   threatDelta: number;
   healthDelta: number;
+  routeChanceBonus?: number;
+  routeExposureReduction?: number;
   message: string;
 };
 

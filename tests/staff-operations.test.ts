@@ -5,8 +5,9 @@ import { resolveDay } from "../game/day-manager.ts";
 import { assignGuest } from "../game/room-manager.ts";
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
 import {
-  assignStaffDuty, canRunScavengeMission, getNightStaffPlan, getScavengeChance,
-  pruneStaffAssignments, runScavengeMission,
+  assignStaffDuty, canRunScavengeMission, getNightStaffPlan, getScavengeChance, getScavengeChanceBreakdown, getScavengeRouteModifiers,
+  pruneStaffAssignments, runScavengeMission, SAFE_ROUTE_SCAVENGE_CHANCE_BONUS,
+  SAFE_ROUTE_SCAVENGE_EXPOSURE_REDUCTION,
 } from "../game/staff-operation-manager.ts";
 import type { GameState } from "../game/types.ts";
 
@@ -41,6 +42,19 @@ test("탐색 성공률은 담당자의 탐색·작업·전투 능력과 임무 �
   const hazel=state.guests.find((guest)=>guest.id==="hazel")!;
   assert.ok(getScavengeChance(hazel,"NEARBY_BLOCK")>getScavengeChance(mia,"NEARBY_BLOCK"));
   assert.ok(getScavengeChance(hazel,"NEARBY_BLOCK")>getScavengeChance(hazel,"FUEL_DEPOT"));
+});
+
+test("안전 통로는 탐색 성공률을 높이고 임무별 실제 노출까지만 낮춘다",()=>{
+  const state=activate(["walter","mia","hazel"]);
+  const walter=state.guests.find((guest)=>guest.id==="walter")!;
+  const mia=state.guests.find((guest)=>guest.id==="mia")!;
+  const hazel=state.guests.find((guest)=>guest.id==="hazel")!;
+  assert.equal(getScavengeChance(walter,"FUEL_DEPOT",true)-getScavengeChance(walter,"FUEL_DEPOT"),SAFE_ROUTE_SCAVENGE_CHANCE_BONUS);
+  assert.deepEqual(getScavengeChanceBreakdown(mia,"FUEL_DEPOT",true),{active:true,chanceBonus:10,exposureReduction:2,baseChance:15,appliedChanceBonus:10,chance:25});
+  assert.deepEqual(getScavengeChanceBreakdown(hazel,"NEARBY_BLOCK",true),{active:true,chanceBonus:10,exposureReduction:1,baseChance:95,appliedChanceBonus:0,chance:95});
+  assert.deepEqual(getScavengeRouteModifiers("FUEL_DEPOT",true),{active:true,chanceBonus:SAFE_ROUTE_SCAVENGE_CHANCE_BONUS,exposureReduction:SAFE_ROUTE_SCAVENGE_EXPOSURE_REDUCTION});
+  assert.deepEqual(getScavengeRouteModifiers("NEARBY_BLOCK",true),{active:true,chanceBonus:SAFE_ROUTE_SCAVENGE_CHANCE_BONUS,exposureReduction:1});
+  assert.deepEqual(getScavengeRouteModifiers("FUEL_DEPOT",false),{active:false,chanceBonus:0,exposureReduction:0});
 });
 
 test("탐색 결과는 같은 세이브 시드·DAY·임무·담당자에서 결정적이며 하루 한 번만 실행된다",()=>{
