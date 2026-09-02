@@ -1,5 +1,6 @@
 import type { DailyObjective, FoodRationPolicy, GameState, Guest, PowerCircuitId } from "./types.ts";
 import { getInvestigationCaseDefinition, getOpenInvestigationCases } from "./investigation-manager.ts";
+import { isVulnerableResident } from "./resident-vulnerability.ts";
 
 export const POWER_CIRCUITS: ReadonlyArray<{ id: PowerCircuitId; name: string; description: string }> = [
   { id: "SECURITY", name: "방호 회로", description: "바리케이드 조명과 감시 장비를 유지합니다." },
@@ -7,10 +8,14 @@ export const POWER_CIRCUITS: ReadonlyArray<{ id: PowerCircuitId; name: string; d
   { id: "KITCHEN", name: "주방 회로", description: "조리와 보관 설비의 식량 손실을 막습니다." },
 ];
 
+export const PRIORITY_RATION_LIMITED_STRESS_DELTA = 2;
+export const PRIORITY_RATION_SEVERE_STRESS_DELTA = 8;
+export const VULNERABLE_RATION_PROTECTION_DESCRIPTION = `취약 주민은 제한 배급 Stress +${PRIORITY_RATION_LIMITED_STRESS_DELTA}, 극단 절약 Stress +${PRIORITY_RATION_SEVERE_STRESS_DELTA} · Health 보호`;
+
 export const RATION_POLICIES: ReadonlyArray<{ id: FoodRationPolicy; name: string; description: string }> = [
   { id: "NORMAL", name: "정상 배급", description: "1인 1식 · Stress -5" },
-  { id: "LIMITED", name: "제한 배급", description: "식량 30% 절약 · Stress +5" },
-  { id: "SEVERE", name: "극단 절약", description: "식량 60% 절약 · Stress +15 · Health -3" },
+  { id: "LIMITED", name: "제한 배급", description: `식량 30% 절약 · Stress +5 · 보호 원칙 활성 시 취약 주민 +${PRIORITY_RATION_LIMITED_STRESS_DELTA}` },
+  { id: "SEVERE", name: "극단 절약", description: `식량 60% 절약 · Stress +15 · Health -3 · 보호 원칙 활성 시 취약 주민 +${PRIORITY_RATION_SEVERE_STRESS_DELTA} · Health 보호` },
 ];
 
 const clamp = (value: number, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -48,12 +53,27 @@ export function getRationPlan(baseFoodDemand: number, policy: FoodRationPolicy):
   return { foodDemand: baseFoodDemand, stressDelta: -5, healthDelta: 0 };
 }
 
-export function applySurvivalGuestEffects(guest: Guest, ration: ReturnType<typeof getRationPlan>, clinicPowered: boolean): Guest {
+export function getResidentRationEffects(
+  guest: Guest,
+  ration: ReturnType<typeof getRationPlan>,
+  vulnerableProtectionActive = false,
+): { stressDelta: number; healthDelta: number; protected: boolean } {
+  if (!vulnerableProtectionActive || !isVulnerableResident(guest) || ration.stressDelta <= 0) {
+    return { stressDelta: ration.stressDelta, healthDelta: ration.healthDelta, protected: false };
+  }
+  if (ration.healthDelta < 0) {
+    return { stressDelta: PRIORITY_RATION_SEVERE_STRESS_DELTA, healthDelta: 0, protected: true };
+  }
+  return { stressDelta: PRIORITY_RATION_LIMITED_STRESS_DELTA, healthDelta: ration.healthDelta, protected: true };
+}
+
+export function applySurvivalGuestEffects(guest: Guest, ration: ReturnType<typeof getRationPlan>, clinicPowered: boolean, vulnerableProtectionActive = false): Guest {
   const needsClinic = guest.infectionState !== "HEALTHY" || guest.health < 80;
+  const residentRation = getResidentRationEffects(guest, ration, vulnerableProtectionActive);
   return {
     ...guest,
-    stress: clamp(guest.stress + ration.stressDelta),
-    health: clamp(guest.health + ration.healthDelta + (!clinicPowered && needsClinic ? -3 : 0)),
+    stress: clamp(guest.stress + residentRation.stressDelta),
+    health: clamp(guest.health + residentRation.healthDelta + (!clinicPowered && needsClinic ? -3 : 0)),
   };
 }
 

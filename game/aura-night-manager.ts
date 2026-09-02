@@ -1,4 +1,5 @@
 import { getAffectedRoomNumbers, getDiseaseChance } from "./aura-effect-manager.ts";
+import { isVulnerableResident } from "./resident-vulnerability.ts";
 import type { AuraMetric, EventFlags, Guest, Room, WorldState } from "./types.ts";
 
 export type AuraNightResolution = {
@@ -50,7 +51,7 @@ export const MUTUAL_AID_CONDITION_REPAIR = 1;
 export const RESEARCH_PREDICTION_THREAT_REDUCTION = 2;
 
 export function isCareTeamEligible(guest:Guest):boolean {
-  return guest.age<18||guest.age>=65||guest.health<80||guest.infectionState!=="HEALTHY"||guest.baseTraits.includes("Pregnant");
+  return isVulnerableResident(guest);
 }
 
 export function isNurseryEligible(guest:Guest):boolean {
@@ -58,7 +59,7 @@ export function isNurseryEligible(guest:Guest):boolean {
 }
 
 export function isFamilyZoneEligible(guest:Guest):boolean {
-  return isCareTeamEligible(guest);
+  return isVulnerableResident(guest);
 }
 
 export type NightFoodDemandBreakdown = { demand:number; saving:number; communityKitchenSaving:number; rationLabSaving:number };

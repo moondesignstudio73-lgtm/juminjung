@@ -16,6 +16,7 @@ import { getEligibleVisitor } from "../game/visitor-manager.ts";
 import { getDailyVisitorCountBreakdown, prepareDailyVisitorQueue, recordVisitorDecision } from "../game/visitor-queue-manager.ts";
 import { resolveDay } from "../game/day-manager.ts";
 import { assignStaffDuty, getScavengeChance, runScavengeMission, SAFE_ROUTE_SCAVENGE_CHANCE_BONUS, SAFE_ROUTE_SCAVENGE_EXPOSURE_REDUCTION } from "../game/staff-operation-manager.ts";
+import { VULNERABLE_RATION_PROTECTION_DESCRIPTION } from "../game/daily-survival-manager.ts";
 
 function conflictState(guestId: string) {
   const state = createInitialGameState();
@@ -33,6 +34,56 @@ function resolutionState(guestId: string) {
   } : guest);
   return state;
 }
+
+test("취약 주민 보호를 만드는 모든 선택은 같은 배급 효과 계약을 공개한다", () => {
+  const producers = STORY_CHOICE_EVENTS.flatMap((event) => event.choices
+    .filter((choice) => choice.effect.flags?.vulnerable_survivors_protected === true)
+    .map((choice) => `${event.id}:${choice.id}`));
+  assert.deepEqual(producers, [
+    "mia-family:stay",
+    "ruth-home:care_team",
+    "rosa-ration:priority",
+    "rosa-family:household",
+    "rosa-family:family_room",
+    "claire-pursuer:protect_claire",
+    "claire-future:nursery",
+  ]);
+  for (const event of STORY_CHOICE_EVENTS) {
+    for (const choice of event.choices) {
+      if (choice.effect.flags?.vulnerable_survivors_protected === true) assert.ok(choice.description.includes(VULNERABLE_RATION_PROTECTION_DESCRIPTION));
+    }
+  }
+});
+
+test("Rosa의 우선 배급 선택은 저장 뒤 극단 절약에서 취약 주민만 실제 보호하고 아침 장부에 남긴다", () => {
+  const state = applyStoryChoice(conflictState("rosa"), "rosa-ration", "priority").state;
+  state.foodRationPolicy = "SEVERE";
+  state.phase = "night";
+  state.selectedNightEventId = "quiet_watch";
+  state.selectedNightChoiceId = "rest";
+  state.guests = state.guests.map((guest) => {
+    if (guest.id === "rosa") return { ...guest, age: 45, health: 100, stress: 30, infectionState: "HEALTHY" as const, baseTraits: [] };
+    if (guest.id === "mia") return { ...guest, status: "STAYING" as const, currentRoomNumber: 302, checkedInDay: 1, remainingNights: 2, health: 100, stress: 30, infectionState: "HEALTHY" as const };
+    if (guest.id === "walter") return { ...guest, status: "STAYING" as const, currentRoomNumber: 303, checkedInDay: 1, remainingNights: 2, age: 45, health: 100, stress: 30, infectionState: "HEALTHY" as const, baseTraits: [] };
+    return guest;
+  });
+  state.rooms = recalculateRoomEffects(assignGuest(assignGuest(assignGuest(state.rooms, 301, "rosa"), 302, "mia"), 303, "walter"), state.guests);
+  const saved = serializeGameState(state);
+  const protectedResult = resolveDay(restoreGameState(saved));
+  const controlState = restoreGameState(saved);
+  controlState.flags.vulnerable_survivors_protected = false;
+  const controlResult = resolveDay(controlState);
+  const protectedMia = protectedResult.guests.find((guest) => guest.id === "mia")!;
+  const controlMia = controlResult.guests.find((guest) => guest.id === "mia")!;
+  const protectedWalter = protectedResult.guests.find((guest) => guest.id === "walter")!;
+  const controlWalter = controlResult.guests.find((guest) => guest.id === "walter")!;
+  assert.equal(protectedResult.flags.vulnerable_survivors_protected, true);
+  assert.equal(controlMia.stress - protectedMia.stress, 7);
+  assert.equal(protectedMia.health - controlMia.health, 3);
+  assert.deepEqual({ stress: protectedWalter.stress, health: protectedWalter.health }, { stress: controlWalter.stress, health: controlWalter.health });
+  assert.deepEqual(protectedResult.lastDaySummary?.priorityRationGuestIds, ["mia"]);
+  assert.ok(protectedResult.eventHistory.some((entry) => entry.message === "취약 주민 우선 배급 · 미아 카터 · Stress +8 · Health 보호"));
+});
 
 test("Eleanor의 갈등 장면은 조건이 되면 pending으로 나타난다", () => {
   assert.equal(getPendingStoryChoice(conflictState("eleanor"))?.id, "eleanor-triage");

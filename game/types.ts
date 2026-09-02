@@ -166,6 +166,7 @@ export type DaySummary = {
   inactiveFacilities?: FacilityId[];
   staffFoodSaving?: number;
   staffDutyResults?: StaffDutyResult[];
+  priorityRationGuestIds?: string[];
   familyZoneGuestIds?: string[];
   nightPreparationOptionIds?: NightPreparationOptionId[];
   checkedOutGuestIds: string[];

@@ -1,13 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  applySurvivalGuestEffects,
   configureFoodRation,
   configurePowerCircuit,
   getActivePowerCircuits,
   getDailyObjectives,
   getPowerCapacity,
   getRationPlan,
+  getResidentRationEffects,
+  RATION_POLICIES,
 } from "../game/daily-survival-manager.ts";
+import { isVulnerableResident } from "../game/resident-vulnerability.ts";
 import { resolveDay } from "../game/day-manager.ts";
 import { performHotelAction } from "../game/hotel-action-manager.ts";
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
@@ -48,6 +52,43 @@ test("제한·극단 배급은 식량 절약과 Stress·Health 대가를 같은 
   assert.deepEqual(getRationPlan(10, "NORMAL"), { foodDemand: 10, stressDelta: -5, healthDelta: 0 });
   assert.deepEqual(getRationPlan(10, "LIMITED"), { foodDemand: 7, stressDelta: 5, healthDelta: 0 });
   assert.deepEqual(getRationPlan(10, "SEVERE"), { foodDemand: 4, stressDelta: 15, healthDelta: -3 });
+});
+
+test("취약 주민 판정은 돌봄·가족 구역·우선 배급이 공유하는 한 기준을 사용한다", () => {
+  const state = createInitialGameState();
+  const mia = state.guests.find((guest) => guest.id === "mia")!;
+  const walter = state.guests.find((guest) => guest.id === "walter")!;
+  assert.equal(isVulnerableResident(mia), true);
+  assert.equal(isVulnerableResident({ ...walter, age: 70, health: 100, infectionState: "HEALTHY", baseTraits: [] }), true);
+  assert.equal(isVulnerableResident({ ...walter, age: 45, health: 79, infectionState: "HEALTHY", baseTraits: [] }), true);
+  assert.equal(isVulnerableResident({ ...walter, age: 45, health: 100, infectionState: "SICK", baseTraits: [] }), true);
+  assert.equal(isVulnerableResident({ ...walter, age: 45, health: 100, infectionState: "HEALTHY", baseTraits: ["Pregnant"] }), true);
+  assert.equal(isVulnerableResident({ ...walter, age: 45, health: 100, infectionState: "HEALTHY", baseTraits: [] }), false);
+});
+
+test("보호 원칙은 취약 주민의 제한·극단 배급 피해만 줄이고 정상 배급과 일반 주민은 바꾸지 않는다", () => {
+  const state = createInitialGameState();
+  const mia = { ...state.guests.find((guest) => guest.id === "mia")!, health: 80, stress: 30, infectionState: "HEALTHY" as const };
+  const walter = { ...state.guests.find((guest) => guest.id === "walter")!, age: 45, health: 80, stress: 30, infectionState: "HEALTHY" as const, baseTraits: [] };
+  assert.deepEqual(getResidentRationEffects(mia, getRationPlan(2, "LIMITED"), true), { stressDelta: 2, healthDelta: 0, protected: true });
+  assert.deepEqual(getResidentRationEffects(mia, getRationPlan(2, "SEVERE"), true), { stressDelta: 8, healthDelta: 0, protected: true });
+  assert.deepEqual(getResidentRationEffects(mia, getRationPlan(2, "NORMAL"), true), { stressDelta: -5, healthDelta: 0, protected: false });
+  assert.deepEqual(getResidentRationEffects(walter, getRationPlan(2, "SEVERE"), true), { stressDelta: 15, healthDelta: -3, protected: false });
+  assert.deepEqual({ stress: applySurvivalGuestEffects(mia, getRationPlan(2, "SEVERE"), true, true).stress, health: applySurvivalGuestEffects(mia, getRationPlan(2, "SEVERE"), true, true).health }, { stress: 38, health: 80 });
+  assert.match(RATION_POLICIES.find((policy) => policy.id === "SEVERE")!.description, /취약 주민 \+8 · Health 보호/);
+});
+
+test("수치 하한·상한 때문에 실제 차이가 없으면 취약 주민 보호 수혜를 기록하지 않는다", () => {
+  const state = createInitialGameState();
+  state.day = 2;
+  state.phase = "night";
+  state.foodRationPolicy = "SEVERE";
+  state.flags.vulnerable_survivors_protected = true;
+  state.rooms = state.rooms.map((room) => room.roomNumber === 101 ? { ...room, permanentEffects: [...room.permanentEffects, { id: "test-recovery", sourceGuestId: "hotel", name: "Recovery", metric: "injuryRecovery" as const, diseaseType: "INJURY" as const, operation: "ADD" as const, value: 10 }] } : room);
+  state.guests = state.guests.map((guest) => guest.id === "mia" ? { ...guest, status: "STAYING" as const, currentRoomNumber: 101, checkedInDay: 1, remainingNights: 2, health: 99, stress: 100, infectionState: "HEALTHY" as const, aura: null } : guest);
+  const resolved = resolveDay(state);
+  assert.deepEqual(resolved.lastDaySummary?.priorityRationGuestIds, []);
+  assert.equal(resolved.eventHistory.some((entry) => entry.message.startsWith("취약 주민 우선 배급")), false);
 });
 
 test("정상 배급은 실제 야간 투숙객의 Stress를 낮추고 장부에 정책을 남긴다", () => {
