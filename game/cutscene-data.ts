@@ -326,6 +326,18 @@ export const CUTSCENES: CutsceneDefinition[] = [
     imageAlt: "헤이즐 퀸이 비 내리는 JUJU HOTEL 외곽 담장에서 철사와 황동 종으로 만든 조기경보 장치를 점검하고, 멀리 따뜻한 호텔 창문과 안개 속 형체들이 보이는 장면.",
   },
   {
+    id: "hazel_vengeance_expedition",
+    triggerStoryEventId: "hazel-watch",
+    triggerStoryChoiceId: "vengeance",
+    priority: 165,
+    kicker: "RUINED OUTSKIRTS · FINAL TRAIL",
+    title: "돌아올 길을 지운 자취",
+    body: "헤이즐 퀸은 호텔의 치안 물자를 자신의 사냥 자루에 나눠 담고, 객실 키와 외곽 경보선의 황동 종을 현관 난간에 남겼다. 안개 속 발자국은 호텔에서 멀어지며 가족을 잃은 날의 괴물 흔적과 포개진 도로 끝으로 이어졌다. 밤이 밝을 때까지 폐허 넘어서 총성은 한 번만 돌아왔다. 외곽의 위협은 크게 줄었지만, 이제 괴물보다 먼저 울리던 종과 그것을 보던 사람은 호텔에 남지 않았다.",
+    quote: "살아 돌아오겠다고는 안 할게. 대신 저 길이 이곳을 다시 찾지 못하게 하지.",
+    image: "/juminjung/assets/cutscenes/hazel-vengeance-expedition-v1.png",
+    imageAlt: "헤이즐 퀸이 추적 자루와 사냥총을 메고 안개 난 폐허로 혼자 떠나며, 뒤의 JUJU HOTEL 현관에는 반납한 객실 키와 사용하지 않을 외곽 경보 종이 남은 장면.",
+  },
+  {
     id: "eleanor_clinic_opened",
     triggerStoryEventId: "eleanor-standard",
     triggerStoryChoiceId: "clinic",

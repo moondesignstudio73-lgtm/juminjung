@@ -1047,10 +1047,21 @@ test("Grace의 두 믿음 결말 컷씬은 다른 장면 뒤에 큐로 저장되
   }
 });
 
-test("Hazel의 외곽 경계대는 지속 경보망과 전용 컷신을 열고 저장된다", () => {
-  const result = applyStoryChoice(resolutionState("hazel"), "hazel-watch", "ranger").state;
+test("Hazel의 외곽 경계대는 지속 경보망·객실 Aura·근무와 전용 컷신을 유지한다", () => {
+  const state = resolutionState("hazel");
+  state.flags.hazel_vengeance_complete = true;
+  state.rooms = recalculateRoomEffects(assignGuest(state.rooms, 301, "hazel"), state.guests);
+  state.staffAssignments.SCAVENGE = "hazel";
+  const choice = STORY_CHOICE_EVENTS.find((event) => event.id === "hazel-watch")!.choices.find((candidate) => candidate.id === "ranger")!;
+  for (const term of ["Trust +12", "Monster Threat -8", "Security +10", "베일과의 관계 +10", "Perimeter Watch Aura", "배정된 근무", "매일 실제 Monster Threat를 최대 3", "치안 물자 2", "영구히 포기", "되돌릴 수 없습니다"]) assert.ok(choice.description.includes(term), term);
+  const result = applyStoryChoice(state, "hazel-watch", "ranger").state;
+  const hazel = result.guests.find((guest) => guest.id === "hazel")!;
   assert.equal(result.flags.hazel_ranger_watch, true);
   assert.equal(result.flags.perimeter_alarm, true);
+  assert.equal(result.flags.hazel_vengeance_complete, false);
+  assert.deepEqual({ status: hazel.status, room: hazel.currentRoomNumber, revisit: hazel.revisitPolicy }, { status: "STAYING", room: 301, revisit: "CONDITIONAL" });
+  assert.equal(result.staffAssignments.SCAVENGE, "hazel");
+  assert.ok(result.rooms.some((room) => room.temporaryEffects.some((effect) => effect.sourceGuestId === "hazel")));
   assert.equal(result.activeCutsceneId, "hazel_perimeter_watch");
   assert.equal(getCutscene(result.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/hazel-perimeter-watch-v1.png");
   const restored = restoreGameState(serializeGameState(result));
@@ -1058,11 +1069,58 @@ test("Hazel의 외곽 경계대는 지속 경보망과 전용 컷신을 열고 �
   assert.equal(restored.activeCutsceneId, "hazel_perimeter_watch");
 });
 
-test("Hazel의 복수 원정은 지속 경보망 효과와 전용 컷신을 열지 않는다", () => {
-  const result = applyStoryChoice(resolutionState("hazel"), "hazel-watch", "vengeance").state;
+test("Hazel의 복수 원정은 물자와 지속 경계를 교환하고 Aura·근무·재방문을 정리하는 영구 출발이다", () => {
+  let state = resolutionState("hazel");
+  state.resources.security = 2;
+  Object.assign(state.flags, { monster_threat: 20, hazel_ranger_watch: true, perimeter_alarm: true });
+  state.rooms = recalculateRoomEffects(assignGuest(state.rooms, 301, "hazel"), state.guests);
+  state.staffAssignments.SCAVENGE = "hazel";
+  state = recordVisitorDecision(state, "hazel", "ACCEPTED", 301);
+  const choice = STORY_CHOICE_EVENTS.find((event) => event.id === "hazel-watch")!.choices.find((candidate) => candidate.id === "vengeance")!;
+  for (const term of ["치안 물자 2", "Trust +8", "Monster Threat -12", "미스터 화이트와의 관계가 15 악화", "스스로 선택한", "영구 출발", "Perimeter Watch Aura", "배정된 근무", "재방문하지 않습니다", "Security +10", "매일 Monster Threat 최대 3", "영구히 포기", "되돌릴 수 없습니다"]) assert.ok(choice.description.includes(term), term);
+  const resolved = applyStoryChoice(state, "hazel-watch", "vengeance");
+  const result = resolved.state;
+  const hazel = result.guests.find((guest) => guest.id === "hazel")!;
+  const whiteRelation = hazel.relationships.find((relation) => relation.targetId === "white")!;
+  assert.equal(result.resources.security, 0);
+  assert.equal(result.flags.monster_threat, 8);
+  assert.equal(whiteRelation.value, -75);
   assert.equal(result.flags.hazel_vengeance_complete, true);
-  assert.equal(result.flags.perimeter_alarm, undefined);
-  assert.equal(result.activeCutsceneId, null);
+  assert.equal(result.flags.hazel_ranger_watch, false);
+  assert.equal(result.flags.perimeter_alarm, false);
+  assert.deepEqual({ status: hazel.status, room: hazel.currentRoomNumber, nights: hazel.remainingNights, revisit: hazel.revisitPolicy, ending: hazel.endingState }, { status: "CHECKED_OUT", room: null, nights: 0, revisit: "NEVER", ending: "VENGEANCE_EXPEDITION" });
+  assert.equal(hazel.storyFlags.story_departed_day, state.day);
+  assert.equal(result.rooms.find((room) => room.roomNumber === 301)?.status, "EMPTY");
+  assert.ok(result.rooms.every((room) => room.temporaryEffects.every((effect) => effect.sourceGuestId !== "hazel")));
+  assert.equal(result.staffAssignments.SCAVENGE, undefined);
+  assert.equal(result.visitorHistory.find((entry) => entry.visitorId === "hazel")?.finalState, "STORY_VENGEANCE_EXPEDITION");
+  assert.equal(result.activeCutsceneId, "hazel_vengeance_expedition");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image, "/juminjung/assets/cutscenes/hazel-vengeance-expedition-v1.png");
+  assert.match(resolved.entry.message, /호텔 출발$/);
+  const restored = restoreGameState(serializeGameState(result));
+  assert.equal(restored.guests.find((guest) => guest.id === "hazel")?.revisitPolicy, "NEVER");
+  assert.equal(getEligibleVisitor(restored.guests.filter((guest) => guest.id === "hazel"), 100, restored.flags), null);
+  assert.equal(restored.activeCutsceneId, "hazel_vengeance_expedition");
+});
+
+test("Hazel의 복수 원정은 치안 물자가 2 미만이면 상태를 바꾸지 않는다", () => {
+  const state = resolutionState("hazel");
+  state.resources.security = 1;
+  const choice = STORY_CHOICE_EVENTS.find((event) => event.id === "hazel-watch")!.choices.find((candidate) => candidate.id === "vengeance")!;
+  const before = serializeGameState(state);
+  assert.equal(canChooseStoryChoice(state, choice), false);
+  assert.throws(() => applyStoryChoice(state, "hazel-watch", "vengeance"), /자원이 부족합니다/);
+  assert.equal(serializeGameState(state), before);
+});
+
+test("Hazel의 두 결말 컷신은 다른 장면 뒤에도 큐로 저장되어 유실되지 않는다", () => {
+  for (const [choiceId, cutsceneId] of [["ranger", "hazel_perimeter_watch"], ["vengeance", "hazel_vengeance_expedition"]] as const) {
+    const state = resolutionState("hazel");
+    state.activeCutsceneId = "first_night";
+    const resolved = applyStoryChoice(state, "hazel-watch", choiceId).state;
+    assert.deepEqual(resolved.queuedCutsceneIds, [cutsceneId]);
+    assert.equal(dismissCutscene(restoreGameState(serializeGameState(resolved))).activeCutsceneId, cutsceneId);
+  }
 });
 
 test("토머스의 마이크로그리드는 안정 전력망을 열고 자신의 라디오 노출만 닫는다", () => {
