@@ -230,6 +230,18 @@ export const CUTSCENES: CutsceneDefinition[] = [
     imageAlt: "로사 마르티네즈가 JUJU HOTEL 복도 공동 세면대에서 주민들과 물을 주전자에 나누고, 다른 주민들이 젖은 옷과 붕대를 함께 씻어 난방관 곁에 거는 장면.",
   },
   {
+    id: "rosa_family_zone",
+    triggerStoryEventId: "rosa-family",
+    triggerStoryChoiceId: "family_room",
+    priority: 165,
+    kicker: "JUJU HOTEL · FAMILY SAFE ZONE",
+    title: "문 하나가 아니라 이어진 불빛",
+    body: "로사 마르티네즈는 자신의 객실을 중심으로 아이와 노인, 부상자와 환자의 방을 가까이 모았다. 복도 모퉁이마다 작은 황동 램프와 비상 끈을 달고, 한 방에서 끈을 당기면 이웃 세 방의 문 아래로 불빛이 흔들리게 했다. 밤의 소음이 커질 때마다 로사는 문을 열지 않고도 이름을 불러 대답을 확인했다. 공동 세면대의 물을 아끼는 생활조는 만들지 못했지만, 가장 약한 사람이 혼자 공포를 견디는 복도는 사라졌다.",
+    quote: "안전한 방 하나로는 부족해요. 서로의 대답이 닿는 거리가 필요해요.",
+    image: "/juminjung/assets/cutscenes/rosa-family-zone-v1.png",
+    imageAlt: "로사 마르티네즈가 JUJU HOTEL의 어두운 복도에서 자신의 Community Care 범위 안에 모인 아이·노인·부상자 객실의 황동 비상 끈과 문 아래 이어진 따뜻한 불빛을 확인하는 장면.",
+  },
+  {
     id: "ruth_care_team",
     triggerStoryEventId: "ruth-home",
     triggerStoryChoiceId: "care_team",

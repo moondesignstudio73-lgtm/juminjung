@@ -1,4 +1,4 @@
-import { getDiseaseChance } from "./aura-effect-manager.ts";
+import { getAffectedRoomNumbers, getDiseaseChance } from "./aura-effect-manager.ts";
 import type { AuraMetric, EventFlags, Guest, Room, WorldState } from "./types.ts";
 
 export type AuraNightResolution = {
@@ -23,6 +23,7 @@ export type AuraNightResolution = {
   civilGuardCrimeReduction:number;
   careTeamGuestIds:string[];
   nurseryGuestIds:string[];
+  familyZoneGuestIds:string[];
   householdWaterSaving:number;
 };
 
@@ -41,6 +42,7 @@ export const CIVIL_GUARD_SECURITY_GAIN = 2;
 export const CIVIL_GUARD_CRIME_REDUCTION = 2;
 export const CARE_TEAM_HEALTH_RECOVERY = 3;
 export const CARE_TEAM_STRESS_RELIEF = 4;
+export const FAMILY_ZONE_STRESS_RELIEF = 5;
 export const HOUSEHOLD_NETWORK_WATER_SAVING = 1;
 export const PATHFINDER_THREAT_REDUCTION = 1;
 export const NURSERY_STRESS_RELIEF = 3;
@@ -53,6 +55,10 @@ export function isCareTeamEligible(guest:Guest):boolean {
 
 export function isNurseryEligible(guest:Guest):boolean {
   return guest.age<18||guest.baseTraits.includes("Pregnant");
+}
+
+export function isFamilyZoneEligible(guest:Guest):boolean {
+  return isCareTeamEligible(guest);
 }
 
 export type NightFoodDemandBreakdown = { demand:number; saving:number; communityKitchenSaving:number; rationLabSaving:number };
@@ -98,6 +104,7 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
   const mobileMedicGuestIds:string[] = [];
   const careTeamGuestIds:string[] = [];
   const nurseryGuestIds:string[] = [];
+  const familyZoneGuestIds:string[] = [];
   const clinicActive = flags.eleanor_clinic_established === true;
   const mobileMedicActive = flags.eleanor_mobile_medic === true&&staying.some((guest)=>guest.id==="eleanor");
   const perimeterAlarmActive = flags.perimeter_alarm === true;
@@ -105,6 +112,8 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
   const civilGuardActive = flags.samuel_civil_guard === true;
   const careTeamActive = flags.ruth_care_team === true;
   const nurseryActive = flags.claire_nursery === true;
+  const rosa = staying.find((guest)=>guest.id==="rosa");
+  const familyZoneRooms = new Set(flags.rosa_family_zone===true&&rosa ? getAffectedRoomNumbers(rooms,rosa) : []);
   const mutualAidActive = flags.grace_mutual_aid === true;
   const researchPredictionActive = flags.lily_vale_research_shared === true;
 
@@ -113,11 +122,14 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
     const auraStress = clamp(guest.stress+additiveValue(room,"stress"));
     const careTeamEligible = careTeamActive&&isCareTeamEligible(guest);
     const careTeamStress = careTeamEligible?clamp(auraStress-CARE_TEAM_STRESS_RELIEF):auraStress;
+    const familyZoneEligible = guest.id!=="rosa"&&familyZoneRooms.has(guest.currentRoomNumber!)&&isFamilyZoneEligible(guest);
+    const familyZoneStress = familyZoneEligible?clamp(careTeamStress-FAMILY_ZONE_STRESS_RELIEF):careTeamStress;
     const nurseryEligible = nurseryActive&&isNurseryEligible(guest);
-    const stress = nurseryEligible?clamp(careTeamStress-NURSERY_STRESS_RELIEF):careTeamStress;
+    const stress = nurseryEligible?clamp(familyZoneStress-NURSERY_STRESS_RELIEF):familyZoneStress;
     const health = careTeamEligible?clamp(guest.health+CARE_TEAM_HEALTH_RECOVERY):guest.health;
     if (health>guest.health||careTeamStress<auraStress) careTeamGuestIds.push(guest.id);
-    if (stress<careTeamStress) nurseryGuestIds.push(guest.id);
+    if (familyZoneStress<careTeamStress) familyZoneGuestIds.push(guest.id);
+    if (stress<familyZoneStress) nurseryGuestIds.push(guest.id);
     return [guest.id,{
       stress,
       trust:clamp(guest.trust+additiveValue(room,"trust")),
@@ -190,6 +202,7 @@ export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, world
     civilGuardCrimeReduction,
     careTeamGuestIds,
     nurseryGuestIds,
+    familyZoneGuestIds,
     householdWaterSaving:water.saving,
   };
 }

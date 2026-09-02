@@ -861,8 +861,14 @@ test("Ruth의 두 돌봄 결말 컷씬은 다른 장면 뒤에 큐로 저장되�
 });
 
 test("Rosa의 공동 생활조는 지속 배급과 전용 컷신을 열고 저장된다", () => {
-  const result=applyStoryChoice(resolutionState("rosa"),"rosa-family","household").state;
+  const state=resolutionState("rosa");
+  state.flags.rosa_family_zone=true;
+  const choice=STORY_CHOICE_EVENTS.find((event)=>event.id==="rosa-family")!.choices.find((candidate)=>candidate.id==="household")!;
+  for(const term of ["Trust +15","Hotel Condition +10","community 평판 +10","humanitarian 평판 +6","물 1을 절감","Security +5","refugee 평판 +7","Stress -5","영구히 포기","다른 주민이 만든 취약 생존자 보호는 유지"]) assert.ok(choice.description.includes(term),term);
+  const result=applyStoryChoice(state,"rosa-family","household").state;
   assert.equal(result.flags.rosa_household_network,true);
+  assert.equal(result.flags.rosa_family_zone,false);
+  assert.equal(result.flags.vulnerable_survivors_protected,true);
   assert.equal(result.activeCutsceneId,"rosa_household_network");
   assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/rosa-household-network-v1.png");
   const restored=restoreGameState(serializeGameState(result));
@@ -870,11 +876,40 @@ test("Rosa의 공동 생활조는 지속 배급과 전용 컷신을 열고 저�
   assert.equal(restored.activeCutsceneId,"rosa_household_network");
 });
 
-test("Rosa의 가족 안전 구역은 공동 생활조 물 절감과 전용 컷신을 열지 않는다", () => {
-  const result=applyStoryChoice(resolutionState("rosa"),"rosa-family","family_room").state;
+test("Rosa의 가족 안전 구역은 객실 배치 보호와 전용 컷신을 열고 저장된다", () => {
+  const state=resolutionState("rosa");
+  state.flags.rosa_household_network=true;
+  state.flags.vulnerable_survivors_protected=true;
+  const choice=STORY_CHOICE_EVENTS.find((event)=>event.id==="rosa-family")!.choices.find((candidate)=>candidate.id==="family_room")!;
+  for(const term of ["Trust +10","Security +5","Hotel Condition +6","refugee 평판 +7","로사 마르티네즈가 투숙 중","Community Care Aura 범위","아이·노인·임신·부상·질병","Stress를 매일 최대 5","효과가 실제 발생한 주민만","추가 Trust +5","Hotel Condition +4","community 평판 +10","humanitarian 평판 +6","물 1 절감","영구히 포기","다른 주민이 만든 취약 생존자 보호는 유지"]) assert.ok(choice.description.includes(term),term);
+  let result=applyStoryChoice(state,"rosa-family","family_room").state;
   assert.equal(result.flags.rosa_family_zone,true);
-  assert.equal(result.flags.rosa_household_network,undefined);
-  assert.equal(result.activeCutsceneId,null);
+  assert.equal(result.flags.rosa_household_network,false);
+  assert.equal(result.flags.vulnerable_survivors_protected,true);
+  assert.equal(result.activeCutsceneId,"rosa_family_zone");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/rosa-family-zone-v1.png");
+  result={...result,rooms:assignGuest(assignGuest(result.rooms,301,"rosa"),302,"mia"),guests:result.guests.map((guest)=>guest.id==="mia"?{...guest,status:"STAYING" as const,currentRoomNumber:302,checkedInDay:1,remainingNights:2,stress:40}:guest)};
+  result.rooms=recalculateRoomEffects(result.rooms,result.guests);
+  const restored=restoreGameState(serializeGameState(result));
+  assert.equal(restored.flags.rosa_family_zone,true);
+  assert.equal(restored.flags.rosa_household_network,false);
+  assert.equal(restored.activeCutsceneId,"rosa_family_zone");
+  restored.phase="night";
+  restored.selectedNightEventId="quiet_watch";
+  restored.selectedNightChoiceId="rest";
+  const resolved=resolveDay(restored);
+  assert.deepEqual(resolved.lastDaySummary?.familyZoneGuestIds,["mia"]);
+  assert.ok(resolved.eventHistory.some((entry)=>entry.message==="가족 안전 구역 보호 · 미아 카터 · Stress -5"));
+});
+
+test("Rosa의 두 가족 결말 컷씬은 다른 장면 뒤에 큐로 저장되어 유실되지 않는다",()=>{
+  for(const [choiceId,cutsceneId] of [["household","rosa_household_network"],["family_room","rosa_family_zone"]] as const){
+    const state=resolutionState("rosa");
+    state.activeCutsceneId="first_night";
+    const resolved=applyStoryChoice(state,"rosa-family",choiceId).state;
+    assert.deepEqual(resolved.queuedCutsceneIds,[cutsceneId]);
+    assert.equal(dismissCutscene(restoreGameState(serializeGameState(resolved))).activeCutsceneId,cutsceneId);
+  }
 });
 
 test("Eli의 길잡이 경로는 안전 통로와 지속 정찰·전용 컷신을 열고 저장된다", () => {

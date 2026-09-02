@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { getInjuryRecovery, recalculateRoomEffects } from "../game/aura-effect-manager.ts";
-import { getNightFoodDemand, getNightFoodDemandBreakdown, getNightWaterDemand, isCareTeamEligible, isNurseryEligible, resolveAuraNight } from "../game/aura-night-manager.ts";
+import { FAMILY_ZONE_STRESS_RELIEF, getNightFoodDemand, getNightFoodDemandBreakdown, getNightWaterDemand, isCareTeamEligible, isFamilyZoneEligible, isNurseryEligible, resolveAuraNight } from "../game/aura-night-manager.ts";
 import { resolveDay } from "../game/day-manager.ts";
 import { createInitialGameState } from "../game/save-manager.ts";
 import { assignGuest } from "../game/room-manager.ts";
@@ -158,6 +158,29 @@ test("공동 생활조는 객실 번호가 남은 비투숙객을 인원과 절�
   const state=place([["walter",101],["claire",110]]);
   state.guests=state.guests.map((guest)=>guest.id==="claire"?{...guest,status:"CHECKED_OUT" as const}:guest);
   assert.deepEqual(getNightWaterDemand(state.guests,{rosa_household_network:true}),{demand:1,saving:0});
+});
+
+test("Rosa의 가족 안전 구역은 Community Care 범위 안 취약 주민만 보호한다", () => {
+  const state=place([["rosa",202],["mia",203],["jack",201],["claire",205]]);
+  const baseline=resolveAuraNight(state.rooms,state.guests,1,"STABLE",0);
+  const result=resolveAuraNight(state.rooms,state.guests,1,"STABLE",0,{rosa_family_zone:true});
+  assert.equal(isFamilyZoneEligible(state.guests.find((guest)=>guest.id==="mia")!),true);
+  assert.equal(isFamilyZoneEligible(state.guests.find((guest)=>guest.id==="jack")!),false);
+  assert.equal(result.guests.find((guest)=>guest.id==="mia")!.stress,baseline.guests.find((guest)=>guest.id==="mia")!.stress-FAMILY_ZONE_STRESS_RELIEF);
+  assert.equal(result.guests.find((guest)=>guest.id==="jack")!.stress,baseline.guests.find((guest)=>guest.id==="jack")!.stress);
+  assert.equal(result.guests.find((guest)=>guest.id==="claire")!.stress,baseline.guests.find((guest)=>guest.id==="claire")!.stress);
+  assert.deepEqual(result.familyZoneGuestIds,["mia"]);
+});
+
+test("가족 안전 구역은 Rosa가 없거나 실제 Stress를 낮추지 못하면 보호 기록을 만들지 않는다", () => {
+  const absent=place([["mia",203]]);
+  const absentResult=resolveAuraNight(absent.rooms,absent.guests,1,"STABLE",0,{rosa_family_zone:true});
+  assert.deepEqual(absentResult.familyZoneGuestIds,[]);
+  const floor=place([["rosa",202],["mia",203]]);
+  floor.guests=floor.guests.map((guest)=>guest.id==="mia"?{...guest,stress:0}:guest);
+  const floorResult=resolveAuraNight(floor.rooms,floor.guests,1,"STABLE",0,{rosa_family_zone:true});
+  assert.equal(floorResult.guests.find((guest)=>guest.id==="mia")!.stress,0);
+  assert.deepEqual(floorResult.familyZoneGuestIds,[]);
 });
 
 test("Samuel의 민간 경비대는 본인 체크아웃 뒤에도 야간 치안과 범죄를 보정한다", () => {
@@ -584,6 +607,18 @@ test("DAY 정산은 공동 생활조의 실제 물 절감과 배급 로그를 �
   const resolved=resolveDay(state);
   assert.equal(resolved.lastDaySummary?.consumed.water,1);
   assert.ok(resolved.eventHistory.some((entry)=>entry.message==="공동 생활조 배급 · 물 1 절감"));
+});
+
+test("DAY 정산은 가족 안전 구역의 실제 보호 대상만 아침 장부와 로그에 반영한다", () => {
+  const state=place([["rosa",202],["mia",203],["jack",201],["claire",205]]);
+  state.phase="night";
+  state.flags.rosa_family_zone=true;
+  state.selectedNightEventId="quiet_watch";
+  state.selectedNightChoiceId="rest";
+  state.guests=state.guests.map((guest)=>guest.status==="STAYING"?{...guest,remainingNights:2}:guest);
+  const resolved=resolveDay(state);
+  assert.deepEqual(resolved.lastDaySummary?.familyZoneGuestIds,["mia"]);
+  assert.ok(resolved.eventHistory.some((entry)=>entry.message==="가족 안전 구역 보호 · 미아 카터 · Stress -5"));
 });
 
 test("DAY 정산은 민간 경비대의 지속 치안·범죄 보정과 순찰 로그를 반영한다", () => {

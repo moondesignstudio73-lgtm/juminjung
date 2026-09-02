@@ -91,6 +91,13 @@ test("Eli의 최종 열쇠고리 선택은 창고 검수와 안전 통로의 서
   assert.ok(scenes.every((scene) => scene.imageAlt.includes("엘리 터너")));
 });
 
+test("Rosa의 최종 가족 선택은 공동 생활조와 가족 안전 구역의 서로 다른 전용 원화를 소유한다", () => {
+  const scenes = CUTSCENES.filter((cutscene) => cutscene.triggerStoryEventId === "rosa-family");
+  assert.deepEqual(scenes.map((scene) => scene.triggerStoryChoiceId).sort(), ["family_room", "household"]);
+  assert.equal(new Set(scenes.map((scene) => scene.image)).size, 2);
+  assert.ok(scenes.every((scene) => scene.imageAlt.includes("로사 마르티네즈")));
+});
+
 test("토머스의 최종 전력 선택은 마이크로그리드와 라디오 중계망의 서로 다른 전용 원화를 소유한다", () => {
   const scenes = CUTSCENES.filter((cutscene) => cutscene.triggerStoryEventId === "thomas-grid");
   assert.deepEqual(scenes.map((scene) => scene.triggerStoryChoiceId).sort(), ["microgrid", "signal"]);
