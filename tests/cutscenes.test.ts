@@ -84,6 +84,13 @@ test("Hazel의 최종 경계 선택은 외곽 경보망과 영구 복수 원정�
   assert.ok(scenes.every((scene) => scene.imageAlt.includes("헤이즐 퀸")));
 });
 
+test("Eli의 최종 열쇠고리 선택은 창고 검수와 안전 통로의 서로 다른 전용 원화를 소유한다", () => {
+  const scenes = CUTSCENES.filter((cutscene) => cutscene.triggerStoryEventId === "eli-keyring");
+  assert.deepEqual(scenes.map((scene) => scene.triggerStoryChoiceId).sort(), ["pathfinder", "quartermaster"]);
+  assert.equal(new Set(scenes.map((scene) => scene.image)).size, 2);
+  assert.ok(scenes.every((scene) => scene.imageAlt.includes("엘리 터너")));
+});
+
 test("토머스의 최종 전력 선택은 마이크로그리드와 라디오 중계망의 서로 다른 전용 원화를 소유한다", () => {
   const scenes = CUTSCENES.filter((cutscene) => cutscene.triggerStoryEventId === "thomas-grid");
   assert.deepEqual(scenes.map((scene) => scene.triggerStoryChoiceId).sort(), ["microgrid", "signal"]);

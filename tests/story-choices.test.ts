@@ -14,6 +14,7 @@ import { recalculateRoomEffects } from "../game/aura-effect-manager.ts";
 import { getNightFoodDemand } from "../game/aura-night-manager.ts";
 import { getEligibleVisitor } from "../game/visitor-manager.ts";
 import { getDailyVisitorCountBreakdown, prepareDailyVisitorQueue, recordVisitorDecision } from "../game/visitor-queue-manager.ts";
+import { resolveDay } from "../game/day-manager.ts";
 
 function conflictState(guestId: string) {
   const state = createInitialGameState();
@@ -876,9 +877,14 @@ test("Rosa의 가족 안전 구역은 공동 생활조 물 절감과 전용 컷�
   assert.equal(result.activeCutsceneId,null);
 });
 
-test("Eli의 길잡이 경로는 안전 통로와 전용 컷신을 열고 저장된다", () => {
-  const result=applyStoryChoice(resolutionState("eli"),"eli-keyring","pathfinder").state;
+test("Eli의 길잡이 경로는 안전 통로와 지속 정찰·전용 컷신을 열고 저장된다", () => {
+  const state=resolutionState("eli");
+  state.flags.eli_quartermaster=true;
+  const choice=STORY_CHOICE_EVENTS.find((event)=>event.id==="eli-keyring")!.choices.find((candidate)=>candidate.id==="pathfinder")!;
+  for(const term of ["Trust +10","Monster Threat -5","refugee 평판 +7","안전 통로","매일 실제 Monster Threat를 최대 1","추가 Trust +5","식량 +2","Security +3","community 평판 +5","시설 유지비 최대 1","영구히 포기","다른 주민이 만든 안전 통로는 유지"]) assert.ok(choice.description.includes(term),term);
+  const result=applyStoryChoice(state,"eli-keyring","pathfinder").state;
   assert.equal(result.flags.eli_pathfinder,true);
+  assert.equal(result.flags.eli_quartermaster,false);
   assert.equal(result.flags.safe_routes_mapped,true);
   assert.equal(result.activeCutsceneId,"eli_safe_passage");
   assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/eli-safe-passage-v1.png");
@@ -887,11 +893,40 @@ test("Eli의 길잡이 경로는 안전 통로와 전용 컷신을 열고 저장
   assert.equal(restored.activeCutsceneId,"eli_safe_passage");
 });
 
-test("Eli의 창고 책임 경로는 안전 통로 효과와 전용 컷신을 열지 않는다", () => {
-  const result=applyStoryChoice(resolutionState("eli"),"eli-keyring","quartermaster").state;
+test("Eli의 창고 책임 경로는 시설 유지비를 실제 절감하고 전용 컷신·저장에 연결된다", () => {
+  const state=resolutionState("eli");
+  Object.assign(state.flags,{eli_pathfinder:true,safe_routes_mapped:true,generator_network_stable:true});
+  state.facilities.water_purifier=2;
+  state.resources.fuel=0;
+  const choice=STORY_CHOICE_EVENTS.find((event)=>event.id==="eli-keyring")!.choices.find((candidate)=>candidate.id==="quartermaster")!;
+  for(const term of ["Trust +15","식량 +2","Security +3","community 평판 +5","매일 가동 시설","유지비를 최대 1","연료, 물, 식량 순","정확히 1 부족","Monster Threat -5","refugee 평판 +7","안전 통로","매일 Monster Threat -1","영구히 포기","다른 주민이 이미 만든 안전 통로는 유지"]) assert.ok(choice.description.includes(term),term);
+  const result=applyStoryChoice(state,"eli-keyring","quartermaster").state;
   assert.equal(result.flags.eli_quartermaster,true);
-  assert.equal(result.flags.eli_pathfinder,undefined);
-  assert.equal(result.activeCutsceneId,null);
+  assert.equal(result.flags.eli_pathfinder,false);
+  assert.equal(result.flags.safe_routes_mapped,true);
+  assert.equal(result.activeCutsceneId,"eli_quartermaster");
+  assert.equal(getCutscene(result.activeCutsceneId)?.image,"/juminjung/assets/cutscenes/eli-quartermaster-v1.png");
+  const restored=restoreGameState(serializeGameState(result));
+  assert.equal(restored.flags.eli_quartermaster,true);
+  assert.equal(restored.activeCutsceneId,"eli_quartermaster");
+  const waterBefore=restored.resources.water;
+  restored.phase="night";
+  const settled=resolveDay(restored);
+  assert.deepEqual(settled.lastDaySummary?.facilityUpkeep,{});
+  assert.deepEqual(settled.lastDaySummary?.facilityUpkeepSaving,{fuel:1});
+  assert.deepEqual(settled.lastDaySummary?.inactiveFacilities,[]);
+  assert.equal(settled.resources.water,waterBefore-1+4);
+  assert.ok(settled.eventHistory.some((entry)=>entry.message==="엘리 창고 검수 · 시설 유지비 fuel 1 절감"));
+});
+
+test("Eli의 두 열쇠고리 결말 컷신은 다른 장면 뒤에도 큐로 저장되어 유실되지 않는다", () => {
+  for(const [choiceId,cutsceneId] of [["quartermaster","eli_quartermaster"],["pathfinder","eli_safe_passage"]] as const){
+    const state=resolutionState("eli");
+    state.activeCutsceneId="first_night";
+    const resolved=applyStoryChoice(state,"eli-keyring",choiceId).state;
+    assert.deepEqual(resolved.queuedCutsceneIds,[cutsceneId]);
+    assert.equal(dismissCutscene(restoreGameState(serializeGameState(resolved))).activeCutsceneId,cutsceneId);
+  }
 });
 
 test("Claire의 안전 육아실은 지속 안정·객실 Aura·근무와 전용 컷씬을 유지한다", () => {

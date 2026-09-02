@@ -1,5 +1,5 @@
 import { FACILITIES } from "./facility-data.ts";
-import type { FacilityId, GameState, HotelActionId, HotelLogEntry, HotelStats, Reputations, Resources } from "./types.ts";
+import type { FacilityId, FacilityLevelDefinition, GameState, HotelActionId, HotelLogEntry, HotelStats, Reputations, Resources } from "./types.ts";
 
 type ActionResult = { state: GameState; ok: boolean; message: string };
 export type HotelActionDefinition = { name: string; cost: Partial<Resources>; resources?: Partial<Resources>; stats?: Partial<HotelStats>; reputation?: Partial<Reputations>; guestTrust?: number };
@@ -11,6 +11,24 @@ function mergeNumbers<T extends Record<string, number>>(current: T, changes: Par
 function canAfford(resources: Resources, cost: Partial<Resources>) { return Object.entries(cost).every(([key, value]) => resources[key as keyof Resources] >= Number(value)); }
 function spend(resources: Resources, cost: Partial<Resources>): Resources { return Object.fromEntries(Object.entries(resources).map(([key, value]) => [key, Math.max(0, value - Number(cost[key as keyof Resources] ?? 0))])) as Resources; }
 function log(state: GameState, message: string): HotelLogEntry[] { return [...state.eventHistory, { day: state.day, type: "EVENT", message }]; }
+
+const RESOURCE_KEYS = ["food", "water", "medicine", "fuel", "parts", "security"] as const satisfies readonly (keyof Resources)[];
+const QUARTERMASTER_UPKEEP_PRIORITY = ["fuel", "water", "food", "parts", "medicine", "security"] as const satisfies readonly (keyof Resources)[];
+export const QUARTERMASTER_UPKEEP_SAVING = 1;
+
+function totalFacilityUpkeep(running: { active: FacilityLevelDefinition }[]): Resources {
+  return Object.fromEntries(RESOURCE_KEYS.map((key) => [key, running.reduce((sum, item) => sum + Number(item.active.upkeep?.[key] ?? 0), 0)])) as Resources;
+}
+
+function getQuartermasterUpkeepSaving(state: GameState, requested: Resources): Partial<Resources> {
+  if (state.flags.eli_quartermaster !== true) return {};
+  const key = QUARTERMASTER_UPKEEP_PRIORITY.find((candidate) => requested[candidate] > 0);
+  return key ? { [key]: Math.min(QUARTERMASTER_UPKEEP_SAVING, requested[key]) } : {};
+}
+
+function subtractSaving(requested: Resources, saving: Partial<Resources>): Resources {
+  return Object.fromEntries(RESOURCE_KEYS.map((key) => [key, Math.max(0, requested[key] - Number(saving[key] ?? 0))])) as Resources;
+}
 
 export function buildFacility(state: GameState, facilityId: FacilityId): ActionResult {
   const facility = FACILITIES.find((item) => item.id === facilityId);
@@ -33,7 +51,7 @@ export function canBuildFacility(state: GameState, facilityId: FacilityId): bool
   return Boolean(nextLevel && state.actionPoints > 0 && canAfford(state.resources, nextLevel.cost));
 }
 
-export function getFacilityEconomy(state: GameState, available: Resources): { resources: Resources; production: Partial<Resources>; upkeep: Partial<Resources>; inactiveFacilities: FacilityId[] } {
+export function getFacilityEconomy(state: GameState, available: Resources): { resources: Resources; production: Partial<Resources>; upkeep: Partial<Resources>; upkeepSaving: Partial<Resources>; inactiveFacilities: FacilityId[] } {
   let resources = { ...available };
   const production: Partial<Resources> = {};
   const upkeep: Partial<Resources> = {};
@@ -44,8 +62,9 @@ export function getFacilityEconomy(state: GameState, available: Resources): { re
   });
   let running = [...configured];
   while (running.length) {
-    const requested = Object.fromEntries(Object.keys(resources).map((key) => [key, running.reduce((sum, item) => sum + Number(item.active.upkeep?.[key as keyof Resources] ?? 0), 0)])) as Resources;
-    const deficient = (Object.keys(resources) as (keyof Resources)[]).filter((key) => requested[key] > resources[key]);
+    const requested = totalFacilityUpkeep(running);
+    const payable = subtractSaving(requested, getQuartermasterUpkeepSaving(state, requested));
+    const deficient = RESOURCE_KEYS.filter((key) => payable[key] > resources[key]);
     if (!deficient.length) break;
     const next = running.filter((item) => !deficient.some((key) => Number(item.active.upkeep?.[key] ?? 0) > 0));
     if (next.length === running.length) break;
@@ -53,16 +72,21 @@ export function getFacilityEconomy(state: GameState, available: Resources): { re
   }
   const runningIds = new Set(running.map((item) => item.id));
   const inactiveFacilities = configured.filter((item) => !runningIds.has(item.id)).map((item) => item.id);
+  const requestedUpkeep = totalFacilityUpkeep(running);
+  const upkeepSaving = getQuartermasterUpkeepSaving(state, requestedUpkeep);
   for (const { active } of running) {
-    for (const [key, value] of Object.entries(active.upkeep ?? {})) upkeep[key as keyof Resources] = Number(upkeep[key as keyof Resources] ?? 0) + Number(value);
     for (const [key, value] of Object.entries(active.production ?? {})) {
       const resourceKey = key as keyof Resources;
       production[resourceKey] = Number(production[resourceKey] ?? 0) + Number(value);
     }
   }
+  for (const key of RESOURCE_KEYS) {
+    const value = Math.max(0, requestedUpkeep[key] - Number(upkeepSaving[key] ?? 0));
+    if (value > 0) upkeep[key] = value;
+  }
   resources = spend(resources, upkeep);
   for (const [key, value] of Object.entries(production)) resources[key as keyof Resources] += Number(value);
-  return { resources, production, upkeep, inactiveFacilities };
+  return { resources, production, upkeep, upkeepSaving, inactiveFacilities };
 }
 
 const ACTIONS: Record<HotelActionId, HotelActionDefinition> = {

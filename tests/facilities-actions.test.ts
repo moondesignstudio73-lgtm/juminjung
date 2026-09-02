@@ -177,6 +177,45 @@ test("연료 0의 마이크로그리드는 기본망만 절감하고 연료 시�
   assert.ok(resolved.eventHistory.some((entry) => entry.message.includes("유지비 부족")));
 });
 
+test("Eli의 창고 검수는 정확히 한 단위 부족한 시설 유지비를 메워 가동을 유지한다", () => {
+  const state = createInitialGameState();
+  state.flags.generator_network_stable = true;
+  state.flags.eli_quartermaster = true;
+  state.facilities.water_purifier = 2;
+  state.resources.fuel = 0;
+  state.phase = "night";
+  const resolved = resolveDay(state);
+  assert.equal(resolved.resources.fuel, 0);
+  assert.equal(resolved.resources.water, state.resources.water + 4);
+  assert.deepEqual(resolved.lastDaySummary?.facilityUpkeep, {});
+  assert.deepEqual(resolved.lastDaySummary?.facilityUpkeepSaving, { fuel: 1 });
+  assert.deepEqual(resolved.lastDaySummary?.inactiveFacilities, []);
+});
+
+test("창고 검수는 연료 다음 물 유지비를 줄이고 실제 지불액과 절감액을 분리 기록한다", () => {
+  const state = createInitialGameState();
+  state.flags.generator_network_stable = true;
+  state.flags.eli_quartermaster = true;
+  state.facilities.trade_network = 2;
+  state.resources = { food: 1, water: 0, medicine: 0, fuel: 0, parts: 0, security: 0 };
+  state.phase = "night";
+  const resolved = resolveDay(state);
+  assert.deepEqual(resolved.lastDaySummary?.facilityUpkeep, { food: 1 });
+  assert.deepEqual(resolved.lastDaySummary?.facilityUpkeepSaving, { water: 1 });
+  assert.deepEqual(resolved.lastDaySummary?.facilityProduction, { parts: 2, fuel: 1 });
+  assert.deepEqual(resolved.lastDaySummary?.inactiveFacilities, []);
+});
+
+test("유지비 없는 시설은 Eli 플래그만으로 허위 절감 기록을 만들지 않는다", () => {
+  const state = createInitialGameState();
+  state.flags.eli_quartermaster = true;
+  state.facilities.water_purifier = 1;
+  state.phase = "night";
+  const resolved = resolveDay(state);
+  assert.deepEqual(resolved.lastDaySummary?.facilityUpkeepSaving, {});
+  assert.equal(resolved.eventHistory.some((entry) => entry.message.startsWith("엘리 창고 검수")), false);
+});
+
 test("LV.2 교역망은 식량과 물을 부품·연료로 바꿔 장기 회복 경로를 만든다", () => {
   const state = createInitialGameState();
   state.facilities.trade_network = 2;

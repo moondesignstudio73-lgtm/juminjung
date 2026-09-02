@@ -103,7 +103,7 @@ export function resolveDay(state: GameState): GameState {
     if (result.dutyId==="MEDICAL") return appliedStaffHealing?[{...result,effect:result.effect.replace(/Health \+\d+/,`Health +${appliedStaffHealing}`)}]:[];
     return appliedStaffFoodSaving?[{...result,effect:`식량 수요 -${appliedStaffFoodSaving}`}]:[];
   });
-  const summary: DaySummary = { completedDay: state.day, nextDay, occupiedGuests: staying.length, consumed, baseFoodDemand, foodRationPolicy: state.foodRationPolicy, poweredCircuits: powerPlan.activeCircuits, powerCapacity: powerPlan.capacity, survivalWarnings: [...powerPlan.warnings, ...preparationPlan.warnings], facilityProduction: economy.production, facilityUpkeep: economy.upkeep, inactiveFacilities: economy.inactiveFacilities, staffFoodSaving: appliedStaffFoodSaving, staffDutyResults, nightPreparationOptionIds: preparationPlan.active.map((option) => option.id), checkedOutGuestIds };
+  const summary: DaySummary = { completedDay: state.day, nextDay, occupiedGuests: staying.length, consumed, baseFoodDemand, foodRationPolicy: state.foodRationPolicy, poweredCircuits: powerPlan.activeCircuits, powerCapacity: powerPlan.capacity, survivalWarnings: [...powerPlan.warnings, ...preparationPlan.warnings], facilityProduction: economy.production, facilityUpkeep: economy.upkeep, facilityUpkeepSaving: economy.upkeepSaving, inactiveFacilities: economy.inactiveFacilities, staffFoodSaving: appliedStaffFoodSaving, staffDutyResults, nightPreparationOptionIds: preparationPlan.active.map((option) => option.id), checkedOutGuestIds };
   const rationName = RATION_POLICIES.find((policy) => policy.id === state.foodRationPolicy)?.name ?? state.foodRationPolicy;
   const rationSaving = Math.max(0, staffAdjustedFoodDemand - demand.food);
   const entries: HotelLogEntry[] = [
@@ -131,6 +131,7 @@ export function resolveDay(state: GameState): GameState {
     ...(auraNight.careTeamGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`공동 돌봄팀 돌봄 · ${auraNight.careTeamGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
     ...(auraNight.nurseryGuestIds.length ? [{day:state.day,type:"EVENT" as const,message:`안전 육아실 돌봄 · ${auraNight.nurseryGuestIds.map((id)=>guests.find((guest)=>guest.id===id)?.name??id).join(" · ")}`}] : []),
     ...(appliedMutualAidConditionRepair ? [{day:state.day,type:"EVENT" as const,message:`공동 구호조 보수 · Hotel Condition +${appliedMutualAidConditionRepair}`}] : []),
+    ...(Object.keys(economy.upkeepSaving).length ? [{ day: state.day, type: "RESOURCE" as const, message: `엘리 창고 검수 · 시설 유지비 ${Object.entries(economy.upkeepSaving).map(([key,value]) => `${key} ${value}`).join(" · ")} 절감` }] : []),
     ...(Object.keys(economy.production).length ? [{ day: state.day, type: "RESOURCE" as const, message: `시설 생산 · ${Object.entries(economy.production).map(([key,value]) => `${key} +${value}`).join(" · ")}` }] : []),
     ...(economy.inactiveFacilities.length ? [{ day: state.day, type: "EVENT" as const, message: `유지비 부족 · ${economy.inactiveFacilities.map((id) => FACILITY_NAMES[id]).join(" · ")} 가동 중단` }] : []),
     ...checkedOutGuestIds.map((guestId): HotelLogEntry => ({ day: nextDay, type: "CHECK_OUT", message: `${state.guests.find((guest) => guest.id === guestId)?.name ?? guestId} · 숙박 종료 자동 체크아웃` })),
