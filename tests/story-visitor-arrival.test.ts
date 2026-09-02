@@ -4,6 +4,7 @@ import { createInitialGameState, restoreGameState, serializeGameState } from "..
 import { applyStoryChoice } from "../game/story-choice-manager.ts";
 import { STORY_CHOICE_EVENTS } from "../game/story-choice-data.ts";
 import { prepareDailyVisitorQueue, recordVisitorDecision } from "../game/visitor-queue-manager.ts";
+import { STORY_VISITOR_ARRIVALS } from "../game/story-visitor-arrival-data.ts";
 
 function samuelResolutionState() {
   const state=createInitialGameState();
@@ -18,6 +19,99 @@ function samuelResolutionState() {
   }:{...guest,arrivalDay:999,arrivalDayRange:[999,999] as [number,number]});
   return state;
 }
+
+function familyResolutionState(guestId: "mia" | "daniel") {
+  const state=createInitialGameState();
+  state.day=12;
+  state.phase="desk";
+  state.visitorSeed=173;
+  state.worldState="COLLAPSE";
+  state.reputations.community=50;
+  state.guests=state.guests.map((guest)=>guest.id===guestId?{
+    ...guest,status:"STAYING" as const,currentRoomNumber:301,checkedInDay:5,remainingNights:1,
+    eventChain:guest.eventChain.map((event)=>event.stage==="CONFLICT"?{...event,completed:true}:event),
+  }:{...guest,arrivalDay:999,arrivalDayRange:[999,999] as [number,number]});
+  return state;
+}
+
+test("가족 이동로를 만드는 두 실제 결말은 저장 후 같은 단일 프런트 방문을 연다",()=>{
+  const producers=[
+    {guestId:"mia" as const,eventId:"mia-family",choiceId:"reunite"},
+    {guestId:"daniel" as const,eventId:"daniel-family",choiceId:"let_choose"},
+  ];
+  const declared=STORY_CHOICE_EVENTS.flatMap((event)=>event.choices
+    .filter((choice)=>choice.effect.flags?.family_routes_complete===true)
+    .map((choice)=>({eventId:event.id,choiceId:choice.id,arrivalId:choice.effect.scheduledVisitorArrival?.id})));
+  assert.deepEqual(declared,producers.map(({eventId,choiceId})=>({eventId,choiceId,arrivalId:"family_route_survivor"})));
+
+  for(const producer of producers){
+    const current=prepareDailyVisitorQueue(familyResolutionState(producer.guestId));
+    const currentQueue=[...current.dailyVisitorQueue];
+    const resolved=applyStoryChoice(current,producer.eventId,producer.choiceId).state;
+    assert.deepEqual(resolved.dailyVisitorQueue,currentQueue);
+    assert.equal(resolved.flags.family_route_survivor_due_day,13);
+    assert.equal(resolved.flags.family_route_survivor_arrived,false);
+
+    const restored=restoreGameState(serializeGameState(resolved));
+    const next=prepareDailyVisitorQueue({...restored,day:13});
+    const routed=next.dailyVisitorQueue.map((id)=>next.guests.find((guest)=>guest.id===id)!).filter((guest)=>guest.storyFlags.family_route_survivor===true);
+    assert.equal(routed.length,1,`${producer.eventId}:${producer.choiceId}`);
+    assert.equal(routed[0].npcType,"NORMAL");
+    assert.equal(routed[0].generated,true);
+    assert.equal(routed[0].faction,"REFUGEE");
+    assert.match(routed[0].conditionLabel,/가족 이동로 안내/);
+    assert.match(routed[0].introDialogue,/미아와 다니엘/);
+    assert.equal(routed[0].questions[0].label,"누구를 찾고 있습니까?");
+    assert.match(routed[0].offeredItems[0].id,/family_route_survivor-item$/);
+    assert.equal(routed[0].offeredItems[0].name,"겹쳐 그린 가족 이동 지도");
+    assert.equal(next.flags.family_route_survivor_arrived,true);
+    assert.equal(next.flags.family_route_survivor_arrived_day,13);
+    assert.match(next.eventHistory.at(-1)?.message??"",/가족 이동로 · 실종 가족을 찾는 생존자 도착/);
+
+    const recorded=recordVisitorDecision(next,routed[0].id,"ACCEPTED",205,{food:1});
+    const history=recorded.visitorHistory.find((entry)=>entry.visitorId===routed[0].id)!;
+    assert.match(history.events[0],/미아와 다니엘의 가족 이동로를 따라 도착/);
+    assert.match(history.events[1],/CHECK IN · 205호/);
+  }
+});
+
+test("가족 이동로의 두 번째 생산자는 완료된 후속 방문을 다시 예약하지 않는다",()=>{
+  const miaResolved=applyStoryChoice(familyResolutionState("mia"),"mia-family","reunite").state;
+  const arrived=prepareDailyVisitorQueue({...miaResolved,day:13});
+  assert.equal(arrived.flags.family_route_survivor_arrived,true);
+  const arrivedGuestId=arrived.dailyVisitorQueue.find((id)=>arrived.guests.find((guest)=>guest.id===id)?.storyFlags.family_route_survivor===true)!;
+
+  const withDaniel={...arrived,day:14,guests:arrived.guests.map((guest)=>guest.id==="daniel"?{
+    ...guest,status:"STAYING" as const,currentRoomNumber:302,checkedInDay:10,remainingNights:1,
+    eventChain:guest.eventChain.map((event)=>event.stage==="CONFLICT"?{...event,completed:true}:event),
+  }:guest)};
+  const danielResolved=applyStoryChoice(withDaniel,"daniel-family","let_choose").state;
+  assert.equal(danielResolved.flags.family_route_survivor_arrived,true);
+  assert.equal(danielResolved.flags.family_route_survivor_arrived_day,13);
+  assert.equal(danielResolved.flags.family_route_survivor_due_day,13);
+  const following=prepareDailyVisitorQueue({...danielResolved,day:15});
+  assert.ok(!following.dailyVisitorQueue.includes(arrivedGuestId));
+  assert.ok(following.dailyVisitorQueue.every((id)=>following.guests.find((guest)=>guest.id===id)?.storyFlags.family_route_survivor!==true));
+});
+
+test("동시에 예약된 스토리 방문은 우선순위대로 하루에 하나씩 도착한다",()=>{
+  const state=samuelResolutionState();
+  Object.assign(state.flags,{
+    samuel_rescue_patrol:true,samuel_rescue_survivor_due_day:12,samuel_rescue_survivor_arrived:false,
+    family_routes_complete:true,family_route_survivor_due_day:12,family_route_survivor_arrived:false,
+  });
+  const first=prepareDailyVisitorQueue(state);
+  const firstStory=first.dailyVisitorQueue.map((id)=>first.guests.find((guest)=>guest.id===id)!).filter((guest)=>guest.storyFlags.story_visitor_arrival_id);
+  assert.deepEqual(firstStory.map((guest)=>guest.storyFlags.story_visitor_arrival_id),["samuel_rescue_survivor"]);
+  assert.equal(first.flags.samuel_rescue_survivor_arrived,true);
+  assert.equal(first.flags.family_route_survivor_arrived,false);
+
+  const second=prepareDailyVisitorQueue({...first,day:13});
+  const secondStory=second.dailyVisitorQueue.map((id)=>second.guests.find((guest)=>guest.id===id)!).filter((guest)=>guest.storyFlags.story_visitor_arrival_id);
+  assert.deepEqual(secondStory.map((guest)=>guest.storyFlags.story_visitor_arrival_id),["family_route_survivor"]);
+  assert.equal(second.flags.family_route_survivor_arrived,true);
+  assert.deepEqual(STORY_VISITOR_ARRIVALS.map((arrival)=>arrival.id),["samuel_rescue_survivor","family_route_survivor"]);
+});
 
 test("실제 Samuel 결말은 오늘 큐를 보존하고 다음 DAY 신규 NORMAL 한 명만 구조 생존자로 표시한다",()=>{
   const current=prepareDailyVisitorQueue(samuelResolutionState());

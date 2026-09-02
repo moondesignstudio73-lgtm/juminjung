@@ -1,13 +1,17 @@
-import { getStoryVisitorArrivalDefinition, type StoryVisitorArrivalDefinition } from "./story-visitor-arrival-data.ts";
+import { findStoryVisitorArrivalDefinition, getStoryVisitorArrivalDefinition, type StoryVisitorArrivalDefinition } from "./story-visitor-arrival-data.ts";
 import type { EventFlags, Guest, StoryVisitorArrivalId } from "./types.ts";
 
 const clamp = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
 
 export function scheduleStoryVisitorArrival(flags: EventFlags, id: StoryVisitorArrivalId, currentDay: number, delayDays: number): EventFlags {
   const definition = getStoryVisitorArrivalDefinition(id);
+  if (flags[definition.completedFlag] === true) return flags;
+  const requestedDueDay = currentDay + Math.max(1, Math.round(delayDays));
+  const existingDueDay = Number(flags[definition.dueDayFlag] ?? 0);
+  const dueDay = Number.isFinite(existingDueDay) && existingDueDay > 0 ? Math.min(existingDueDay, requestedDueDay) : requestedDueDay;
   return {
     ...flags,
-    [definition.dueDayFlag]: currentDay + Math.max(1, Math.round(delayDays)),
+    [definition.dueDayFlag]: dueDay,
     [definition.completedFlag]: false,
     [definition.arrivedDayFlag]: 0,
   };
@@ -18,26 +22,26 @@ export function applyStoryVisitorArrival(guest: Guest, definition: StoryVisitorA
   const originQuestion = guest.questions[0];
   return {
     ...guest,
-    faction: "REFUGEE",
-    description: `${guest.description} 사무엘 프라이스가 옛 검문선 명단을 따라 찾아내 JUJU HOTEL까지 호송했다.`,
+    faction: definition.faction,
+    description: `${guest.description} ${definition.descriptionSuffix}`,
     conditionLabel: `${definition.shortLabel} · ${guest.conditionLabel}`,
-    introDialogue: "“사무엘 프라이스가 검문선 명단에서 제 이름을 찾았습니다. 그가 아니었다면 이 호텔 불빛까지 오지 못했을 겁니다.”",
+    introDialogue: definition.introDialogue,
     questions: [
-      { ...originQuestion, label: "사무엘과 어떻게 만났습니까?", answer: "폐쇄된 검문소 지하에서 버티고 있었습니다. 사무엘이 명단의 이름을 하나씩 부르며 저를 찾아냈습니다." },
+      { ...originQuestion, label: definition.questionLabel, answer: definition.questionAnswer },
       ...guest.questions.slice(1),
     ],
     offeredItems: [
-      { id: `${guest.id}-samuel-list`, type: "INFORMATION", name: definition.itemName, short: definition.itemShort, detail: definition.itemDetail },
+      { id: `${guest.id}-${definition.id}-item`, type: "INFORMATION", name: definition.itemName, short: definition.itemShort, detail: definition.itemDetail },
       ...guest.offeredItems,
     ],
-    trust: clamp(guest.trust + 8),
-    riskLevel: clamp(guest.riskLevel - 5),
+    trust: clamp(guest.trust + definition.trustDelta),
+    riskLevel: clamp(guest.riskLevel + definition.riskDelta),
     storyFlags: {
       ...guest.storyFlags,
       story_visitor_arrival_id: definition.id,
       story_visitor_arrival_source: definition.sourceFlag,
-      samuel_rescue_survivor: true,
-      samuel_rescue_survivor_day: day,
+      [definition.guestFlag]: true,
+      [definition.guestDayFlag]: day,
     },
   };
 }
@@ -48,7 +52,7 @@ export function completeStoryVisitorArrival(flags: EventFlags, definition: Story
 
 export function getStoryVisitorArrivalHistoryEvent(guest: Guest, day: number): string | null {
   const id = guest.storyFlags.story_visitor_arrival_id;
-  if (id !== "samuel_rescue_survivor" || Number(guest.storyFlags.samuel_rescue_survivor_day) !== day) return null;
-  const definition = getStoryVisitorArrivalDefinition(id);
+  const definition = findStoryVisitorArrivalDefinition(id);
+  if (!definition || Number(guest.storyFlags[definition.guestDayFlag]) !== day) return null;
   return `DAY ${day} · ${definition.historyLabel}`;
 }

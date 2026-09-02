@@ -109,7 +109,7 @@ export type Guest = {
 };
 
 export type VisitorDecision = "ACCEPTED" | "REFUSED";
-export type StoryVisitorArrivalId = "samuel_rescue_survivor";
+export type StoryVisitorArrivalId = "samuel_rescue_survivor" | "family_route_survivor";
 export type VisitorHistoryRecord = {
   visitorId: string;
   firstVisitDay: number;
