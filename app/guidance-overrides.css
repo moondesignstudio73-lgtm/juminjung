@@ -6,19 +6,19 @@
 }
 
 .priority-urgent > b::after {
-  content: "긴급";
+  content: '긴급';
   color: #c7a260;
   font-size: 9px;
 }
 
 .priority-recommended > b::after {
-  content: "권장";
+  content: '권장';
   color: #c7a260;
   font-size: 9px;
 }
 
 .priority-optional > b::after {
-  content: "선택";
+  content: '선택';
   color: #c7a260;
   font-size: 9px;
 }
@@ -30,7 +30,9 @@
   bottom: 18px;
   min-height: 48px;
   padding-inline: 20px !important;
-  box-shadow: 0 12px 35px #000c, 0 0 0 1px #d06d58;
+  box-shadow:
+    0 12px 35px #000c,
+    0 0 0 1px #d06d58;
 }
 
 @media (max-width: 620px) {
