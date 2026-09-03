@@ -108,16 +108,16 @@ export function getDailyObjectives(state: GameState): DailyObjective[] {
   const capacity = getPowerCapacity(state.resources.fuel, state.flags.generator_network_stable === true);
   const issues: DailyObjective[] = [];
   if (state.resources.food <= Math.max(6, staying * 3)) issues.push({ id: "food_shortage", priority: "URGENT", title: "식량 부족 대응", description: `식량 ${state.resources.food} · 투숙객 ${staying}명`, actionHint: "배급을 조정하거나 교역 원정을 준비하십시오." });
-  if (capacity < 3) issues.push({ id: "power_shortage", priority: capacity <= 1 ? "URGENT" : "RECOMMENDED", title: "제한 전력 배분", description: `현재 ${capacity}/3 회로 가동 가능 · 연료 ${state.resources.fuel}`, actionHint: "오늘 밤 반드시 필요한 회로만 선택하십시오." });
-  if (threat >= 25) issues.push({ id: "monster_threat", priority: threat >= 45 ? "URGENT" : "RECOMMENDED", title: "외곽 위협 상승", description: `Monster Threat ${threat}`, actionHint: "경계 순찰 또는 방호 회로를 우선하십시오." });
-  if (state.hotelStats.hotelCondition <= 50 || damagedRooms) issues.push({ id: "hotel_damage", priority: state.hotelStats.hotelCondition <= 35 ? "URGENT" : "RECOMMENDED", title: "호텔 손상 복구", description: `상태 ${state.hotelStats.hotelCondition} · 손상/봉쇄 객실 ${damagedRooms}`, actionHint: "부품 2와 AP 1로 가장 위험한 구역을 보수하십시오." });
+  if (capacity < 3) issues.push({ id: "power_shortage", priority: capacity <= 1 ? "URGENT" : "RECOMMENDED", title: "제한 전력 배분", description: `현재 ${capacity}/3 회로 가동 가능 · 연료 ${state.resources.fuel}`, actionHint: "오늘 탭의 전력 배분에서 반드시 필요한 회로만 선택하세요." });
+  if (threat >= 25) issues.push({ id: "monster_threat", priority: threat >= 45 ? "URGENT" : "RECOMMENDED", title: "외곽 위협 상승", description: `괴물 위협 ${threat}`, actionHint: "시설 탭의 경계 순찰을 실행하거나 오늘 탭에서 방호 회로를 켜세요." });
+  if (state.hotelStats.hotelCondition <= 50 || damagedRooms) issues.push({ id: "hotel_damage", priority: state.hotelStats.hotelCondition <= 35 ? "URGENT" : "RECOMMENDED", title: "호텔 손상 복구", description: `상태 ${state.hotelStats.hotelCondition} · 손상/봉쇄 객실 ${damagedRooms}`, actionHint: "시설 탭에서 부품 2와 AP 1을 사용해 호텔 보수를 실행하세요." });
   if (state.resources.medicine <= 3 && state.guests.some((guest) => guest.status === "STAYING" && guest.infectionState !== "HEALTHY")) issues.push({ id: "medicine_shortage", priority: "URGENT", title: "의약품 고갈 임박", description: `의약품 ${state.resources.medicine}`, actionHint: "진료 회로를 유지하고 교역 경로를 찾으십시오." });
   const openCase=getOpenInvestigationCases(state)[0];
   if (openCase) {
     const definition=getInvestigationCaseDefinition(openCase.caseId)!;
-    issues.push({id:`investigation_${openCase.caseId.toLowerCase()}`,priority:"RECOMMENDED",title:`조사 미완료 · ${definition.title}`,description:`증거 ${openCase.collectedEvidenceIds.length}/${definition.points.length} · 결론에 필요한 증거 ${definition.minimumEvidenceToConclude}`,actionHint:"낮 행동 포인트를 사용해 사건 현장을 조사하고 직접 결론을 선택하십시오."});
+    issues.push({id:`investigation_${openCase.caseId.toLowerCase()}`,priority:"RECOMMENDED",title:`조사 미완료 · ${definition.title}`,description:`증거 ${openCase.collectedEvidenceIds.length}/${definition.points.length} · 결론에 필요한 증거 ${definition.minimumEvidenceToConclude}`,actionHint:"기록 탭에서 AP를 사용해 현장을 조사하고 직접 결론을 선택하세요."});
   }
-  if (staying > 0 && !state.staffAssignments.SCAVENGE) issues.push({ id: "scout_unassigned", priority: "RECOMMENDED", title: "외부 정찰 담당자 없음", description: "탐색 능력이 있는 투숙객이 아직 외부 임무에 배치되지 않았습니다.", actionHint: "외부 정찰 담당자를 배치해 식량·의약품·연료 탐색을 준비하십시오." });
+  if (staying > 0 && !state.staffAssignments.SCAVENGE) issues.push({ id: "scout_unassigned", priority: "RECOMMENDED", title: "외부 정찰 담당자 없음", description: "탐색 능력이 있는 투숙객이 아직 외부 임무에 배치되지 않았습니다.", actionHint: "인력 탭 → 외부 정찰 담당자에서 탐색 수치가 높은 투숙객을 선택하세요." });
   if (!issues.length) issues.push({ id: "stable_operations", priority: "OPTIONAL", title: "호텔 운영 안정화", description: `행동 포인트 ${state.actionPoints}/${state.maxActionPoints}`, actionHint: "시설을 강화하거나 공동체 신뢰를 쌓으십시오." });
   const order = { URGENT: 0, RECOMMENDED: 1, OPTIONAL: 2 } as const;
   return issues.sort((a, b) => order[a.priority] - order[b.priority]).slice(0, 5);

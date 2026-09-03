@@ -1,0 +1,42 @@
+/* Last-mile guidance rules intentionally load after the legacy screen styles. */
+.management-screen .daily-survival-panel .daily-objective > b,
+.report-screen .report-paper .report-objectives article > b {
+  color: transparent;
+  font-size: 0.1px;
+}
+
+.priority-urgent > b::after {
+  content: "긴급";
+  color: #c7a260;
+  font-size: 9px;
+}
+
+.priority-recommended > b::after {
+  content: "권장";
+  color: #c7a260;
+  font-size: 9px;
+}
+
+.priority-optional > b::after {
+  content: "선택";
+  color: #c7a260;
+  font-size: 9px;
+}
+
+.report-screen .report-actions button:last-child {
+  position: fixed;
+  z-index: 35;
+  right: 22px;
+  bottom: 18px;
+  min-height: 48px;
+  padding-inline: 20px !important;
+  box-shadow: 0 12px 35px #000c, 0 0 0 1px #d06d58;
+}
+
+@media (max-width: 620px) {
+  .report-screen .report-actions button:last-child {
+    right: 10px;
+    bottom: 10px;
+    max-width: calc(100vw - 20px);
+  }
+}
