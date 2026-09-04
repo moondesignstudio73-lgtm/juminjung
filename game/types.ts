@@ -20,6 +20,7 @@ export type GuestResidency =
   | 'RESIDENT'
   | 'STAFF';
 export type RevisitPolicy = 'ALWAYS' | 'CONDITIONAL' | 'NEVER';
+export type NpcRank = 'F' | 'E' | 'D' | 'C' | 'B' | 'A' | 'S' | 'SS' | 'SSS';
 export type GuestSkills = {
   work: number;
   combat: number;
@@ -176,6 +177,13 @@ export type AuraDefinition = Omit<RoomEffect, 'id' | 'sourceGuestId'> & {
 };
 
 export type Guest = {
+  /** Current professional grade. Missing values are migrated from saved skills. */
+  rank?: NpcRank;
+  /** Reserved for future investigation outcomes such as an overstated claim. */
+  claimedRank?: NpcRank | null;
+  rankRevealed?: boolean;
+  specialization?: string;
+  professionalTraits?: string[];
   community?: {
     job: string;
     traits: Array<'CAREFUL' | 'FAST_WASTEFUL' | 'STEADY'>;

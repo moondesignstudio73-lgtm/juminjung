@@ -4,6 +4,7 @@ import './aura.css';
 import './guidance-overrides.css';
 import './system-menu.css';
 import './front-desk-hub.css';
+import './npc-profile.css';
 import { useEffect, useState, useRef, type ReactNode } from 'react';
 import {
   getActionFeedback,
@@ -15,6 +16,13 @@ import { Button } from '@/components/ui/button';
 import { SystemMenu } from './system-menu';
 import { NightManagement } from './night-management';
 import { RoomRecovery, ResidentDetails } from './community';
+import {
+  NpcCompactRecord,
+  NpcIdentity,
+  NpcProfileLedger,
+  NpcRankBadge,
+} from './npc-profile';
+import type { ProfessionalStat } from '@/game/npc-rank';
 import { expelResident, restoreRoom } from '@/game/community-manager';
 import {
   getCapacityComparison,
@@ -22,7 +30,7 @@ import {
 } from '@/game/capacity-manager';
 import { residenceLabel, communityProfile } from '@/game/community-data';
 import { HotelStatus, RoomContents } from './hotel-ui';
-import { canUseShortcut } from '@/game/ui-guidance';
+import { canUseShortcut, roomCaption } from '@/game/ui-guidance';
 import { getLivingForecast } from '@/game/day-flow-manager';
 import './ui-polish.css';
 import { DayFlowNav, DayFlowPage, FlowArchive } from './day-flow';
@@ -151,10 +159,7 @@ import {
 } from '@/game/guest-visual-manager';
 import { getCutscene } from '@/game/cutscene-data';
 import { dismissCutscene } from '@/game/cutscene-manager';
-import {
-  getHotelPolicyTransition,
-  getLodgingContribution,
-} from '@/game/day-four-transition';
+import { getHotelPolicyTransition } from '@/game/day-four-transition';
 import {
   configureFoodRation,
   calculatePowerPlan,
@@ -1120,10 +1125,6 @@ export default function Home() {
     : null;
   const DetailIcon = detail ? itemIcons[detail.type] : Inspect;
   const onboarding = getOnboardingGuide(save.day);
-  const lodgingContribution = getLodgingContribution(
-    visitor,
-    save.negotiated,
-  );
   return withSystemMenu(
     <main
       data-front-desk-root
@@ -1221,7 +1222,9 @@ export default function Home() {
                 오늘 방문 {save.dailyVisitorIndex + 1} /{' '}
                 {save.dailyVisitorQueue.length}
               </span>
-              <h2>{visitor.name}</h2>
+              <h2 className="npc-name-with-rank">
+                {visitor.name} <NpcRankBadge guest={visitor} />
+              </h2>
               <p>
                 {visitor.age}세 · {visitor.role}
               </p>
@@ -1241,13 +1244,15 @@ export default function Home() {
                   <dt>요청</dt>
                   <dd>{residenceLabel(visitor)}</dd>
                 </div>
-                <div>
-                  <dt>매일 필요한 것</dt>
-                  <dd>
-                    식량 {communityProfile(visitor).consumption.food} · 물{' '}
-                    {communityProfile(visitor).consumption.water}
-                  </dd>
-                </div>
+                {save.day < 4 && (
+                  <div>
+                    <dt>일일 유지비</dt>
+                    <dd>
+                      식량 −{communityProfile(visitor).consumption.food} · 물 −
+                      {communityProfile(visitor).consumption.water}
+                    </dd>
+                  </div>
+                )}
                 <div>
                   <dt>상태</dt>
                   <dd>
@@ -1269,21 +1274,10 @@ export default function Home() {
                 )}
               </dl>
               {save.day >= 4 && (
-                <div className="lodging-contribution">
-                  <span>제공 가능 물자</span>
-                  {lodgingContribution.length ? (
-                    <div>
-                      {lodgingContribution.map((entry) => (
-                        <b key={entry.resource}>
-                          {entry.label} {entry.amount}
-                          {entry.extra ? <em> 협상 포함</em> : null}
-                        </b>
-                      ))}
-                    </div>
-                  ) : (
-                    <p>제공 물자 없음 · 사정과 기여 가능성을 확인하세요.</p>
-                  )}
-                </div>
+                <NpcProfileLedger
+                  guest={visitor}
+                  negotiated={save.negotiated}
+                />
               )}
               {save.day >= 4 && (
                 <div className="clue-count">
@@ -1308,14 +1302,6 @@ export default function Home() {
                       · 일일 상한 6명
                     </small>
                   </div>
-                </div>
-              )}
-              {visitor.discoveredTraits.length > 0 && (
-                <div className="verified-traits">
-                  <span>확인된 특성</span>
-                  {visitor.discoveredTraits.map((trait) => (
-                    <b key={trait}>{getVisitorTraitLabel(visitor.id, trait)}</b>
-                  ))}
                 </div>
               )}
               {visitorReaction && (
@@ -1950,13 +1936,13 @@ function HotelGrid({
                   <>
                     <RoomContents room={room} guests={guests} />
                     {recommended.includes(room.roomNumber) && (
-                      <small className="room-recommendation">★ 추천</small>
-                    )}
-                    {affectedByAura && (
-                      <i title={auraDefinition!.name}>
-                        <AuraGlyph aura={auraDefinition!} />
-                        <em>{auraDefinition!.shortLabel}</em>
-                      </i>
+                      <small
+                        className="room-recommendation"
+                        aria-label="추천 객실"
+                        title="추천 객실"
+                      >
+                        ★
+                      </small>
                     )}
                   </>
                 );
@@ -1972,6 +1958,7 @@ function HotelGrid({
                     onFocus={() => onPreview?.(room.roomNumber)}
                     onBlur={() => onPreview?.(null)}
                     className={className}
+                    aria-label={`${room.roomNumber}호 ${roomCaption(room, guests)}${recommended.includes(room.roomNumber) ? ', 추천 객실' : ''}${affectedByAura ? `, ${auraDefinition!.name} 영향 범위` : ''}`}
                   >
                     {content}
                   </button>
@@ -2088,14 +2075,13 @@ function RoomAssignment({
   const previewGuest = { ...guest, currentRoomNumber: selected };
   const affected =
     selected === null ? [] : getAffectedRoomNumbers(rooms, previewGuest);
-  const adjacentRooms =
-    selected === null
-      ? []
-      : rooms.filter(
-          (room) =>
-            Math.floor(room.roomNumber / 100) === Math.floor(selected / 100) &&
-            Math.abs(room.roomNumber - selected) === 1,
-        );
+  const inspectedIsRecommended = inspectedRoom
+    ? recommended.includes(inspectedRoom.roomNumber)
+    : false;
+  const inspectedInfluenceCount = inspectedRoom
+    ? Math.max(0, inspectedAffected.length - 1)
+    : 0;
+  const selectedInfluenceCount = Math.max(0, affected.length - 1);
   const showAura = day === 1 || shouldShowAuraOverlay('assignment');
   return (
     <section
@@ -2138,22 +2124,12 @@ function RoomAssignment({
         <div className="placement-intro">
           <strong>첫 번째 객실 배치</strong>
           <p>
-            지금 문을 열 수 있는 객실은{' '}
-            {
-              rooms.filter(
-                (r) => r.status === 'EMPTY' || r.status === 'OCCUPIED',
-              ).length
-            }
-            개입니다. 나머지는 파손되어 복구가 필요합니다.
-          </p>
-          <p>
-            문을 열어주는 것만으로는 부족합니다. 능력과 드러난 특성을 보고 머물
-            곳을 정하세요.
+            {guest.name}은 주변 객실 주민을 회복시키는 지원형 투숙객입니다.
           </p>
           <p>
             {profile?.recommended === 'CENTER'
-              ? `${guest.name}의 능력은 주변을 돕는 지원형입니다. 중앙 객실을 살펴보세요. 끝 객실은 주변 방과 접촉을 줄여야 할 때 고려합니다.`
-              : '중앙은 주변을 돕는 지원형에게, 끝은 접촉을 줄여야 할 투숙객에게 어울립니다. 이 손님의 능력과 사정을 먼저 살펴보세요.'}
+              ? '중앙 객실을 추천하지만, 문이 열린 어느 빈 객실이든 선택할 수 있습니다.'
+              : '능력과 드러난 특성을 살펴보고 머물 곳을 정하세요.'}
           </p>
         </div>
       ) : (
@@ -2198,9 +2174,10 @@ function RoomAssignment({
             />
           </div>
           <div className="room-legend">
-            <span>빈 객실</span>
-            <span>사용 중</span>
-            <span>{guest.aura?.name ?? 'Aura 없음'}</span>
+            <span className="legend-empty">빈 객실</span>
+            <span className="legend-locked">잠김·파손</span>
+            <span className="legend-recommended">★ 추천</span>
+            {guest.aura && <span className="legend-aura">능력 영향</span>}
           </div>
           <div className="room-detail-panel" aria-live="polite">
             <div className="room-detail-content">
@@ -2224,39 +2201,47 @@ function RoomAssignment({
                     신규 방문자와 비교합니다.
                   </small>
                 </section>
-              ) : inspectedRoom?.recovery && !inspectedRoom.recovery.restored ? (
-                <RoomRecovery
-                  key={inspectedRoom.roomNumber}
-                  state={state}
-                  roomNumber={inspectedRoom.roomNumber}
-                  compact
-                />
               ) : inspectedRoom ? (
-                <p className="room-detail-placeholder">
-                  {inspectedRoom.roomNumber}호는 배정 가능한 빈 객실입니다.
-                </p>
+                <section
+                  className={`placement-room-detail${inspectedIsRecommended ? ' is-recommended' : ''}`}
+                >
+                  <header>
+                    <strong>{inspectedRoom.roomNumber}호</strong>
+                    <span>
+                      {roomCaption(inspectedRoom, state.guests)} ·{' '}
+                      {positionDescription!.title}
+                    </span>
+                  </header>
+                  {inspectedRoom.recovery &&
+                  !inspectedRoom.recovery.restored ? (
+                    <RoomRecovery
+                      key={inspectedRoom.roomNumber}
+                      state={state}
+                      roomNumber={inspectedRoom.roomNumber}
+                      compact
+                    />
+                  ) : (
+                    <p>{positionDescription!.text}</p>
+                  )}
+                  <footer>
+                    {inspectedIsRecommended && profile && (
+                      <span className="placement-reason">
+                        ★ 추천 객실 · {profile.reason}
+                      </span>
+                    )}
+                    {guest.aura && (
+                      <span className="placement-range">
+                        <AuraGlyph aura={guest.aura} /> 능력 영향 · 주변{' '}
+                        {inspectedInfluenceCount}객실
+                      </span>
+                    )}
+                  </footer>
+                </section>
               ) : (
                 <p className="room-detail-placeholder">
-                  객실을 선택하면 위치와 복구 정보를 확인할 수 있습니다.
+                  객실을 가리키거나 선택하면 위치와 상태를 확인할 수 있습니다.
                 </p>
               )}
-              <div className="placement-comparison">
-                <strong>
-                  {inspectedRoom
-                    ? `${inspectedRoom.roomNumber}호 · ${positionDescription!.title}`
-                    : '객실을 가리키거나 선택해 비교하세요'}
-                </strong>
-                <p>
-                  {positionDescription?.text ??
-                    '추천은 길잡이일 뿐입니다. 어느 빈 방이든 선택할 수 있습니다.'}
-                </p>
-                {inspectedRoom && guest.aura && (
-                  <small>
-                    실제 능력 범위: {inspectedAffected.join(' · ')}호 · 자기 방
-                    포함
-                  </small>
-                )}
-              </div>
             </div>
           </div>
         </div>
@@ -2278,91 +2263,52 @@ function RoomAssignment({
           ) : (
             <>
               <div className="assignment-guest-scroll">
-            <span className="panel-label">투숙객 능력 미리보기</span>
-            <h2>{guest.name}</h2>
-            <p>
-              {guest.role} · {residenceLabel(guest)}
-            </p>
-            {selected !== null && (
-              <section className="room-choice-summary" aria-live="polite">
-                <small>선택한 객실</small>
-                <strong>{selected}호</strong>
-                <p>
-                  같은 층 좌우 객실:{' '}
-                  {adjacentRooms.length
-                    ? adjacentRooms
-                        .map(
-                          (room) =>
-                            `${room.roomNumber}호 ${room.guestId ? '사용 중' : '빈 방'}`,
-                        )
-                        .join(' · ')
-                    : '복도 끝 객실'}
-                </p>
-              </section>
-            )}
-            {guest.aura ? (
-              <div
-                className={`aura-card aura-${guest.aura.category.toLowerCase()}`}
-              >
-                <AuraGlyph aura={guest.aura} size={20} />
-                <div>
-                  <strong>{guest.aura.name}</strong>
-                  <p>
-                    {guest.aura.name === 'Basic Care'
-                      ? '자기 방과 좌우·위아래층·대각선 한 칸 안의 투숙객이 밤마다 Health를 2 회복합니다. 부상 여부 무관, 최대 100.'
-                      : guest.aura.description}
-                  </p>
-                  {profile && (
-                    <div className="placement-tip">
-                      <strong>배치 팁</strong>
+                <span className="panel-label">배정할 투숙객</span>
+                <h2>{guest.name}</h2>
+                <NpcIdentity guest={guest} />
+                {guest.aura ? (
+                  <div
+                    className={`aura-card aura-${guest.aura.category.toLowerCase()}`}
+                  >
+                    <AuraGlyph aura={guest.aura} size={20} />
+                    <div>
+                      <strong>{guest.aura.name}</strong>
                       <p>
-                        {profile.reason}.{' '}
-                        {profile.recommended === 'CENTER'
-                          ? '지원형은 중앙에서 주변 방을 돌보기 쉽습니다. 추천 방만의 추가 보너스는 없습니다.'
-                          : '주변 방과 거리를 두는 배치를 고려하세요.'}
+                        {guest.aura.name === 'Basic Care'
+                          ? '주변 객실 주민의 야간 체력 회복 +2'
+                          : guest.aura.description}
                       </p>
                     </div>
-                  )}
-                  {guest.aura.name !== 'Basic Care' &&
-                    guest.aura.radius === 1 &&
-                    guest.aura.distance === 'CHEBYSHEV' && (
-                      <p>
-                        자기 방과 좌우·위아래층·대각선 한 칸까지 영향을 줍니다.
-                      </p>
-                    )}
-                  {guest.aura.name === 'Basic Care' && (
-                    <p>빈 방에는 회복 대상이 없습니다.</p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <p className="system-note">
-                이 투숙객은 현재 객실 Aura가 없습니다. 관계와 숨겨진 특성은 이후
-                사건에 영향을 줍니다.
-              </p>
-            )}
-            <dl>
-              <div>
-                <dt>선택 객실</dt>
-                <dd>{selected ?? '선택 전'}</dd>
-              </div>
-              <div>
-                <dt>영향 객실</dt>
-                <dd>
-                  {affected.length
-                    ? affected.join(' · ')
-                    : guest.aura
-                      ? '객실을 선택하세요'
-                      : '없음'}
-                </dd>
-              </div>
-              <div>
-                <dt>Health / Stress / Trust</dt>
-                <dd>
-                  {guest.health} / {guest.stress} / {guest.trust}
-                </dd>
-              </div>
-            </dl>
+                  </div>
+                ) : (
+                  <p className="system-note">객실에 영향을 주는 능력 없음</p>
+                )}
+                {profile && (
+                  <div className="placement-tip">
+                    <strong>배치 팁</strong>
+                    <p>
+                      {profile.recommended === 'CENTER'
+                        ? '지원형 능력은 중앙 객실에서 활용하기 좋습니다.'
+                        : '주변 방과 거리를 두는 배치를 고려하세요.'}
+                    </p>
+                  </div>
+                )}
+                <section className="room-choice-summary" aria-live="polite">
+                  <div>
+                    <small>선택 객실</small>
+                    <strong>{selected === null ? '—' : `${selected}호`}</strong>
+                  </div>
+                  <div>
+                    <small>영향 범위</small>
+                    <strong>
+                      {selected === null
+                        ? '—'
+                        : guest.aura
+                          ? `${selectedInfluenceCount}객실`
+                          : '없음'}
+                    </strong>
+                  </div>
+                </section>
               </div>
               <div className="assignment-actions">
                 <Button variant="secondary" onClick={onCancel}>
@@ -2410,20 +2356,25 @@ function FullCapacityPanel({
   onReject?: () => void;
   onCancel: () => void;
 }) {
+  const [explainedStat, setExplainedStat] = useState<{
+    owner: string;
+    stat: ProfessionalStat;
+  } | null>(null);
   const history = resident
     ? state.eventHistory
         .filter((entry) => entry.message.includes(resident.name))
         .slice(-1)
         .reverse()
     : [];
-  const incoming = communityProfile(visitor);
   return (
     <div className="capacity-panel">
       <div className="capacity-panel-body">
         <span className="panel-label">만실 · 주민 비교</span>
         {!resident || !comparison ? (
           <>
-            <h2>{visitor.name}</h2>
+            <h2 className="npc-name-with-rank">
+              {visitor.name} <NpcRankBadge guest={visitor} />
+            </h2>
             <p>{visitor.role} · 신규 방문자</p>
             <section className="capacity-empty-state">
               <strong>누구의 방을 내어줄까요?</strong>
@@ -2431,11 +2382,10 @@ function FullCapacityPanel({
                 사용 중인 객실을 선택하면 현재 주민이 맡은 일과 교체 후 소비량을
                 비교합니다. 잠긴 객실에서는 복구 조건을 볼 수 있습니다.
               </p>
-              <dl>
-                <div><dt>식량</dt><dd>{incoming.consumption.food} / DAY</dd></div>
-                <div><dt>물</dt><dd>{incoming.consumption.water} / DAY</dd></div>
-                <div><dt>주요 능력</dt><dd>{visitor.aura?.name ?? visitor.role}</dd></div>
-              </dl>
+              <NpcCompactRecord
+                guest={visitor}
+                onExplain={(owner, stat) => setExplainedStat({ owner, stat })}
+              />
             </section>
           </>
         ) : (
@@ -2443,35 +2393,44 @@ function FullCapacityPanel({
             <div className="capacity-versus">
               <article className="capacity-person current-resident">
                 <small>현재 주민</small>
-                <strong>{resident.name}</strong>
+                <strong>
+                  {resident.name} <NpcRankBadge guest={resident} />
+                </strong>
                 <span>{comparison.current.job}</span>
-                <dl>
-                  <div><dt>식량</dt><dd>{comparison.current.consumption.food}</dd></div>
-                  <div><dt>물</dt><dd>{comparison.current.consumption.water}</dd></div>
-                  <div><dt>건강</dt><dd>{resident.health}</dd></div>
-                  <div><dt>신뢰</dt><dd>{resident.trust}</dd></div>
-                </dl>
-                <em className={`need-${comparison.current.need.level.toLowerCase()}`}>
-                  필요도 {comparison.current.need.level}
-                </em>
-                <p>{comparison.current.need.reason}</p>
+                <NpcCompactRecord
+                  guest={resident}
+                  resident
+                  onExplain={(owner, stat) => setExplainedStat({ owner, stat })}
+                />
               </article>
               <article className="capacity-person incoming-visitor">
                 <small>신규 방문자</small>
-                <strong>{visitor.name}</strong>
+                <strong>
+                  {visitor.name} <NpcRankBadge guest={visitor} />
+                </strong>
                 <span>{comparison.incoming.job}</span>
-                <dl>
-                  <div><dt>식량</dt><dd>{comparison.incoming.consumption.food}</dd></div>
-                  <div><dt>물</dt><dd>{comparison.incoming.consumption.water}</dd></div>
-                  <div><dt>건강</dt><dd>{visitor.health}</dd></div>
-                  <div><dt>위험</dt><dd>{visitor.riskLevel}</dd></div>
-                </dl>
-                <em className={`need-${comparison.incoming.need.level.toLowerCase()}`}>
-                  필요도 {comparison.incoming.need.level}
-                </em>
-                <p>{comparison.incoming.need.reason}</p>
+                <NpcCompactRecord
+                  guest={visitor}
+                  onExplain={(owner, stat) => setExplainedStat({ owner, stat })}
+                />
               </article>
             </div>
+            <output className="capacity-stat-explanation" aria-live="polite">
+              <strong>
+                {explainedStat
+                  ? `${explainedStat.owner} · ${explainedStat.stat.label}`
+                  : '능력 설명'}
+              </strong>
+              <span>
+                {explainedStat?.stat.help ??
+                  'ⓘ를 누르면 두 사람의 실제 전문 수치가 쓰이는 곳을 설명합니다.'}
+              </span>
+              {explainedStat && (
+                <button type="button" onClick={() => setExplainedStat(null)}>
+                  닫기
+                </button>
+              )}
+            </output>
             <section className="capacity-impact">
               <strong>교체 후 예상 변화</strong>
               <div>
@@ -3072,9 +3031,9 @@ function FrontDeskTools({
     window.addEventListener('keydown', handle);
     return () => window.removeEventListener('keydown', handle);
   }, []);
-  const [guestNote, setGuestNote] = useState<'dialogue' | 'status' | null>(
-    null,
-  );
+  const [guestNote, setGuestNote] = useState<
+    'dialogue' | 'status' | 'residence' | null
+  >(null);
   const [guestPage, setGuestPage] = useState(0);
   const [auraGuestId, setAuraGuestId] = useState<string | null>(null);
   const [inspectedRoomNumber, setInspectedRoomNumber] = useState<number | null>(
@@ -3515,7 +3474,8 @@ function FrontDeskTools({
                         <span>
                           <strong>{resident.name}</strong>
                           <small>
-                            {resident.role} · {resident.currentRoomNumber}호
+                            <NpcRankBadge guest={resident} /> {resident.role} ·{' '}
+                            {resident.currentRoomNumber}호
                           </small>
                         </span>
                         <em>
@@ -3556,7 +3516,9 @@ function FrontDeskTools({
                 {hasStayingGuest && (
                   <article className="guest-detail-card">
                     <small>투숙객 상세</small>
-                    <h3>{guest.name}</h3>
+                    <h3 className="npc-name-with-rank">
+                      {guest.name} <NpcRankBadge guest={guest} />
+                    </h3>
                     <p>
                       {guest.currentRoomNumber}호 · {guest.role}
                     </p>
@@ -3576,25 +3538,10 @@ function FrontDeskTools({
                           )?.name ?? '휴식'}
                         </dd>
                       </div>
-                      <div>
-                        <dt>관계</dt>
-                        <dd>
-                          {guest.trust >= 65
-                            ? '당신을 신뢰함'
-                            : guest.trust >= 40
-                              ? '조심스럽게 지켜봄'
-                              : '경계함'}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>현재 요청</dt>
-                        <dd>
-                          {guest.health < 55
-                            ? '의약품과 휴식 필요'
-                            : '특별한 요청 없음'}
-                        </dd>
-                      </div>
                     </dl>
+                    {guestNote !== 'residence' && (
+                      <NpcProfileLedger guest={guest} resident />
+                    )}
                     <div className="guest-detail-actions">
                       <Button
                         variant="secondary"
@@ -3627,24 +3574,29 @@ function FrontDeskTools({
                       <Button
                         variant="secondary"
                         className="danger-action"
-                        onClick={() => setGuestNote('status')}
+                        onClick={() =>
+                          setGuestNote((current) =>
+                            current === 'residence' ? null : 'residence',
+                          )
+                        }
                       >
                         거주 정보
                       </Button>
                     </div>
-                    <ResidentDetails
-                      key={guest.id}
-                      state={state}
-                      guest={guest}
-                      onExpel={() => onCheckout()}
-                    />
-                    {guestNote && (
+                    {guestNote === 'residence' ? (
+                      <ResidentDetails
+                        key={guest.id}
+                        state={state}
+                        guest={guest}
+                        onExpel={() => onCheckout()}
+                      />
+                    ) : guestNote ? (
                       <p className="guest-inline-note">
                         {guestNote === 'dialogue'
                           ? `처음 프론트에서 남긴 말: ${guest.introDialogue}`
                           : `${guest.conditionLabel} · ${getGuestVisualState(guest).label}`}
                       </p>
-                    )}
+                    ) : null}
                   </article>
                 )}
               </div>

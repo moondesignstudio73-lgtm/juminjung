@@ -1,5 +1,6 @@
 import type { AuraDefinition, Guest, Resources } from "./types.ts";
 import { FRONT_DESK_PROFILES } from "./front-desk-dialogue-data.ts";
+import { getMainNpcRank, getRankProfessionalTrait } from './npc-rank.ts';
 
 export const ELEANOR_ID = "eleanor";
 type Seed = {
@@ -111,11 +112,15 @@ export function createGuests():Guest[] {
   return seeds.map((s) => {
     const desk = FRONT_DESK_PROFILES[s.id];
     if (!desk) throw new Error(`프런트 대화 데이터가 없습니다: ${s.id}`);
+    const skills = MAIN_SKILLS[s.id];
+    const focus = (Object.entries(skills).sort((a, b) => b[1] - a[1])[0]?.[0] ??
+      'work') as keyof Guest['skills'];
+    const rank = getMainNpcRank(s.id);
     return ({
-    id:s.id,npcType:"MAIN",residency:"STORY_LOCKED",storyLockedResident:true,revisitPolicy:s.id==="white"||s.id==="jack"?"ALWAYS":"CONDITIONAL",generated:false,faction:s.id==="hayes"||s.id==="owen"?"MILITARY":s.id==="jack"||s.id==="victor"?"MERCHANT":s.id==="rosa"||s.id==="grace"?"COMMUNITY":"INDEPENDENT",name:s.name,age:s.age,gender:s.gender,role:s.role,description:s.description,portrait:s.portrait??"",portraitVariants:s.portraitVariants??{},expressions:["neutral","happy","sad","angry","afraid","suspicious","injured"],
+    id:s.id,npcType:"MAIN",residency:"STORY_LOCKED",storyLockedResident:true,revisitPolicy:s.id==="white"||s.id==="jack"?"ALWAYS":"CONDITIONAL",generated:false,rank,claimedRank:null,rankRevealed:true,specialization:s.role,professionalTraits:getRankProfessionalTrait(rank,focus),faction:s.id==="hayes"||s.id==="owen"?"MILITARY":s.id==="jack"||s.id==="victor"?"MERCHANT":s.id==="rosa"||s.id==="grace"?"COMMUNITY":"INDEPENDENT",name:s.name,age:s.age,gender:s.gender,role:s.role,description:s.description,portrait:s.portrait??"",portraitVariants:s.portraitVariants??{},expressions:["neutral","happy","sad","angry","afraid","suspicious","injured"],
     arrivalDay:s.days[0],arrivalDayRange:s.days,arrivalConditions:s.arrivalConditions??conditionalArrivals[s.id]??[],conditionLabel:s.condition??"피로 · 안정",introDialogue:s.intro??desk.introDialogue,negotiationDialogue:desk.negotiationDialogue,
     questions:desk.questions,offeredItems:s.items??[],offer:s.offer??{},negotiatedOffer:desk.negotiatedOffer,
-    baseTraits:s.traits,hiddenTraits:s.hidden,discoveredTraits:[],health:80,stress:45,trust:25,riskLevel:s.risk??35,skills:MAIN_SKILLS[s.id],relationships:s.relations??[],storyFlags:{},eventChain:stages.map((e,index)=>({...e,id:`${s.id}-${e.id}`,title:featuredTitles[s.id]?.[index]??e.title})),infectionState:"HEALTHY",alive:true,endingState:null,
+    baseTraits:s.traits,hiddenTraits:s.hidden,discoveredTraits:[],health:80,stress:45,trust:25,riskLevel:s.risk??35,skills,relationships:s.relations??[],storyFlags:{},eventChain:stages.map((e,index)=>({...e,id:`${s.id}-${e.id}`,title:featuredTitles[s.id]?.[index]??e.title})),infectionState:"HEALTHY",alive:true,endingState:null,
     currentRoomNumber:null,stayDuration:s.stay,remainingNights:s.stay,checkedInDay:null,status:"WAITING",aura:s.aura,
   });
   });

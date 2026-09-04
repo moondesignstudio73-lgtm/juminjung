@@ -44,19 +44,6 @@ export function ResidentDetails({
         {guest.checkedInDay === null ? 0 : state.day - guest.checkedInDay + 1}일
         · 객실 복구 {profile.repairsCompleted}회
       </p>
-      <p>
-        기본 일일 유지비: 식량 {profile.consumption.food} · 물{' '}
-        {profile.consumption.water} · 객실 1개
-      </p>
-      <small>배급과 주변 능력에 따라 실제 소비는 달라집니다.</small>
-      <p>
-        {JOB_NAMES[profile.job] ?? guest.role} ·{' '}
-        {profile.traits.includes('CAREFUL')
-          ? '꼼꼼함: 객실 복구 부품 -1, 시간 +15분'
-          : profile.traits.includes('FAST_WASTEFUL')
-            ? '서두르는 손길: 객실 복구 시간 -30분, 부품 +1'
-            : '차분함: 표준 복구 시간과 비용'}
-      </p>
       {onExpel && expelBlockReason && (
         <p className="resident-expel-blocked">
           퇴실 불가 · {expelBlockReason}

@@ -1,5 +1,16 @@
 import { communityProfile } from './community-data.ts';
-import type { AuraDefinition, Guest, GuestSkills, Resources } from './types.ts';
+import {
+  createRankedSkills,
+  getRankProfessionalTrait,
+  rollNpcRank,
+} from './npc-rank.ts';
+import type {
+  AuraDefinition,
+  Guest,
+  GuestSkills,
+  NpcRank,
+  Resources,
+} from './types.ts';
 
 type Range = [number, number];
 type JobProfile = {
@@ -379,16 +390,21 @@ export function createNormalVisitor(
   const rolledProfile = pick(JOBS, random);
   const profile = tutorial ? JOBS[1] : engineerTutorial ? JOBS[0] : rolledProfile;
   const age = between([profile.minAge, profile.maxAge], random);
-  const rare = random() < 0.04;
-  const skills = Object.fromEntries(
-    Object.entries(profile.skills).map(([key, range]) => [
-      key,
-      clamp(between(range as Range, random) + (rare ? 10 : 0)),
-    ]),
-  ) as GuestSkills;
+  // Keep the original visitor stream stable for traits, health, identity and
+  // saves created before ranks existed. Rank/skill variance uses its own stream.
+  random();
+  Object.keys(profile.skills).forEach(() => random());
+  const rankRandom = seeded(identitySeed ^ 0x6d2b79f5);
+  const rank: NpcRank = tutorial
+    ? 'B'
+    : engineerTutorial
+      ? 'B'
+      : rollNpcRank(rankRandom(), day);
+  const ranked = createRankedSkills(profile.skills, rank, rankRandom);
+  const skills = ranked.skills;
+  const highRank = ['S', 'SS', 'SSS'].includes(rank);
   const visibleTraits: string[] = [pick(POSITIVE_TRAITS, random)];
   if (random() < 0.55) visibleTraits.push(pick(CONDITIONAL_TRAITS, random));
-  if (rare) visibleTraits.push('RareTalent');
   const hiddenTraits =
     random() < Math.min(0.7, 0.2 + day * 0.018)
       ? [pick(NEGATIVE_TRAITS, random)]
@@ -414,7 +430,8 @@ export function createNormalVisitor(
       (hiddenTraits.includes('Violent') ? 18 : 0) +
       (hiddenTraits.includes('Thief') ? 12 : 0),
   );
-  const auraEnabled = Boolean(profile.aura) && random() < (rare ? 0.8 : 0.32);
+  const auraEnabled =
+    Boolean(profile.aura) && random() < (highRank ? 0.68 : 0.32);
   const itemType: Guest['offeredItems'][number]['type'] = profile.offer.medicine
     ? 'MEDICINE'
     : profile.offer.fuel
@@ -469,9 +486,25 @@ export function createNormalVisitor(
     storyLockedResident: false,
     revisitPolicy: 'ALWAYS',
     generated: true,
+    rank,
+    claimedRank: null,
+    rankRevealed: true,
+    specialization:
+      ranked.focus === 'medical'
+        ? '응급 대응형'
+        : ranked.focus === 'repair'
+          ? '현장 수리형'
+          : ranked.focus === 'combat'
+            ? '위협 대응형'
+            : ranked.focus === 'scavenge'
+              ? '정찰형'
+              : ranked.focus === 'social'
+                ? '공동체 지원형'
+                : '현장 지원형',
+    professionalTraits: getRankProfessionalTrait(rank, ranked.focus),
     faction,
     name,
-    role: rare ? `숙련 ${profile.role}` : profile.role,
+    role: profile.role,
     age,
     gender,
     description: `무너진 도로를 지나 JUJU HOTEL의 불빛을 찾아온 ${profile.role}.`,
@@ -570,7 +603,25 @@ export function createNormalVisitor(
         }
       : {}),
   };
-  return {...visitor,community:communityProfile(visitor)};
+  const baseCommunity = communityProfile(visitor);
+  const demandingElite = ['SS', 'SSS'].includes(rank);
+  return {
+    ...visitor,
+    community: {
+      ...baseCommunity,
+      consumption: {
+        food: demandingElite
+          ? Math.min(5, baseCommunity.consumption.food + 1)
+          : rank === 'F'
+            ? 1
+            : baseCommunity.consumption.food,
+        water:
+          rank === 'SSS'
+            ? Math.min(5, baseCommunity.consumption.water + 1)
+            : baseCommunity.consumption.water,
+      },
+    },
+  };
 }
 
 export const NORMAL_VISITOR_JOBS = JOBS.map(({ role, minAge, maxAge }) => ({

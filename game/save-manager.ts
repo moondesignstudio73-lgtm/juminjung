@@ -26,6 +26,7 @@ import {
 } from './monster-codex-manager.ts';
 import { DEFAULT_NIGHT_PREPARATION } from './night-preparation-data.ts';
 import { normalizeNightPreparation } from './night-preparation-manager.ts';
+import { getNpcRank } from './npc-rank.ts';
 import type {
   FacilityId,
   GameState,
@@ -322,7 +323,15 @@ export function restoreGameState(raw: string | null): GameState {
           !catalogGuests.some((catalogGuest) => catalogGuest.id === guest.id),
       )
       .map((guest) => guest as Guest);
-    const guests = [...catalogGuests, ...generatedGuests];
+    const guests = [...catalogGuests, ...generatedGuests].map((guest) => ({
+      ...guest,
+      rank: getNpcRank(guest),
+      claimedRank: guest.claimedRank ?? null,
+      rankRevealed: guest.rankRevealed ?? true,
+      professionalTraits: Array.isArray(guest.professionalTraits)
+        ? guest.professionalTraits.slice(0, 2)
+        : [],
+    }));
     const savedFacilities = (parsed.facilities ?? {}) as Record<
       string,
       unknown
