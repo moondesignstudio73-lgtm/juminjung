@@ -16,6 +16,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   security: '보안 물자',
   guests: '투숙객',
   rooms: '사용 객실',
+  capacity: '개방 객실',
   ap: '행동 포인트',
 };
 export function resourceChanges(
@@ -34,11 +35,17 @@ export function getActionFeedback(
 ): ActionFeedback | null {
   if (
     before.day !== after.day ||
-    !['desk', 'story'].includes(before.phase) ||
-    !['desk', 'story', 'night'].includes(after.phase)
+    !['desk', 'story', 'night_management'].includes(before.phase) ||
+    !['desk', 'story', 'night', 'night_management'].includes(after.phase)
   )
     return null;
   const changes = resourceChanges(before, after);
+  if (before.phase === 'night_management' && after.phase === 'night_management') {
+    for (const [resource, b, a] of [
+      ['경과 시간(분)', before.nightShift?.elapsedMinutes ?? 0, after.nightShift?.elapsedMinutes ?? 0],
+      ['발전기 내구도', before.facilityState?.generator?.condition ?? 42, after.facilityState?.generator?.condition ?? 42],
+    ] as const) if (b !== a) changes.push({ resource, before: b, after: a });
+  }
   for (const [key, label] of [
     ['security', '호텔 안전도'],
     ['hotelCondition', '호텔 상태'],
@@ -60,7 +67,7 @@ export function getActionFeedback(
       before.rooms.filter((r) => r.occupied).length,
       after.rooms.filter((r) => r.occupied).length,
     ],
-    ['ap', before.actionPoints, after.actionPoints],
+    ['capacity',before.rooms.filter(r=>r.status==='EMPTY'||r.status==='OCCUPIED').length,after.rooms.filter(r=>r.status==='EMPTY'||r.status==='OCCUPIED').length],
   ] as const) {
     if (b !== a) changes.push({ resource, before: b, after: a });
   }
@@ -114,7 +121,7 @@ export function getActionFeedback(
     title: arriving
       ? `${arriving.name} 체크인`
       : leaving
-        ? `${leaving.name} 체크아웃`
+        ? `${leaving.name} 퇴실`
         : moved
           ? `${moved.name} 객실 이동`
           : '호텔 운영 기록',

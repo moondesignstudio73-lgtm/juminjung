@@ -89,7 +89,7 @@ export function getOnboardingGuide(day: number): OnboardingGuide {
     return {
       stage: 'STAFFING',
       title: '오늘의 문제를 맡을 담당자를 정하세요',
-      instruction: '투숙객의 직업을 비교해 한 사람을 알맞은 업무에 배치하세요.',
+      instruction: '정비공의 사정을 듣고 입실을 결정하세요. 발전기 담당으로 한 번 배정하면 매일 점검과 경미한 수리를 대신합니다.',
       unlocked: '새 시스템 · 직원 업무 배치',
       showResources: true,
       showFood: true,
@@ -106,7 +106,7 @@ export function getOnboardingGuide(day: number): OnboardingGuide {
       stage: 'POWER',
       title: '발전기실의 이상한 소리를 조사하세요',
       instruction:
-        '정비 담당자를 지정하고 발전기실을 조사한 뒤 필요한 전력 회로만 남기세요.',
+        '엔지니어를 지속 배정하면 매일 점검과 경미 수리를 맡습니다. 별도의 조사 사건과 대형 파손은 직접 해결하세요.',
       unlocked: '새 시스템 · 전력',
       showResources: true,
       showFood: true,

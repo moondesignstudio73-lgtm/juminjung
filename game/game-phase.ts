@@ -6,6 +6,7 @@ export function normalizeGamePhase(value: unknown): GamePhase {
     'title',
     'prologue',
     'desk',
+    'night_management',
     'story',
     'night',
     'report',

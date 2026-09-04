@@ -13,6 +13,17 @@ import {
 import { ResourceChangeToast, ChangeLines } from './action-feedback';
 import { Button } from '@/components/ui/button';
 import { SystemMenu } from './system-menu';
+import { NightManagement } from './night-management';
+import { RoomRecovery, ResidentDetails } from './community';
+import { expelResident, restoreRoom } from '@/game/community-manager';
+import { residenceLabel, communityProfile } from '@/game/community-data';
+import { HotelStatus, RoomContents } from './hotel-ui';
+import { canUseShortcut } from '@/game/ui-guidance';
+import { getLivingForecast } from '@/game/day-flow-manager';
+import './ui-polish.css';
+import { DayFlowNav, DayFlowPage, FlowArchive } from './day-flow';
+import { advanceDayFlow, currentDayStage, normalizeDayFlow, openOptionalOperations, type DayStage } from '@/game/day-flow-manager';
+import { beginNightShift, completeNightShift, repairGenerator, performNightHotelAction, isGeneratorSpecialist, moveNightLocation, inspectGenerator, assignGeneratorDuty, upgradeGenerator, nightClock } from '@/game/night-work-manager';
 import {
   getPlacementProfile,
   getRecommendedRooms,
@@ -235,6 +246,10 @@ const nightPreparationCategories: ReadonlyArray<{
 
 export default function Home() {
   const [save, setSave] = useState<UiSave>(makeInitial);
+  const [reviewStage, setReviewStage] = useState<DayStage | null>(null);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [operationTools, setOperationTools] = useState(false);
+  useEffect(() => { setReviewStage(null); setArchiveOpen(false); setOperationTools(false); }, [save.day, save.phase, save.dayFlow?.stage]);
   const previousFeedbackState = useRef<UiSave | null>(null);
   const [actionFeedback, setActionFeedback] = useState<ActionFeedback | null>(
     null,
@@ -284,6 +299,19 @@ export default function Home() {
   const visitorFlow = getDailyVisitorCountBreakdown(save);
 
   useEffect(() => {
+    const handle = (event: KeyboardEvent) => {
+      if (save.day < 1 || activeCutscene || roomAssignment || !canUseShortcut(event, event.target as Element, !!document.querySelector('[role="dialog"]'))) return;
+      if (event.key.toLowerCase() === 'j') { event.preventDefault(); setArchiveOpen(value => !value); }
+      if (event.key === '4' && save.phase === 'night_management') {
+        event.preventDefault(); setArchiveOpen(false); setOperationTools(false);
+        setSave(current => ({...current, dayFlow:{...normalizeDayFlow(current).dayFlow!,operationLocation:null}}));
+      }
+    };
+    window.addEventListener('keydown', handle);
+    return () => window.removeEventListener('keydown', handle);
+  }, [save.day, save.phase, activeCutscene, roomAssignment]);
+
+  useEffect(() => {
     const restored = loadBrowserGame();
     setSave({
       ...restored,
@@ -316,7 +344,7 @@ export default function Home() {
     if (save.phase === 'desk' && eligibleVisitor) {
       setDialogue(
         isReturningVisitor
-          ? `“길 위에서 다시 돌아왔습니다. 이번에도 ${eligibleVisitor.stayDuration}박을 부탁하죠. 지난번 일을 기억하고 있습니다.”`
+          ? '“길 위에서 다시 돌아왔습니다. 이번에는 함께 살아갈 자리를 찾고 있습니다.”'
           : (visitorReaction?.dialogue ?? eligibleVisitor.introDialogue),
       );
       setSelectedItem(null);
@@ -328,11 +356,13 @@ export default function Home() {
     eligibleVisitor?.id,
     isReturningVisitor,
     visitorReaction?.id,
+    frontDeskSession,
   ]);
 
   const update = (patch: Partial<UiSave>) =>
     setSave((current) => ({ ...current, ...patch }));
   const reset = () => {
+    setReviewStage(null); setArchiveOpen(false); setOperationTools(false);
     previousFeedbackState.current = null;
     setActionFeedback(null);
     setRoomAssignment(null);
@@ -344,6 +374,7 @@ export default function Home() {
     setManagedGuestId(null);
   };
   const restore = (restored: GameState) => {
+    setReviewStage(null); setArchiveOpen(false); setOperationTools(false);
     previousFeedbackState.current = null;
     setActionFeedback(null);
     setRoomAssignment(null);
@@ -364,7 +395,9 @@ export default function Home() {
   };
   const withSystemMenu = (screen: ReactNode) => (
     <>
-      {screen}
+      {save.day > 0 && !activeCutscene && !['title','prologue','ending'].includes(save.phase) && <DayFlowNav state={save} review={reviewStage} onReview={stage=>{setReviewStage(stage);setArchiveOpen(false);}} onArchive={()=>setArchiveOpen(true)}/>}
+      {save.day>0&&!activeCutscene&&['desk','night_management'].includes(save.phase)&&!archiveOpen&&!reviewStage&&<HotelStatus state={save}/>}
+      {archiveOpen ? <FlowArchive state={save} onClose={()=>setArchiveOpen(false)}/> : reviewStage ? <DayFlowPage key={`review-${reviewStage}`} state={save} stage={reviewStage} readOnly onContinue={()=>setReviewStage(null)} onRation={()=>{}} onOperation={()=>{}}/> : screen}
       <ResourceChangeToast feedback={actionFeedback} />
       <SystemMenu
         state={save}
@@ -584,56 +617,7 @@ export default function Home() {
     setRoomAssignment(null);
     setSave({ ...next, prologue: save.prologue });
   };
-  const checkout = () => {
-    const expelledMain =
-      managedGuest.npcType === 'MAIN' && managedGuest.storyLockedResident;
-    const guests = save.guests.map((guest) =>
-      guest.id === managedGuest.id
-        ? {
-            ...guest,
-            currentRoomNumber: null,
-            status: 'CHECKED_OUT' as const,
-            remainingNights: 0,
-            storyFlags: {
-              ...guest.storyFlags,
-              last_checked_out_day: save.day,
-              next_revisit_day: getNextRevisitDay(save.day),
-              ...(expelledMain
-                ? { player_expelled: true, forced_leave: true }
-                : {}),
-            },
-          }
-        : guest,
-    );
-    update({
-      guests,
-      rooms: recalculateRoomEffects(
-        checkoutGuest(save.rooms, managedGuest.id),
-        guests,
-      ),
-      flags:
-        managedGuest.id === ELEANOR_ID
-          ? setGuestRoomFlags(save.flags, null)
-          : save.flags,
-      visitorHistory: updateVisitorFinalState(
-        save.visitorHistory,
-        managedGuest.id,
-        expelledMain ? 'PLAYER_EXPELLED' : 'CHECKED_OUT',
-        `DAY ${save.day} · ${expelledMain ? '플레이어 추방' : '수동 체크아웃'}`,
-      ),
-      staffAssignments: pruneStaffAssignments(save.staffAssignments, guests),
-      eventHistory: [
-        ...save.eventHistory,
-        {
-          day: save.day,
-          type: 'CHECK_OUT',
-          message: `${managedGuest.name} · ${expelledMain ? '플레이어 추방' : '수동 체크아웃'}`,
-        },
-      ],
-      decision: null,
-      phase: 'desk',
-    });
-  };
+  const checkout = () => setSave(current => ({...expelResident(current, managedGuest.id), prologue:current.prologue}));
 
   if (!hydrated) return <LobbyLoading />;
   if (activeCutscene)
@@ -678,11 +662,11 @@ export default function Home() {
               save.prologue < PROLOGUE_BEATS.length - 1
                 ? update({ prologue: save.prologue + 1 })
                 : setSave((current) => ({
-                    ...prepareDailyVisitorQueue({
+                    ...normalizeDayFlow({ ...prepareDailyVisitorQueue({
                       ...current,
                       phase: 'desk',
                       day: 1,
-                    }),
+                    }), phase: 'report' }),
                     prologue: current.prologue,
                   }))
             }
@@ -711,8 +695,9 @@ export default function Home() {
     return <LobbyLoading />;
   const frontDeskTools = (
     <FrontDeskTools
+      initialPanel={operationTools ? 'staff' : undefined}
       key={frontDeskSession}
-      hasVisitor={Boolean(eligibleVisitor)}
+      hasVisitor={operationTools || Boolean(eligibleVisitor)}
       assignmentOpen={roomAssignment !== null}
       state={save}
       guest={managedGuest}
@@ -781,9 +766,29 @@ export default function Home() {
           prologue: current.prologue,
         }))
       }
-      onContinue={() => setSave((current) => routeToNight(current))}
+      onContinue={() => setSave((current) => ({ ...advanceDayFlow(current), prologue: current.prologue }))}
     />
   );
+  const continueFlow = () => setSave(current => { const next = advanceDayFlow(current); return next.phase === 'night' ? routeToNight({...next,prologue:current.prologue}) : {...next,prologue:current.prologue}; });
+  const flowPage = (stage: DayStage) => <DayFlowPage key={`${save.day}-${stage}-${frontDeskSession}`} state={save} stage={stage} onContinue={continueFlow} onExpel={id=>setSave(current=>({...expelResident(current,id),prologue:current.prologue}))} onRation={policy=>setSave(current=>({...configureFoodRation(current,policy),prologue:current.prologue}))} onOperation={location=>{
+    if (location === 'front' && currentDayStage(save) === 'residents') { setSave(current=>({...openOptionalOperations(current),prologue:current.prologue})); return; }
+    if (location === 'staff') { setOperationTools(true); return; }
+    setSave(current=>{const next=moveNightLocation(current,location);return {...next,dayFlow:{...normalizeDayFlow(next).dayFlow!,operationLocation:next.nightShift?.location??null},prologue:current.prologue};});
+  }}/ >;
+  if (save.phase === 'desk' && currentDayStage(save) === 'residents') return withSystemMenu(flowPage('residents'));
+  if (save.phase === 'desk' && !eligibleVisitor) return withSystemMenu(flowPage('visitors'));
+  if (save.phase === 'night_management' && !save.dayFlow?.operationLocation) return withSystemMenu(operationTools ? <main className="day-flow-page operation-tools"><header><h1>직원과 외부 업무</h1></header><Button variant="outline" onClick={()=>setOperationTools(false)}>운영 목록으로 돌아가기</Button>{frontDeskTools}</main> : flowPage('operations'));
+  if (save.phase === 'night_management') return withSystemMenu(<main className="day-flow-page"><header><p>DAY {save.day} · 호텔 내부 · {nightClock(save)}</p><h1>필요한 공간을 살펴봅니다</h1></header><Button variant="outline" onClick={()=>setSave(current=>({...current,dayFlow:{...normalizeDayFlow(current).dayFlow!,operationLocation:null}}))}>운영 화면으로 돌아가기</Button><div className="flow-facility"><NightManagement embedded key={frontDeskSession} state={save}
+    onMove={location => setSave(current => ({ ...moveNightLocation(current, location), prologue: current.prologue }))}
+    onInspect={() => setSave(current => ({ ...inspectGenerator(current), prologue: current.prologue }))}
+    onAssign={id => setSave(current => ({ ...assignGeneratorDuty(current, id), prologue: current.prologue }))}
+    onUpgrade={() => setSave(current => ({ ...upgradeGenerator(current), prologue: current.prologue }))}
+    onRestoreRoom={(room,id)=>setSave(current=>({...restoreRoom(current,room,id),prologue:current.prologue}))}
+    onRepair={id => setSave(current => ({ ...repairGenerator(current, id).state, prologue: current.prologue }))}
+    onAction={id => setSave(current => ({ ...performNightHotelAction(current, id), prologue: current.prologue }))}
+    onRation={policy => setSave(current => ({ ...configureFoodRation(current, policy), prologue: current.prologue }))}
+    onFinish={() => setSave(current => routeToNight({ ...completeNightShift(current), prologue: current.prologue }))}
+  /></div></main>);
   if (save.phase === 'story')
     return withSystemMenu(
       <StoryChoiceScene
@@ -815,31 +820,7 @@ export default function Home() {
       />,
     );
   if (save.phase === 'report')
-    return withSystemMenu(
-      <MorningReport
-        state={save}
-        onStartEnding={(endingId) =>
-          setSave((current) => ({
-            ...startEnding(current, endingId),
-            prologue: current.prologue,
-          }))
-        }
-        onNext={() =>
-          setSave((current) => ({
-            ...prepareDailyVisitorQueue({
-              ...current,
-              phase: 'desk',
-              decision: null,
-              asked: [],
-              inspected: [],
-              negotiated: false,
-              held: false,
-            }),
-            prologue: current.prologue,
-          }))
-        }
-      />,
-    );
+    return withSystemMenu(flowPage('report'));
   if (save.phase === 'ending')
     return withSystemMenu(
       <CampaignEnding
@@ -882,7 +863,7 @@ export default function Home() {
     <main
       data-front-desk-root
       data-game-phase={save.phase}
-      className={`game-shell unified-front-desk onboarding-day-${Math.min(save.day, 10)}`}
+      className={`game-shell unified-front-desk day-flow-visitors onboarding-day-${Math.min(save.day, 10)}`}
     >
       <GameGuide />
       <div className="rain" aria-hidden="true" />
@@ -911,6 +892,7 @@ export default function Home() {
       </header>
 
       <section className="desk-scene" aria-label="밤의 JUJU HOTEL 프런트">
+        {save.flags.generator_outage_day === save.day - 1 && <output className="tutorial-callout"><b>지난밤 복도 조명이 꺼졌습니다.</b><span>정전의 피해가 장부에 남았습니다. 오늘 밤 발전기실에서 수리를 준비하세요.</span></output>}
         {eligibleVisitor && save.day <= 3 && (
           <output className="tutorial-callout">
             <b>{onboarding.unlocked}</b>
@@ -936,10 +918,12 @@ export default function Home() {
               <p>
                 {visitor.age}세 · {visitor.role}
               </p>
+              {save.day >= 4 && isGeneratorSpecialist(visitor) && <p className="night-job-hint">맡길 수 있는 일: 매일 발전기 점검·경미 수리<br/><small>지속 배정하면 매일 발전기실을 방문할 필요가 줄어듭니다. 수리는 부품 1개로 내구도 +25. 숙박 중 식량과 물은 계속 필요합니다. 대형 파손은 직접 해결해야 합니다.</small></p>}
               <dl>
                 <div>
                   <dt>요청</dt>
-                  <dd>{visitor.stayDuration}박</dd>
+                  <dd>{residenceLabel(visitor)}</dd>
+                  </div><div><dt>매일 필요한 것</dt><dd>식량 {communityProfile(visitor).consumption.food} · 물 {communityProfile(visitor).consumption.water}</dd>
                 </div>
                 <div>
                   <dt>상태</dt>
@@ -1167,6 +1151,7 @@ export default function Home() {
       {roomAssignment && (
         <div className="front-desk-overlay room-assignment-overlay">
           <RoomAssignment
+            state={save}
             day={save.day}
             rooms={save.rooms}
             guest={save.guests.find(
@@ -1562,6 +1547,7 @@ function HotelGrid({
   affected,
   onSelect,
   inspectOccupied = false,
+  guests = ROOM_GUEST_CATALOG,
   recommended = [],
   onPreview,
 }: {
@@ -1572,6 +1558,7 @@ function HotelGrid({
   affected?: number[];
   onSelect?: (roomNumber: number) => void;
   inspectOccupied?: boolean;
+  guests?: Guest[];
   recommended?: number[];
   onPreview?: (roomNumber: number | null) => void;
 }) {
@@ -1604,13 +1591,10 @@ function HotelGrid({
                 ].join(' ');
                 const content = (
                   <>
-                    <b>{room.roomNumber}</b>
+                    <RoomContents room={room} guests={guests}/>
                     {recommended.includes(room.roomNumber) && (
                       <small className="room-recommendation">★ 추천</small>
                     )}
-                    <span>
-                      {getRoomOccupantLabel(room, ROOM_GUEST_CATALOG)}
-                    </span>
                     {affectedByAura && (
                       <i title={auraDefinition!.name}>
                         <AuraGlyph aura={auraDefinition!} />
@@ -1652,6 +1636,7 @@ function HotelGrid({
 }
 
 function RoomAssignment({
+  state,
   day,
   rooms,
   guest,
@@ -1661,20 +1646,22 @@ function RoomAssignment({
   onConfirm,
   onCancel,
 }: {
+  state: GameState;
   day: number;
   rooms: Room[];
   guest: Guest;
   selected: number | null;
   mode: 'checkin' | 'move';
-  onSelect: (roomNumber: number) => void;
+  onSelect: (roomNumber: number | null) => void;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
   const [hoveredRoom, setHoveredRoom] = useState<number | null>(null);
+  const [inspectedNumber, setInspectedNumber] = useState<number | null>(null);
   const profile = getPlacementProfile(guest);
   const tutorial = day === 1 && mode === 'checkin';
   const inspectedRoom = rooms.find(
-    (room) => room.roomNumber === (hoveredRoom ?? selected),
+    (room) => room.roomNumber === (hoveredRoom ?? inspectedNumber ?? selected),
   );
   const positionDescription = inspectedRoom
     ? getPlacementDescription(inspectedRoom, rooms)
@@ -1714,12 +1701,13 @@ function RoomAssignment({
         </div>
         <div className="day-chip">
           <span>DAY {day}</span>
-          <small>빈 객실 {rooms.filter(isRoomSelectable).length} / 30</small>
+          <small>빈 객실 {rooms.filter(isRoomSelectable).length} · 개방 {rooms.filter(r=>r.status==='EMPTY'||r.status==='OCCUPIED').length} / 30</small>
         </div>
       </header>
       {tutorial ? (
         <div className="placement-intro">
           <strong>첫 번째 객실 배치</strong>
+          <p>지금 문을 열 수 있는 객실은 {rooms.filter(r=>r.status==='EMPTY'||r.status==='OCCUPIED').length}개입니다. 나머지는 파손되어 복구가 필요합니다.</p>
           <p>
             문을 열어주는 것만으로는 부족합니다. 능력과 드러난 특성을 보고 머물
             곳을 정하세요.
@@ -1748,11 +1736,13 @@ function RoomAssignment({
           <div className="placement-map-scroll">
             <HotelGrid
               rooms={rooms}
+              guests={state.guests}
               auraDefinition={showAura ? guest.aura : null}
               auraMode="preview"
               selected={selected}
               affected={showAura ? inspectedAffected : []}
-              onSelect={onSelect}
+              inspectOccupied
+              onSelect={number=>{setInspectedNumber(number);onSelect(isRoomSelectable(rooms.find(r=>r.roomNumber===number)!)?number:null);}}
               recommended={recommended}
               onPreview={setHoveredRoom}
             />
@@ -1762,6 +1752,8 @@ function RoomAssignment({
             <span>사용 중</span>
             <span>{guest.aura?.name ?? 'Aura 없음'}</span>
           </div>
+          {inspectedRoom && <RoomRecovery key={inspectedRoom.roomNumber} state={state} roomNumber={inspectedRoom.roomNumber}/>}
+          {!rooms.some(isRoomSelectable) && <p role="status">사용 가능한 객실이 모두 찼습니다. 배정을 취소한 뒤 주민 퇴실을 요청하거나, 야간에 객실을 복구하세요. 이 방문객은 거절할 수도 있습니다.</p>}
           <div className="placement-comparison" aria-live="polite">
             <strong>
               {inspectedRoom
@@ -1783,7 +1775,7 @@ function RoomAssignment({
           <span className="panel-label">투숙객 능력 미리보기</span>
           <h2>{guest.name}</h2>
           <p>
-            {guest.role} · {guest.stayDuration}박 요청
+            {guest.role} · {residenceLabel(guest)}
           </p>
           {selected !== null && (
             <section className="room-choice-summary" aria-live="polite">
@@ -2266,6 +2258,7 @@ type FrontDeskPanel =
   | 'advanced';
 
 function FrontDeskTools({
+  initialPanel,
   hasVisitor,
   assignmentOpen,
   state,
@@ -2287,6 +2280,7 @@ function FrontDeskTools({
   onStartEnding,
   onContinue,
 }: {
+  initialPanel?: FrontDeskPanel;
   hasVisitor: boolean;
   assignmentOpen: boolean;
   state: UiSave;
@@ -2317,7 +2311,17 @@ function FrontDeskTools({
   onStartEnding: (id: GameState['availableEndings'][number]) => void;
   onContinue: () => void;
 }) {
-  const [panel, setPanel] = useState<FrontDeskPanel | null>(null);
+  const [panel, setPanel] = useState<FrontDeskPanel | null>(initialPanel ?? null);
+  useEffect(() => {
+    const handle = (event: KeyboardEvent) => {
+      if (!canUseShortcut(event, event.target as Element, !!document.querySelector('[role="dialog"]'))) return;
+      if (['1','2','3'].includes(event.key)) {
+        event.preventDefault(); setPanel(event.key === '1' ? null : event.key === '2' ? 'rooms' : 'guests');
+      }
+    };
+    window.addEventListener('keydown', handle);
+    return () => window.removeEventListener('keydown', handle);
+  }, []);
   const [guestNote, setGuestNote] = useState<'dialogue' | 'status' | null>(
     null,
   );
@@ -2364,16 +2368,12 @@ function FrontDeskTools({
     (entry) => entry.day === state.day && entry.type === 'CHECK_OUT',
   ).length;
   const dailyDemand = stayingGuests.length;
+  const living = getLivingForecast(state);
   const basicPower = calculatePowerPlan(state, dailyDemand);
-  const foodDemand = getRationPlan(
-    dailyDemand + basicPower.extraFoodDemand,
-    state.foodRationPolicy,
-  ).foodDemand;
+  const foodDemand = living.food;
   const fuelDemand = basicPower.fuelDemand + preparationPlan.fuelCost;
   const foodDays = foodDemand ? state.resources.food / foodDemand : Infinity;
-  const waterDays = dailyDemand
-    ? state.resources.water / dailyDemand
-    : Infinity;
+  const waterDays = living.waterDays ?? Infinity;
   const medicineLow =
     state.resources.medicine < Math.max(2, stayingGuests.length);
   const infectionRisk = stayingGuests.some((resident) => resident.health < 45)
@@ -2398,12 +2398,12 @@ function FrontDeskTools({
     icon: ReactNode;
   }> = [
     { id: 'ledger', label: '호텔 장부', unlockDay: 1, icon: <BookOpen /> },
-    { id: 'guests', label: '투숙객', unlockDay: 1, icon: <HeartPulse /> },
+    { id: 'guests', label: '주민', unlockDay: 1, icon: <HeartPulse /> },
     { id: 'rooms', label: '객실', unlockDay: 1, icon: <LayoutGrid /> },
     { id: 'resources', label: '자원', unlockDay: 4, icon: <Soup /> },
     {
       id: 'staff',
-      label: '직원 관리',
+      label: '주민 업무',
       unlockDay: 5,
       icon: <BriefcaseBusiness />,
     },
@@ -2433,12 +2433,14 @@ function FrontDeskTools({
       className={`front-desk-tools ${assignmentOpen ? 'assignment-open' : ''}`}
     >
       <nav className="front-desk-quick" aria-label="호텔 퀵메뉴">
-        {quickMenus.map((item) => {
+        {quickMenus.filter(item=>item.id!=='advanced'&&item.id!=='resources').map((item) => {
           const unlocked = state.day >= item.unlockDay;
           return (
             <button
               type="button"
               key={item.id}
+              data-panel={item.id}
+              title={unlocked?item.label:`DAY ${item.unlockDay}부터 이용할 수 있습니다`}
               disabled={!unlocked}
               className={panel === item.id ? 'active' : ''}
               aria-label={
@@ -2449,7 +2451,7 @@ function FrontDeskTools({
               onClick={() => setPanel(item.id)}
             >
               {item.icon}
-              <span>{item.label}</span>
+              <span>{item.label}</span>{item.id==='guests'&&stayingGuests.some(g=>g.health<70||g.infectionState!=='HEALTHY')&&<small className="menu-alert">주의 {stayingGuests.filter(g=>g.health<70||g.infectionState!=='HEALTHY').length}</small>}
               {!unlocked && <small>DAY {item.unlockDay}</small>}
             </button>
           );
@@ -2499,7 +2501,7 @@ function FrontDeskTools({
               <ChevronRight />
             </Button>
             <small className="front-desk-primary-note">
-              마감 후 야간 결과가 처리되고 다음 날로 이어집니다.
+              마감 후 호텔을 순회하며 작업합니다. 순회를 마치면 밤의 사건과 결과로 이어집니다.
             </small>
           </article>
         </section>
@@ -2537,7 +2539,7 @@ function FrontDeskTools({
                 <section className="ledger-summary">
                   <article>
                     <span>객실</span>
-                    <strong>{occupiedRooms} / 30</strong>
+                    <strong>{occupiedRooms} / {state.rooms.filter(r=>r.status==='EMPTY'||r.status==='OCCUPIED').length} 개방 객실</strong>
                     <small>사용 중</small>
                   </article>
                   <article>
@@ -2650,6 +2652,7 @@ function FrontDeskTools({
                 </div>
                 <HotelGrid
                   rooms={state.rooms}
+                  guests={state.guests}
                   inspectOccupied
                   selected={inspectedRoomNumber}
                   onSelect={(number) => {
@@ -2684,6 +2687,7 @@ function FrontDeskTools({
                         투숙객 관리
                       </Button>
                     )}
+                    <RoomRecovery key={inspectedRoomNumber} state={state} roomNumber={inspectedRoomNumber}/>
                   </div>
                 )}
               </div>
@@ -2702,7 +2706,7 @@ function FrontDeskTools({
                         onClick={() => onSelectGuest(resident.id)}
                       >
                         <span className="guest-list-avatar">
-                          {resident.name.slice(0, 1)}
+                          {resident.portrait ? <img src={resident.portrait} alt="" loading="lazy"/> : resident.name.slice(0, 1)}
                         </span>
                         <span>
                           <strong>{resident.name}</strong>
@@ -2795,11 +2799,12 @@ function FrontDeskTools({
                       <Button
                         variant="secondary"
                         className="danger-action"
-                        onClick={onCheckout}
+                        onClick={() => setGuestNote('status')}
                       >
-                        {guest.storyLockedResident ? '퇴실 요청' : '체크아웃'}
+                        거주 정보
                       </Button>
                     </div>
+                    <ResidentDetails key={guest.id} state={state} guest={guest} onExpel={()=>onCheckout()}/>
                     {guestNote && (
                       <p className="guest-inline-note">
                         {guestNote === 'dialogue'
@@ -3026,7 +3031,7 @@ function FrontDeskTools({
                 <li key={item}>{item}</li>
               ))}
             </ul>
-            <p>그래도 밤으로 넘어가시겠습니까?</p>
+            <p>프론트를 닫고 야간 순회를 시작하시겠습니까? 호텔 관리와 수리는 순회 중에도 가능합니다.</p>
             <div>
               <Button
                 variant="secondary"
@@ -3279,7 +3284,7 @@ function StoryCutscene({
         <h1>{cutscene.title}</h1>
         <p>
           {cutscene.id === 'first_night' &&
-          state.guests.some((g) => g.alive && g.status === 'STAYING')
+          state.eventHistory.some((e) => e.day === 1 && e.type === 'CHECK_IN')
             ? '아버지가 없는 첫날 밤. 문을 열어준 사람들의 기척이 복도에 남아 있습니다. 닫힌 객실 문을 하나씩 지나며, 당신은 아침까지 이 호텔을 지키기로 합니다.'
             : cutscene.body}
         </p>
@@ -3292,65 +3297,6 @@ function StoryCutscene({
   );
 }
 
-function MorningReport({
-  state,
-  onNext,
-}: {
-  state: UiSave;
-  onNext: () => void;
-  onStartEnding: (id: GameState['availableEndings'][number]) => void;
-}) {
-  const result = state.lastNightPresentation;
-  const residents = state.guests.filter(
-    (g) => g.alive && g.status === 'STAYING',
-  );
-  return (
-    <main className="event-screen night-conclusion">
-      <p className="scene-index">
-        DAY {result?.day ?? state.lastDaySummary?.completedDay ?? state.day - 1}{' '}
-        · NIGHT
-      </p>
-      <section>
-        <span>오늘의 선택이 남긴 것</span>
-        <h1>{result?.title ?? '호텔은 아침을 맞습니다'}</h1>
-        {result?.choice && <blockquote>{result.choice}</blockquote>}
-        {(
-          result?.moments ?? [
-            '지난밤의 기록은 프론트의 호텔 장부에 남아 있습니다.',
-          ]
-        ).map((line) => (
-          <p key={line}>{line}</p>
-        ))}
-        {!!result?.changes.length && (
-          <div className="night-event-cost">
-            <small>이 야간 사건으로 달라진 물자</small>
-            <ChangeLines changes={result.changes} />
-          </div>
-        )}
-        <div className="night-recap">
-          <small>지금까지의 이야기</small>
-          <p>
-            {residents.length
-              ? residents
-                  .slice(0, 2)
-                  .map((g) => g.name)
-                  .join(', ') +
-                (residents.length > 2 ? ' 외 생존자들' : '') +
-                '의 기척이 호텔에 남아 있습니다.'
-              : '프론트는 다음 생존자의 노크를 기다립니다.'}
-            <br />
-            {state.fatherStoryProgress > 0
-              ? '아버지가 남긴 흔적이 조금씩 이어지고 있습니다.'
-              : '아버지의 행방은 아직 알 수 없습니다.'}
-          </p>
-        </div>
-        <Button className="advance" onClick={onNext}>
-          DAY {state.day} 시작 <ChevronRight />
-        </Button>
-      </section>
-    </main>
-  );
-}
 
 function HotelArchive({
   state,

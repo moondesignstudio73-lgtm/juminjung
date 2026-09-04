@@ -1,3 +1,4 @@
+import { createEstablishedHotel } from './established-hotel.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -15,7 +16,7 @@ import { selectNightEvent } from '../game/night-event-manager.ts';
 
 void test('check-in toast shows real gained resources, never invented food charges', () => {
   const before = {
-    ...createInitialGameState(),
+    ...createEstablishedHotel(),
     phase: 'desk' as const,
     day: 1,
   };
@@ -50,7 +51,7 @@ void test('check-in toast shows real gained resources, never invented food charg
 });
 void test('facility effects reuse before/after diff; no-op and daily consumption never become daytime toasts', () => {
   const before = {
-    ...createInitialGameState(),
+    ...createEstablishedHotel(),
     phase: 'desk' as const,
     day: 4,
     resources: {
@@ -77,7 +78,7 @@ void test('facility effects reuse before/after diff; no-op and daily consumption
 });
 void test('night event cost excludes normal consumption and report reload does not settle twice', () => {
   const before = {
-    ...createInitialGameState(),
+    ...createEstablishedHotel(),
     phase: 'night' as const,
     day: 2,
     selectedNightEventId: 'quiet_watch',
@@ -99,14 +100,14 @@ void test('night event cost excludes normal consumption and report reload does n
   assert.throws(() => resolveDay(loaded));
 });
 void test('legacy reports without new presentation retain resources and history', () => {
-  const old = { ...createInitialGameState(), day: 4, phase: 'report' as const };
+  const old = { ...createEstablishedHotel(), day: 4, phase: 'report' as const };
   const restored = restoreGameState(serializeGameState(old));
   assert.equal(restored.lastNightPresentation, undefined);
   assert.deepEqual(restored.resources, old.resources);
 });
 void test('night selection still responds to resource shortage, not just DAY', () => {
   const state = {
-    ...createInitialGameState(),
+    ...createEstablishedHotel(),
     day: 2,
     phase: 'night' as const,
   };

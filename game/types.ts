@@ -14,6 +14,7 @@ export type GuestExpression =
   | 'injured';
 export type NpcType = 'NORMAL' | 'MAIN';
 export type GuestResidency =
+  | 'LEAVING' | 'EXPELLED' | 'MISSING' | 'DEAD'
   | 'TEMPORARY'
   | 'STORY_LOCKED'
   | 'RESIDENT'
@@ -152,6 +153,7 @@ export type RoomEffect = {
 };
 
 export type Room = {
+  recovery?: { damage: import('./community-data.ts').RoomDamage; availableDay: number; restored: boolean };
   roomNumber: number;
   floor: number;
   position: Position;
@@ -174,6 +176,12 @@ export type AuraDefinition = Omit<RoomEffect, 'id' | 'sourceGuestId'> & {
 };
 
 export type Guest = {
+  community?: {
+    job: string;
+    traits: Array<'CAREFUL' | 'FAST_WASTEFUL' | 'STEADY'>;
+    consumption: { food: number; water: number };
+    repairsCompleted: number;
+  };
   placement?: {
     tags: Array<'support' | 'isolation' | 'security' | 'medical' | 'maintenance' | 'social' | 'dangerous'>;
     recommended: 'CENTER' | 'EDGE';
@@ -334,6 +342,7 @@ export type HotelLogEntry = {
 };
 
 export type DaySummary = {
+  guestChanges?: Array<{id:string;name:string;healthBefore:number;healthAfter:number;stressBefore:number;stressAfter:number}>;
   completedDay: number;
   nextDay: number;
   occupiedGuests: number;
@@ -777,12 +786,16 @@ export type GamePhase =
   | 'title'
   | 'prologue'
   | 'desk'
+  | 'night_management'
   | 'story'
   | 'night'
   | 'report'
   | 'ending';
 
 export type GameState = {
+  dayFlow?: { day: number; stage: 'report' | 'visitors' | 'residents' | 'operations' | 'events'; visited: Array<'report' | 'visitors' | 'residents' | 'operations' | 'events'>; morningBrief?: string[]; operationLocation?: 'front' | 'rooms' | 'kitchen' | 'storage' | 'generator' | 'clinic' | 'entrance' | null };
+  nightShift?: NightShift;
+  facilityState?: Partial<Record<'generator', FacilityState>>;
   lastNightPresentation?: { day:number; title:string; choice:string; moments:string[]; changes:Array<{resource:string;before:number;after:number}> };
   version: 15;
   phase: GamePhase;
@@ -833,4 +846,21 @@ export type GameState = {
   activeCutsceneId: CutsceneId | null;
   queuedCutsceneIds: CutsceneId[];
   seenCutsceneIds: CutsceneId[];
+};
+
+export type FacilityState = {
+  condition: number; maxCondition: number; lastWearDay: number;
+  wear?: number; automationLevel?: number; lastServicedDay?: number;
+  lastInspectedDay?: number; lastAutomationDay?: number;
+  activeProblem?: 'minor' | 'major' | null;
+};
+export type NightShift = {
+  day: number;
+  /** Legacy saves only; never used as an action budget. */
+  actions?: number;
+  elapsedMinutes?: number;
+  location?: 'front' | 'rooms' | 'kitchen' | 'storage' | 'generator' | 'clinic' | 'entrance';
+  completed: boolean;
+  tasks: Array<{ actionId: string; workerId: string | null; location: string }>;
+  lastWork?: { title: string; message: string; partsBefore: number; partsAfter: number; conditionBefore: number; conditionAfter: number };
 };

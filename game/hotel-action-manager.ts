@@ -60,7 +60,7 @@ export function getFacilityEconomy(state: GameState, available: Resources): { re
     const active = level ? facility.levels[level - 1] : null;
     return active ? [{ id: facility.id, active }] : [];
   });
-  let running = [...configured];
+  let running = configured.filter(item => !(state.flags.generator_outage_day === state.day && Number(item.active.upkeep?.fuel ?? 0) > 0));
   while (running.length) {
     const requested = totalFacilityUpkeep(running);
     const payable = subtractSaving(requested, getQuartermasterUpkeepSaving(state, requested));
@@ -112,17 +112,17 @@ export function canPerformHotelAction(state: GameState, actionId: HotelActionId)
   return state.actionPoints > 0 && canAfford(state.resources, action.cost);
 }
 
-export function performHotelAction(state: GameState, actionId: HotelActionId): ActionResult {
+export function performHotelAction(state: GameState, actionId: HotelActionId, spendActionPoint = true): ActionResult {
   const action = getHotelActionDefinition(state, actionId);
-  if (state.actionPoints < 1) return { state, ok: false, message: "오늘 사용할 행동 포인트가 없습니다." };
+  if (spendActionPoint && state.actionPoints < 1) return { state, ok: false, message: "오늘 사용할 행동 포인트가 없습니다." };
   if (!canAfford(state.resources, action.cost)) return { state, ok: false, message: "필요한 자원이 부족합니다." };
   const spent = spend(state.resources, action.cost);
   const guests = action.guestTrust ? state.guests.map((guest) => guest.checkedInDay !== null && guest.alive ? { ...guest, trust: clamp(guest.trust + action.guestTrust!) } : guest) : state.guests;
-  const unavailableRoom = actionId === "repair_hotel" ? [...state.rooms].filter((room) => room.status === "DAMAGED" || room.status === "LOCKED").sort((a, b) => a.roomCondition - b.roomCondition || a.roomNumber - b.roomNumber)[0] : null;
+  const unavailableRoom = actionId === "repair_hotel" ? [...state.rooms].filter((room) => !room.recovery && (room.status === "DAMAGED" || room.status === "LOCKED")).sort((a, b) => a.roomCondition - b.roomCondition || a.roomNumber - b.roomNumber)[0] : null;
   const rooms = unavailableRoom ? state.rooms.map((room) => room.roomNumber === unavailableRoom.roomNumber ? { ...room, status: "EMPTY" as const, roomCondition: 100, occupied: false, guestId: null, temporaryEffects: [] } : room) : state.rooms;
   const repairedSiege = actionId === "repair_hotel" && state.flags.hotel_siege_breached === true;
   const repairDetails = [unavailableRoom ? `${unavailableRoom.roomNumber}호 복구` : null, repairedSiege ? "공성 피해 복구" : null].filter(Boolean);
   const repairDetail = repairDetails.length ? ` · ${repairDetails.join(" · ")}` : "";
   const flags = repairedSiege ? { ...state.flags, hotel_siege_breached: false, hotel_siege_damage_repaired: true } : state.flags;
-  return { ok: true, message: `${action.name}${repairDetail} 완료`, state: { ...state, actionPoints: state.actionPoints - 1, guests, rooms, flags, resources: mergeNumbers<Resources>(spent, action.resources ?? {}), hotelStats: mergeNumbers<HotelStats>(state.hotelStats, action.stats ?? {}), reputations: mergeNumbers<Reputations>(state.reputations, action.reputation ?? {}), eventHistory: log(state, `낮 행동 · ${action.name}${repairDetail}`) } };
+  return { ok: true, message: `${action.name}${repairDetail} 완료`, state: { ...state, actionPoints: state.actionPoints - Number(spendActionPoint), guests, rooms, flags, resources: mergeNumbers<Resources>(spent, action.resources ?? {}), hotelStats: mergeNumbers<HotelStats>(state.hotelStats, action.stats ?? {}), reputations: mergeNumbers<Reputations>(state.reputations, action.reputation ?? {}), eventHistory: log(state, `${spendActionPoint ? '낮 행동' : '야간 작업'} · ${action.name}${repairDetail}`) } };
 }

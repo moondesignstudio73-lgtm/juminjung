@@ -1,4 +1,5 @@
 import type { Guest, Room } from "./types.ts";
+import { INITIAL_OPEN_ROOMS, roomRecovery, ROOM_DAMAGE } from './community-data.ts';
 
 const ROOM_STATUS_LABELS: Record<Room["status"], string> = {
   EMPTY: "비어 있음",
@@ -7,7 +8,7 @@ const ROOM_STATUS_LABELS: Record<Room["status"], string> = {
   LOCKED: "봉쇄",
 };
 
-export function createRooms(): Room[] {
+export function createRooms({ restored = false }: { restored?: boolean } = {}): Room[] {
   return [1, 2, 3].flatMap((floor) =>
     Array.from({ length: 10 }, (_, x) => ({
       roomNumber: floor * 100 + x + 1,
@@ -15,8 +16,9 @@ export function createRooms(): Room[] {
       position: { x, y: floor - 1 },
       occupied: false,
       guestId: null,
-      roomCondition: 100,
-      status: "EMPTY" as const,
+      roomCondition: restored || INITIAL_OPEN_ROOMS.includes(floor * 100 + x + 1) ? 100 : 20,
+      status: restored || INITIAL_OPEN_ROOMS.includes(floor * 100 + x + 1) ? "EMPTY" as const : "LOCKED" as const,
+      recovery: restored || INITIAL_OPEN_ROOMS.includes(floor * 100 + x + 1) ? undefined : roomRecovery(floor * 100 + x + 1),
       temporaryEffects: [],
       permanentEffects: [],
     })),
@@ -28,7 +30,7 @@ export function isRoomSelectable(room: Room): boolean {
 }
 
 export function getRoomOccupantLabel(room: Room, guests: Guest[]): string {
-  if (!room.occupied) return ROOM_STATUS_LABELS[room.status];
+  if (!room.occupied) return room.recovery && !room.recovery.restored ? ROOM_DAMAGE[room.recovery.damage].label : ROOM_STATUS_LABELS[room.status];
   if (!room.guestId) return "사용 중";
   const guest = guests.find((candidate) => candidate.id === room.guestId);
   return guest?.name.trim().split(/\s+/)[0] || "사용 중";

@@ -1,3 +1,4 @@
+import { communityProfile } from './community-data.ts';
 import type { AuraDefinition, Guest, GuestSkills, Resources } from './types.ts';
 
 type Range = [number, number];
@@ -293,6 +294,7 @@ const JOBS: JobProfile[] = [
   },
 ];
 
+JOBS.push({...JOBS[0],role:'배관공'});
 const NAMES = {
   여성: [
     '에바 모건',
@@ -358,14 +360,6 @@ const SKILL_LABELS: Record<keyof GuestSkills, string> = {
   scavenge: '탐색',
   social: '대화',
 };
-const stayDuration = (random: () => number) => {
-  const roll = random();
-  if (roll < 0.25) return 1;
-  if (roll < 0.5) return 2;
-  if (roll < 0.75) return 3;
-  if (roll < 0.9) return random() < 0.5 ? 4 : 5;
-  return random() < 0.5 ? 6 : 7;
-};
 
 export function createNormalVisitor(
   saveSeed: number,
@@ -379,10 +373,11 @@ export function createNormalVisitor(
     0;
   const random = seeded(identitySeed);
   const tutorial = day === 1 && slot === 0;
+  const engineerTutorial = day === 5 && slot === 0;
   const rolledGender = random() < 0.5 ? '여성' : '남성';
-  const gender = tutorial ? '남성' : rolledGender;
+  const gender = tutorial || engineerTutorial ? '남성' : rolledGender;
   const rolledProfile = pick(JOBS, random);
-  const profile = tutorial ? JOBS[1] : rolledProfile;
+  const profile = tutorial ? JOBS[1] : engineerTutorial ? JOBS[0] : rolledProfile;
   const age = between([profile.minAge, profile.maxAge], random);
   const rare = random() < 0.04;
   const skills = Object.fromEntries(
@@ -402,7 +397,7 @@ export function createNormalVisitor(
   const stress = clamp(between([28, Math.min(88, 48 + day)], random));
   const illnessRoll = random();
   const infectionState: Guest['infectionState'] =
-    illnessRoll < Math.min(0.08, day * 0.002)
+    engineerTutorial ? 'HEALTHY' : illnessRoll < Math.min(0.08, day * 0.002)
       ? 'INFECTED_SUSPECTED'
       : illnessRoll < 0.18
         ? 'INJURED'
@@ -410,9 +405,9 @@ export function createNormalVisitor(
           ? 'SICK'
           : 'HEALTHY';
   const rolledName = pick(NAMES[gender], random);
-  const name = tutorial ? '리암 모건' : rolledName;
+  const name = tutorial ? '리암 모건' : engineerTutorial ? '에단 브룩스' : rolledName;
   const id = `normal-${day}-${slot}-${identitySeed.toString(36)}`;
-  const nights = stayDuration(random);
+  const nights = 0; // Compatibility fields only; residents do not expire.
   const portraitTemplate = pick(PORTRAITS[gender], random);
   const riskLevel = clamp(
     between([12, Math.min(82, 38 + day)], random) +
@@ -463,14 +458,14 @@ export function createNormalVisitor(
     {
       id: `${id}-resolution`,
       stage: 'RESOLUTION',
-      title: '떠날 것인가 남을 것인가',
+      title: '함께 살아갈 자리',
       completed: false,
     },
   ];
-  return {
+  const visitor: Guest = {
     id,
     npcType: 'NORMAL',
-    residency: 'TEMPORARY',
+    residency: 'RESIDENT',
     storyLockedResident: false,
     revisitPolicy: 'ALWAYS',
     generated: true,
@@ -504,7 +499,8 @@ export function createNormalVisitor(
             : '감염 의심',
     introDialogue: tutorial
       ? '“리암 모건입니다. 간호사였어요. 방을 내어주시면 가까이 있는 부상자들을 밤마다 돌보겠습니다.”'
-      : `“${day}일째 길 위에 있었습니다. ${nights}박만 버티게 해주시면 가진 물자를 내놓겠습니다.”`,
+      : engineerTutorial ? '“에단 브룩스입니다. 발전기를 고치던 정비공이에요. 이곳 불빛도 떨리는군요. 방을 내어주신다면 오늘 밤 한번 살펴보겠습니다.”'
+      : `“${day}일째 길 위에 있었습니다. 이곳에 머물며 함께 살아가고 싶습니다. 가진 물자도 나누겠습니다.”`,
     negotiationDialogue:
       '“전부는 어렵습니다. 그래도 창고 바닥까지 털어 보겠습니다.”',
     questions: [
@@ -574,6 +570,7 @@ export function createNormalVisitor(
         }
       : {}),
   };
+  return {...visitor,community:communityProfile(visitor)};
 }
 
 export const NORMAL_VISITOR_JOBS = JOBS.map(({ role, minAge, maxAge }) => ({

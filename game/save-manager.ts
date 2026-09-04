@@ -1,5 +1,10 @@
 import { recalculateRoomEffects } from './aura-effect-manager.ts';
 import { normalizeGamePhase } from './game-phase.ts';
+import { normalizeNightWork } from './night-work-manager.ts';
+import { normalizeDayFlow } from './day-flow-manager.ts';
+import { normalizeCommunity } from './community-manager.ts';
+import { ROOM_DAMAGE, roomRecovery } from './community-data.ts';
+import { saveOverview } from './ui-guidance.ts';
 import { createEventFlags } from './event-manager.ts';
 import { createGuests } from './guest-data.ts';
 import { createResources } from './resource-manager.ts';
@@ -35,6 +40,7 @@ export const MANUAL_SAVE_SLOTS = [1, 2, 3] as const;
 const manualSaveKey = (slot: number) => `juju-hotel-manual-save-${slot}`;
 
 export type ManualSaveSummary = {
+  residents?:number; open?:number; occupied?:number; event?:string;
   slot: number;
   day: number | null;
   savedAt: number | null;
@@ -190,11 +196,12 @@ function normalizeOccupancy(
     const guestId = occupiedByRoom.get(room.roomNumber) ?? null;
     return {
       ...room,
+      recovery: saved ? saved.recovery && ROOM_DAMAGE[saved.recovery.damage] ? {...roomRecovery(room.roomNumber),damage:saved.recovery.damage,restored:saved.status==='EMPTY'||saved.status==='OCCUPIED'} : undefined : room.recovery,
       ...(saved
         ? {
             roomCondition: normalizeRoomCondition(
               saved.roomCondition,
-              room.roomCondition,
+              saved.status === 'EMPTY' || saved.status === 'OCCUPIED' ? 100 : room.roomCondition,
             ),
             permanentEffects: saved.permanentEffects ?? [],
           }
@@ -560,7 +567,7 @@ export function restoreGameState(raw: string | null): GameState {
       seenCutsceneIds,
     } as GameState;
     return {
-      ...state,
+      ...normalizeCommunity(normalizeDayFlow(normalizeNightWork(state))),
       rooms: recalculateRoomEffects(state.rooms, state.guests),
     };
   } catch {
@@ -577,9 +584,15 @@ export function serializeGameState(state: GameState): string {
 
 export function loadBrowserGame(): GameState {
   if (typeof window === 'undefined') return createInitialGameState();
-  const current = window.localStorage.getItem(SAVE_KEY);
+  let current: string | null;
+  let legacy: string | null;
+  try {
+    current = window.localStorage.getItem(SAVE_KEY);
+    legacy = current ? null : window.localStorage.getItem(LEGACY_SAVE_KEY);
+  } catch {
+    return createInitialGameState();
+  }
   if (current) return restoreGameState(current);
-  const legacy = window.localStorage.getItem(LEGACY_SAVE_KEY);
   if (!legacy) return createInitialGameState();
   try {
     const old = JSON.parse(legacy) as Partial<GameState>;
@@ -613,25 +626,27 @@ export function loadBrowserGame(): GameState {
   }
 }
 
-export function saveBrowserGame(state: GameState): void {
-  if (typeof window !== 'undefined')
-    window.localStorage.setItem(SAVE_KEY, serializeGameState(state));
+export function saveBrowserGame(state: GameState): boolean {
+  if(typeof window==='undefined')return false;
+  try { window.localStorage.setItem(SAVE_KEY, serializeGameState(state)); notifySaved(true); return true; }
+  catch { notifySaved(false); return false; }
 }
+function notifySaved(ok:boolean){if(typeof window!=='undefined'&&typeof window.dispatchEvent==='function'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('juju:save-result',{detail:{ok}}));}
 
 export function saveManualGame(
   slot: number,
   state: GameState,
   savedAt = Date.now(),
-): void {
+): boolean {
   if (
     typeof window === 'undefined' ||
     !MANUAL_SAVE_SLOTS.includes(slot as 1 | 2 | 3)
   )
-    return;
-  window.localStorage.setItem(
+    return false;
+  try { window.localStorage.setItem(
     manualSaveKey(slot),
     JSON.stringify({ savedAt, state: JSON.parse(serializeGameState(state)) }),
-  );
+  ); return true; } catch { return false; }
 }
 
 export function loadManualGame(slot: number): GameState | null {
@@ -640,11 +655,12 @@ export function loadManualGame(slot: number): GameState | null {
     !MANUAL_SAVE_SLOTS.includes(slot as 1 | 2 | 3)
   )
     return null;
-  const raw = window.localStorage.getItem(manualSaveKey(slot));
-  if (!raw) return null;
   try {
+    const raw = window.localStorage.getItem(manualSaveKey(slot));
+    if (!raw) return null;
     const record = JSON.parse(raw) as { state?: unknown };
-    return record.state ? restoreGameState(JSON.stringify(record.state)) : null;
+    const state = record.state as Partial<GameState> | undefined;
+    return state && typeof state.day === 'number' && typeof state.phase === 'string' && Array.isArray(state.rooms) && Array.isArray(state.guests) ? restoreGameState(JSON.stringify(state)) : null;
   } catch {
     return null;
   }
@@ -667,6 +683,7 @@ export function getManualSaveSummaries(): ManualSaveSummary[] {
         state?: Partial<GameState>;
       };
       return {
+        ...saveOverview(record.state??{}),
         slot,
         day: Number(record.state?.day ?? 0),
         savedAt: Number(record.savedAt ?? 0),

@@ -13,7 +13,7 @@ export const PRIORITY_RATION_SEVERE_STRESS_DELTA = 8;
 export const VULNERABLE_RATION_PROTECTION_DESCRIPTION = `취약 주민은 제한 배급 Stress +${PRIORITY_RATION_LIMITED_STRESS_DELTA}, 극단 절약 Stress +${PRIORITY_RATION_SEVERE_STRESS_DELTA} · Health 보호`;
 
 export const RATION_POLICIES: ReadonlyArray<{ id: FoodRationPolicy; name: string; description: string }> = [
-  { id: "NORMAL", name: "정상 배급", description: "1인 1식 · Stress -5" },
+  { id: "NORMAL", name: "정상 배급", description: "개인별 기본 수요 지급 · Stress -5" },
   { id: "LIMITED", name: "제한 배급", description: `식량 30% 절약 · Stress +5 · 보호 원칙 활성 시 취약 주민 +${PRIORITY_RATION_LIMITED_STRESS_DELTA}` },
   { id: "SEVERE", name: "극단 절약", description: `식량 60% 절약 · Stress +15 · Health -3 · 보호 원칙 활성 시 취약 주민 +${PRIORITY_RATION_SEVERE_STRESS_DELTA} · Health 보호` },
 ];
@@ -28,7 +28,8 @@ export function getPowerCapacity(fuel: number, microgridActive = false): number 
   return 0;
 }
 
-export function getActivePowerCircuits(state: Pick<GameState, "resources" | "flags" | "powerAllocation">): PowerCircuitId[] {
+export function getActivePowerCircuits(state: Pick<GameState, "resources" | "flags" | "powerAllocation"> & Partial<Pick<GameState, 'day'>>): PowerCircuitId[] {
+  if (state.day !== undefined && state.flags.generator_outage_day === state.day) return [];
   const capacity = getPowerCapacity(state.resources.fuel, state.flags.generator_network_stable === true);
   return POWER_CIRCUITS.map(({ id }) => id).filter((id) => state.powerAllocation.includes(id)).slice(0, capacity);
 }
@@ -79,7 +80,7 @@ export function applySurvivalGuestEffects(guest: Guest, ration: ReturnType<typeo
 
 export function calculatePowerPlan(state: GameState, occupiedGuests: number) {
   const microgridActive = state.flags.generator_network_stable === true;
-  const capacity = getPowerCapacity(state.resources.fuel, microgridActive);
+  const capacity = state.flags.generator_outage_day === state.day ? 0 : getPowerCapacity(state.resources.fuel, microgridActive);
   const activeCircuits = getActivePowerCircuits(state);
   const securityPowered = activeCircuits.includes("SECURITY");
   const clinicPowered = activeCircuits.includes("CLINIC");

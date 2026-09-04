@@ -38,7 +38,7 @@ void test('DAY 1 tutorial is Liam with Basic Care across seeds', () => {
 });
 void test('recommendations use real topology; other interior rooms have equal reach', () => {
   const guest = createNormalVisitor(1, 1, 0),
-    rooms = createRooms();
+    rooms = createRooms({ restored: true });
   assert.deepEqual(getRecommendedRooms(guest, rooms), [205, 206]);
   const coverage = (n: number) =>
     getAffectedRoomNumbers(rooms, { ...guest, currentRoomNumber: n });
@@ -54,7 +54,7 @@ void test('recommendations use real topology; other interior rooms have equal re
 });
 void test('non-recommended choices and moving remain legal; occupied suggestions disappear', () => {
   const guest = createNormalVisitor(1, 1, 0),
-    rooms = createRooms();
+    rooms = createRooms({ restored: true });
   const assigned = assignGuest(rooms, 101, guest.id);
   assert.equal(assigned[0].guestId, guest.id);
   assert.match(getPlacementFeedback(guest, rooms[0], rooms), /배치 가능합니다/);
@@ -70,7 +70,7 @@ void test('Basic Care preview matches actual room recovery effects, including ot
     currentRoomNumber: 205,
     status: 'STAYING' as const,
   };
-  const rooms = recalculateRoomEffects(createRooms(), [guest]);
+  const rooms = recalculateRoomEffects(createRooms({ restored: true }), [guest]);
   for (const room of rooms) {
     assert.equal(
       getInjuryRecovery(room),

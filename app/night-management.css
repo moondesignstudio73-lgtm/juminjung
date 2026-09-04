@@ -1,0 +1,307 @@
+.night-hotel {
+  --night-brass: #c69b55;
+  --font-display: 'Noto Serif KR', Georgia, serif;
+  --font-body: 'Pretendard', 'Noto Sans KR', sans-serif;
+  color: #ede1ca;
+  background: #0b0d0b;
+  min-height: 100vh;
+  padding: 36px clamp(18px, 4vw, 64px) 28px;
+  font-family: var(--font-body);
+}
+.night-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding-right: 125px;
+  border-bottom: 1px solid #665637;
+  padding-bottom: 20px;
+}
+.night-heading p {
+  color: var(--night-brass);
+  margin: 0 0 8px;
+}
+.night-heading h1 {
+  font: 500 clamp(24px, 3vw, 38px) var(--font-display);
+  margin: 0;
+}
+.night-budget {
+  display: flex;
+  flex-direction: column;
+  min-width: 100px;
+}
+.night-budget strong {
+  font-size: 30px;
+  color: var(--night-brass);
+}
+.night-budget small {
+  display: block;
+  font-size: 16px;
+  color: #b6b5a4;
+}
+.night-objective {
+  margin: 20px 0;
+  max-width: 80ch;
+  line-height: 1.7;
+}
+.night-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.85fr) minmax(400px, 1.3fr);
+  gap: 32px;
+  align-items: start;
+}
+.night-hotel-map {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px;
+  background: #665637;
+  padding: 3px;
+  border: 1px solid #665637;
+  position: sticky;
+  top: 20px;
+}
+.night-hotel-map .hotel-location {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  white-space: normal;
+  text-align: left;
+  padding: 20px;
+  height: auto;
+  min-height: 108px;
+  gap: 7px;
+  border-radius: 0;
+  background: #161c17;
+  color: #ede1ca;
+}
+.night-hotel-map .hotel-location[aria-pressed='true'] {
+  background: #31372b;
+  box-shadow: inset 4px 0 var(--night-brass);
+}
+.hotel-location svg {
+  color: var(--night-brass);
+}
+.hotel-location span {
+  font-size: 12px;
+  color: #b6b5a4;
+}
+.night-hotel-map .location-rooms {
+  grid-column: 1/-1;
+  order: -2;
+}
+.night-hotel-map .location-front {
+  order: 2;
+}
+.night-hotel-map:has(.location-clinic):not(:has(.location-entrance))
+  .location-front,
+.night-hotel-map:not(:has(.location-kitchen)) .location-front {
+  grid-column: 1 / -1;
+}
+.night-hotel-map .location-entrance {
+  order: 3;
+}
+.night-map-note {
+  grid-column: 1/-1;
+  background: #0b0d0b;
+  margin: 0;
+  padding: 18px;
+  color: #b6b5a4;
+  font-size: 12px;
+  order: 4;
+}
+.night-location-detail {
+  background: #171b16;
+  border-top: 2px solid var(--night-brass);
+  padding: 24px;
+  min-height: 370px;
+  min-width: 0;
+}
+.night-location-detail h2 {
+  font: 500 28px var(--font-display);
+  margin: 0 0 20px;
+}
+.night-location-detail h3 {
+  font-size: 17px;
+  color: var(--night-brass);
+  margin: 20px 0 10px;
+}
+.night-location-detail p {
+  line-height: 1.75;
+  max-width: 70ch;
+  margin: 12px 0;
+}
+.night-location-detail button {
+  height: auto;
+  min-height: 42px;
+  white-space: normal;
+  text-align: left;
+  margin: 4px 4px 4px 0;
+  border-color: #665637;
+  border-radius: 3px;
+}
+.night-location-detail button[aria-pressed='true'] {
+  border-color: var(--night-brass);
+  background: #343829;
+}
+.night-help,
+.night-location-detail small {
+  display: block;
+  line-height: 1.6;
+  color: #b6b5a4;
+}
+.generator-gauge {
+  display: grid;
+  gap: 8px;
+  border-left: 3px solid var(--night-brass);
+  padding-left: 18px;
+}
+.generator-gauge strong {
+  font-size: 42px;
+  color: var(--night-brass);
+}
+.generator-gauge strong small {
+  display: inline;
+  font-size: 16px;
+}
+.generator-gauge.is-critical {
+  border-color: #bd7462;
+}
+.generator-gauge.is-critical strong {
+  color: #db9982;
+}
+.night-hotel meter {
+  display: block;
+  width: 100%;
+  height: 15px;
+  accent-color: #c69b55;
+}
+.night-hotel meter::-webkit-meter-bar {
+  background: #30362c;
+  border: 1px solid #665637;
+}
+.night-hotel meter::-webkit-meter-optimum-value {
+  background: #b19759;
+}
+.night-hotel meter::-webkit-meter-suboptimum-value {
+  background: #b19759;
+}
+.night-hotel meter::-webkit-meter-even-less-good-value {
+  background: #b46a55;
+}
+.night-hotel meter::-moz-meter-bar {
+  background: #b19759;
+}
+.night-workers {
+  display: grid;
+  gap: 12px;
+}
+.night-worker {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid #454734;
+}
+.night-worker img {
+  width: 64px;
+  height: 82px;
+  object-fit: cover;
+  object-position: top;
+  background: #0b0d0b;
+}
+.night-worker > div {
+  min-width: 0;
+}
+.night-work-result {
+  border-left: 2px solid var(--night-brass);
+  padding-left: 18px;
+  margin-top: 22px;
+}
+.night-rooms {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+.night-rooms button {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  gap: 2px;
+}
+.night-rooms small {
+  font-size: 10px;
+}
+.night-actions {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.night-stock div {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  align-items: center;
+  margin: 22px 0;
+}
+.night-stock dd {
+  margin: 0;
+  font-size: 22px;
+}
+.night-finish {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  border-top: 1px solid #665637;
+  padding-top: 20px;
+  margin-top: 24px;
+}
+.night-finish > div {
+  width: 100%;
+}
+.night-finish button {
+  height: auto;
+  min-height: 48px;
+  padding: 12px 24px;
+  white-space: normal;
+  margin: 4px;
+}
+.night-finish .night-main-cta {
+  background: #c69b55;
+  color: #10150f;
+  font-size: 17px;
+}
+.night-hotel button:focus-visible {
+  outline: 2px solid #e8c98d;
+  outline-offset: 3px;
+}
+@media (max-width: 800px) {
+  .night-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .night-hotel-map {
+    position: static;
+  }
+  .night-hotel-map .hotel-location {
+    min-height: 76px;
+    padding: 10px;
+  }
+  .night-heading {
+    flex-wrap: wrap;
+    padding-right: 0;
+    padding-top: 16px;
+    align-items: flex-start;
+  }
+  .night-heading h1 {
+    font-size: 25px;
+  }
+  .night-location-detail {
+    padding: 18px;
+  }
+  .night-finish .night-main-cta {
+    width: 100%;
+    margin: 0;
+  }
+}

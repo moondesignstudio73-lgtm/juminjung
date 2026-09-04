@@ -1,3 +1,4 @@
+import { createEstablishedHotel } from './established-hotel.ts';
 import test from "node:test";
 import assert from "node:assert/strict";
 import { resolveDay } from "../game/day-manager.ts";
@@ -9,14 +10,14 @@ import { getMonsterCodexState } from "../game/monster-codex-manager.ts";
 import { getDailyVisitorCountBreakdown } from "../game/visitor-queue-manager.ts";
 
 function withGuest() {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.day = 12;
   state.guests[0] = { ...state.guests[0], status: "STAYING", currentRoomNumber: 301, checkedInDay: 1 };
   return state;
 }
 
 function withRelationshipPair(sourceId: string, targetId: string, sourceRoom = 301, targetRoom = 310) {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.day = 16;
   state.guests = state.guests.map((guest) => guest.id === sourceId ? { ...guest, status: "STAYING", currentRoomNumber: sourceRoom, checkedInDay: 1 } : guest.id === targetId ? { ...guest, status: "STAYING", currentRoomNumber: targetRoom, checkedInDay: 1 } : guest);
   return state;
@@ -29,7 +30,7 @@ test("식량이 투숙객 수보다 적으면 배급실 사건이 선택된다",
 });
 
 test("공동 식당이 줄인 실제 수요만큼 식량이 있으면 배급 위기를 만들지 않는다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.guests = state.guests.map((guest,index)=>index<2?{...guest,status:"STAYING",currentRoomNumber:101+index,checkedInDay:1}:guest);
   state.resources.food=1;
   assert.equal(selectNightEvent(state).id,"food_shortage");
@@ -38,7 +39,7 @@ test("공동 식당이 줄인 실제 수요만큼 식량이 있으면 배급 위
 });
 
 test("보존식 연구가 줄인 실제 수요만큼 식량이 있으면 배급 위기를 만들지 않는다", () => {
-  const state=createInitialGameState();
+  const state=createEstablishedHotel();
   state.guests=state.guests.map((guest,index)=>index<3?{...guest,status:"STAYING",currentRoomNumber:101+index,checkedInDay:1}:guest);
   state.resources.food=2;
   assert.equal(selectNightEvent(state).id,"food_shortage");
@@ -47,20 +48,20 @@ test("보존식 연구가 줄인 실제 수요만큼 식량이 있으면 배급 
 });
 
 test("낮은 연료는 발전기 고장 사건을 발생시킨다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.resources.fuel = 10;
   assert.equal(selectNightEvent(state).id, "generator_failure");
 });
 
 test("안정화된 마이크로그리드는 일반 저연료 발전기 고장을 억제한다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.resources.fuel = 0;
   state.flags.generator_network_stable = true;
   assert.equal(selectNightEvent(state).id, "quiet_watch");
 });
 
 test("보유 자원이 부족한 야간 선택지는 비활성화된다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.resources.fuel = 1;
   const event = selectNightEvent(state);
   const reserve = event.choices.find((choice) => choice.id === "reserve")!;
@@ -92,7 +93,7 @@ test("철문 침입 정산은 첫 괴물 목격 컷신을 한 번만 예약한�
 });
 
 test("NPC 스토리 전용 컷신은 일반 야간 사건에서 잘못 예약되지 않는다", () => {
-  const queued = queueNightEventCutscene(createInitialGameState(), "quiet_watch", "listen", 2);
+  const queued = queueNightEventCutscene(createEstablishedHotel(), "quiet_watch", "listen", 2);
   assert.equal(queued.activeCutsceneId, null);
 });
 
@@ -297,7 +298,7 @@ test("호텔 공성 결과별 컷신과 해결 상태는 저장 복원 후 한 �
 });
 
 test("DAY 1 정산은 첫날 밤 컷신을 한 번만 예약한다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.day = 1;
   state.phase = "night";
   state.selectedNightEventId = "quiet_watch";
@@ -311,12 +312,12 @@ test("DAY 1 정산은 첫날 밤 컷신을 한 번만 예약한다", () => {
 });
 
 test("첫날 밤 컷신은 quiet_watch가 아닌 사건 뒤에도 날짜로 예약된다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   assert.equal(queueNightEventCutscene(state, "generator_failure", "reserve", 1).activeCutsceneId, "first_night");
 });
 
 test("발전기를 포기한 선택은 첫날에도 전용 정전 컷신을 우선한다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   const blackout = queueNightEventCutscene(state, "generator_failure", "blackout", 1);
   assert.equal(blackout.activeCutsceneId, "generator_blackout");
   const dismissed = dismissCutscene(blackout);
@@ -325,12 +326,12 @@ test("발전기를 포기한 선택은 첫날에도 전용 정전 컷신을 우�
 });
 
 test("DAY 1에 범용 컷신이 겹쳐도 사건 전용 장면이 먼저 선택된다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   assert.equal(queueNightEventCutscene(state, "perimeter_breach", "fight", 1).activeCutsceneId, "guest_attacked");
 });
 
 test("철문 침입에 맞서 싸우면 전용 피습 컷신이 우선되고 이후 첫 목격 장면도 남는다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   const attacked = queueNightEventCutscene(state, "perimeter_breach", "fight", 12);
   assert.equal(attacked.activeCutsceneId, "guest_attacked");
   const dismissed = dismissCutscene(attacked);
@@ -338,7 +339,7 @@ test("철문 침입에 맞서 싸우면 전용 피습 컷신이 우선되고 이
 });
 
 test("피난민 수용과 거절은 같은 사건에서 서로 다른 결과 컷신을 예약한다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   assert.equal(queueNightEventCutscene(state, "refugee_wave", "shelter", 7).activeCutsceneId, null);
   assert.equal(queueNightEventCutscene(state, "refugee_wave", "shelter", 8).activeCutsceneId, "refugees_sheltered");
   assert.equal(queueNightEventCutscene(state, "refugee_wave", "shelter", 9).activeCutsceneId, "refugees_sheltered");
@@ -423,7 +424,7 @@ test("207호 사건으로 사용할 수 없어진 객실 상태는 저장 복원
 });
 
 test("207호 컷신은 사건 자체의 DAY 조건을 따르고 완료 날짜 경계에서 누락되지 않는다", () => {
-  assert.equal(queueNightEventCutscene(createInitialGameState(), "room_body_discovery", "investigate_body", 9).activeCutsceneId, "room_body_discovery");
+  assert.equal(queueNightEventCutscene(createEstablishedHotel(), "room_body_discovery", "investigate_body", 9).activeCutsceneId, "room_body_discovery");
 });
 
 test("아버지 기록실 또는 Lily 문서 경로를 얻은 플레이만 DAY 20부터 91.3MHz 신호를 수신한다", () => {
@@ -441,7 +442,7 @@ test("아버지 기록실 또는 Lily 문서 경로를 얻은 플레이만 DAY 2
 });
 
 test("Lily의 공개 방송은 DAY 16부터 한 번만 생존자 응답 사건을 연다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.flags.lily_documents_decoded = true;
   state.flags.lily_truth_broadcast = true;
   state.day = 15;
@@ -456,7 +457,7 @@ test("Lily의 공개 방송은 DAY 16부터 한 번만 생존자 응답 사건�
 });
 
 test("아버지의 91.3MHz 신호가 겹치면 공개 방송 응답보다 먼저 처리된다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.day = 20;
   state.flags.lily_documents_decoded = true;
   state.flags.lily_truth_broadcast = true;
@@ -467,7 +468,7 @@ test("아버지의 91.3MHz 신호가 겹치면 공개 방송 응답보다 먼저
 });
 
 test("되돌아온 증언을 검증하면 연료를 쓰고 보강 단서·위협·진행도를 함께 남긴다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.day = 16;
   state.flags.lily_documents_decoded = true;
   state.flags.lily_truth_broadcast = true;
@@ -495,7 +496,7 @@ test("되돌아온 증언을 검증하면 연료를 쓰고 보강 단서·위협
 });
 
 test("연료가 없으면 증언 검증은 막히지만 주파수 폐쇄는 위협을 낮추고 저장된다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.day = 16;
   state.flags.lily_documents_decoded = true;
   state.flags.lily_truth_broadcast = true;
@@ -671,7 +672,7 @@ test("실제 철문 침입 위기는 아버지 귀환 후보보다 먼저 처리
 });
 
 test("발전기 정전 실제 정산은 호텔 상태·치안을 낮추고 전용 컷신과 후속 플래그를 남긴다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.day = 4;
   state.phase = "night";
   state.resources.fuel = 10;
@@ -685,7 +686,7 @@ test("발전기 정전 실제 정산은 호텔 상태·치안을 낮추고 전�
 });
 
 test("피난민 선택 결과 컷신은 실제 DAY 정산의 선택과 플래그를 함께 반영한다", () => {
-  const shelter = createInitialGameState();
+  const shelter = createEstablishedHotel();
   shelter.day = 8;
   shelter.phase = "night";
   shelter.worldState = "UNREST";
@@ -696,7 +697,7 @@ test("피난민 선택 결과 컷신은 실제 DAY 정산의 선택과 플래그
   assert.equal(sheltered.flags.refugees_sheltered, true);
   assert.equal(sheltered.flags.refugees_denied, false);
 
-  const deny = createInitialGameState();
+  const deny = createEstablishedHotel();
   deny.day = 8;
   deny.phase = "night";
   deny.worldState = "UNREST";
@@ -709,14 +710,14 @@ test("피난민 선택 결과 컷신은 실제 DAY 정산의 선택과 플래그
 });
 
 test("본 피난민 결과 컷신은 저장 복원 뒤 같은 선택에서 다시 예약되지 않는다", () => {
-  const queued = queueNightEventCutscene(createInitialGameState(), "refugee_wave", "shelter", 8);
+  const queued = queueNightEventCutscene(createEstablishedHotel(), "refugee_wave", "shelter", 8);
   const restored = restoreGameState(serializeGameState(dismissCutscene(queued)));
   assert.deepEqual(restored.seenCutsceneIds, ["refugees_sheltered"]);
   assert.equal(queueNightEventCutscene(restored, "refugee_wave", "shelter", 12), restored);
 });
 
 test("DAY 2 이후에는 첫날 밤 컷신을 뒤늦게 재생하지 않는다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.day = 5;
   state.phase = "night";
   state.selectedNightEventId = "quiet_watch";
@@ -725,7 +726,7 @@ test("DAY 2 이후에는 첫날 밤 컷신을 뒤늦게 재생하지 않는다",
 });
 
 test("피난민을 받아들이면 자원을 소비하고 평판·위협·플래그가 변한다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.day = 8;
   state.worldState = "UNREST";
   const result = applyNightChoice(state, "refugee_wave", "shelter");
@@ -738,7 +739,7 @@ test("피난민을 받아들이면 자원을 소비하고 평판·위협·플래
 });
 
 test("Victor의 공개 벙커망은 피난민 수용 UI와 정산의 비용·위협을 함께 낮춘다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.day = 8;
   state.worldState = "UNREST";
   state.flags.bunker_network_open = true;
@@ -761,7 +762,7 @@ test("Victor의 공개 벙커망은 피난민 수용 UI와 정산의 비용·위
 });
 
 test("공개 벙커 수용은 실제 완화 비용이 부족하면 막히고 독점 경로에는 적용되지 않는다", () => {
-  const publicState = createInitialGameState();
+  const publicState = createEstablishedHotel();
   publicState.day = 8;
   publicState.worldState = "UNREST";
   publicState.flags.bunker_network_open = true;
@@ -772,7 +773,7 @@ test("공개 벙커 수용은 실제 완화 비용이 부족하면 막히고 독
   assert.equal(canChooseNightChoice(publicState, publicChoice), false);
   assert.throws(() => applyNightChoice(publicState, "refugee_wave", "shelter"), /자원이 부족/);
 
-  const monopolyState = createInitialGameState();
+  const monopolyState = createEstablishedHotel();
   monopolyState.day = 8;
   monopolyState.worldState = "UNREST";
   monopolyState.flags.victor_monopoly_alliance = true;
@@ -788,7 +789,7 @@ test("공개 벙커 수용은 실제 완화 비용이 부족하면 막히고 독
 });
 
 test("저장 복원 뒤에도 공개 벙커 피난민 완화 계약이 유지된다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.day = 8;
   state.worldState = "UNREST";
   state.flags.bunker_network_open = true;
@@ -799,19 +800,19 @@ test("저장 복원 뒤에도 공개 벙커 피난민 완화 계약이 유지된
 });
 
 test("피난민 거절과 발전기 정전은 후속 방문 장면 플래그를 남긴다", () => {
-  const refugeeState = createInitialGameState();
+  const refugeeState = createEstablishedHotel();
   refugeeState.day = 8;
   refugeeState.worldState = "UNREST";
   const denied = applyNightChoice(refugeeState, "refugee_wave", "deny").state;
   assert.equal(denied.flags.refugees_denied, true);
   assert.equal(denied.flags.refugees_sheltered, false);
-  const generatorState = createInitialGameState();
+  const generatorState = createEstablishedHotel();
   generatorState.resources.fuel = 10;
   assert.equal(applyNightChoice(generatorState, "generator_failure", "blackout").state.flags.generator_blackout, true);
 });
 
 test("야간 선택은 정산 로그와 마지막 사건으로 저장되고 임시 선택은 초기화된다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.phase = "night";
   state.selectedNightEventId = "quiet_watch";
   state.selectedNightChoiceId = "rest";
@@ -823,7 +824,7 @@ test("야간 선택은 정산 로그와 마지막 사건으로 저장되고 임�
 });
 
 test("Save v15는 야간 선택과 진행 중인 컷신을 복원한다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.selectedNightEventId = "quiet_watch";
   state.selectedNightChoiceId = "patrol";
   state.activeCutsceneId = "first_monster_sighting";
@@ -835,7 +836,7 @@ test("Save v15는 야간 선택과 진행 중인 컷신을 복원한다", () => 
 });
 
 test("손상 저장의 알 수 없는 컷신과 비배열 시청 기록은 안전하게 제거된다", () => {
-  const raw = JSON.parse(serializeGameState(createInitialGameState()));
+  const raw = JSON.parse(serializeGameState(createEstablishedHotel()));
   raw.activeCutsceneId = "unknown_scene";
   raw.seenCutsceneIds = "first_monster_sighting";
   const restored = restoreGameState(JSON.stringify(raw));
@@ -879,7 +880,7 @@ test("의료진 공동 진료는 배치 관계와 의약품을 실제 NPC 회복
 });
 
 test("야간 사건은 오래된 사건 ID와 감당할 수 없는 선택을 대체 적용하지 않는다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.resources.fuel = 1;
   assert.throws(() => applyNightChoice(state, "quiet_watch", "rest"), /일치하지 않습니다/);
   assert.throws(() => applyNightChoice(state, "generator_failure", "reserve"), /자원이 부족합니다/);

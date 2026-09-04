@@ -54,14 +54,14 @@ export function createNightPresentation(
     );
   if (
     after.flags.generator_blackout === true &&
-    before.flags.generator_blackout !== true
+    (before.flags.generator_blackout !== true || after.flags.generator_outage_day === before.day)
   )
     moments.unshift(
-      '출력을 줄인 복도가 어둠에 잠겼습니다. 남은 조명 아래에서 아침을 기다립니다.',
+      after.flags.generator_outage_day === before.day ? '발전기가 멎어 복도 전체가 어둠에 잠겼습니다. 손전등을 나누어 들고 아침을 기다립니다.' : '출력을 줄인 복도가 어둠에 잠겼습니다. 남은 조명 아래에서 아침을 기다립니다.',
     );
   if (after.lastDaySummary?.inactiveFacilities?.length)
     moments.push(
-      '유지 물자가 닿지 않은 시설이 멈췄습니다. 프론트 장부에 점검할 곳을 남겼습니다.',
+      after.flags.generator_outage_day === before.day ? '정전으로 연료를 사용하는 생산 시설이 멈췄습니다. 발전기실에 수리가 필요합니다.' : '유지 물자가 닿지 않은 시설이 멈췄습니다. 프론트 장부에 점검할 곳을 남겼습니다.',
     );
   const departed =
     after.lastDaySummary?.checkedOutGuestIds

@@ -169,11 +169,12 @@ export function runScavengeMission(state:GameState,missionId:ScavengeMissionId):
   return {ok:true,message,report,state:{...state,actionPoints:state.actionPoints-1,resources,guests,visitorHistory,lastScavengeDay:state.day,lastScavengeReport:report,flags:{...state.flags,monster_threat:clamp(Number(state.flags.monster_threat??0)+threatDelta)},reputations:{...state.reputations,community:clamp(state.reputations.community+(outcome==="CLEAN_SUCCESS"?2:outcome==="SUCCESS"?1:0))},eventHistory:[...state.eventHistory,{day:state.day,type:"RESOURCE",message}]}};
 }
 
-export function getNightStaffPlan(state:Pick<GameState,"staffAssignments"|"guests">):{
+export function getNightStaffPlan(state:Pick<GameState,"staffAssignments"|"guests"> & Partial<Pick<GameState,'nightShift'|'day'>>):{
   foodSaving:number; conditionDelta:number; securityDelta:number; threatDelta:number;
   healingGuestId:string|null; healing:number; results:StaffDutyResult[];
 } {
-  const assignments=pruneStaffAssignments(state.staffAssignments,state.guests);
+  const busy = new Set(state.nightShift?.day === state.day ? state.nightShift?.tasks.map(t => t.workerId) : []);
+  const assignments=pruneStaffAssignments(Object.fromEntries(Object.entries(state.staffAssignments).filter(([, id]) => !busy.has(id))),state.guests);
   const assigned=(dutyId:StaffDutyId)=>state.guests.find((guest)=>guest.id===assignments[dutyId])??null;
   const maintenance=assigned("MAINTENANCE");
   const security=assigned("SECURITY");

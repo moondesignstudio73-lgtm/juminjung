@@ -1,3 +1,4 @@
+import { createEstablishedHotel } from './established-hotel.ts';
 import test from "node:test";
 import assert from "node:assert/strict";
 import { getInjuryRecovery, recalculateRoomEffects } from "../game/aura-effect-manager.ts";
@@ -7,7 +8,7 @@ import { createInitialGameState } from "../game/save-manager.ts";
 import { assignGuest } from "../game/room-manager.ts";
 
 function place(entries: Array<[string, number]>) {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   const assigned = new Map(entries);
   state.guests = state.guests.map((guest) => assigned.has(guest.id) ? {
     ...guest,
@@ -193,7 +194,7 @@ test("Samuel의 민간 경비대는 본인 체크아웃 뒤에도 야간 치안�
 });
 
 test("공동 돌봄팀 대상은 데이터로 판정하고 건강한 일반 성인에게 무차별 적용하지 않는다", () => {
-  const state=createInitialGameState();
+  const state=createEstablishedHotel();
   const mia=state.guests.find((guest)=>guest.id==="mia")!;
   const claire=state.guests.find((guest)=>guest.id==="claire")!;
   const walter=state.guests.find((guest)=>guest.id==="walter")!;

@@ -1,4 +1,5 @@
 import { NIGHT_EVENTS } from "./night-event-data.ts";
+import { getGeneratorBreakdownEvent } from './night-work-manager.ts';
 import { getNightFoodDemand } from "./aura-night-manager.ts";
 import { getActiveRelationships } from "./relationship-manager.ts";
 import { openInvestigationCase } from "./investigation-manager.ts";
@@ -35,6 +36,8 @@ function meetsCondition(state: GameState, event: NightEventDefinition): boolean 
 }
 
 export function selectNightEvent(state: GameState): NightEventDefinition {
+  const breakdown = getGeneratorBreakdownEvent(state);
+  if (breakdown) return breakdown;
   return [...NIGHT_EVENTS].sort((a, b) => b.priority - a.priority).find((event) => meetsCondition(state, event)) ?? NIGHT_EVENTS.at(-1)!;
 }
 

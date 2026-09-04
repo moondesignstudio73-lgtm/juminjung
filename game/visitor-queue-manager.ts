@@ -128,13 +128,20 @@ export function prepareDailyVisitorQueue(state:GameState):GameState {
   const normalReturnCandidates=state.guests.filter((guest)=>guest.npcType==="NORMAL"&&isReturnReady(guest,state.day)).sort((a,b)=>returnReadyDay(a)-returnReadyDay(b)||a.id.localeCompare(b.id));
   const returningNormal=normalReturnCandidates.length&&random()<NORMAL_REVISIT_CHANCE?normalReturnCandidates[Math.floor(random()*normalReturnCandidates.length)]:null;
   const slots=Array.from({length:count},(_,index)=>index);
-  const mainSlot=main?Math.floor(random()*count):-1;
+  let mainSlot=main?Math.floor(random()*count):-1;
+  if (state.day === 5 && mainSlot === 0) mainSlot = 1;
   let returnSlot=returningNormal?Math.floor(random()*count):-1;
   if (returningNormal&&returnSlot===mainSlot) returnSlot=(returnSlot+1)%count;
+  if (state.day === 5 && returnSlot === 0) returnSlot = slots.find(slot => slot !== 0 && slot !== mainSlot) ?? -1;
   const generated:Guest[]=[];
   const storyArrival=getPendingStoryVisitorArrival(state.flags,state.day);
   let storyArrivalUsed=false;
   const queue=slots.map((slot)=>{
+    if (state.day === 5 && slot === 0) {
+      const engineer = createNormalVisitor(state.visitorSeed, state.day, slot);
+      generated.push(engineer);
+      return engineer.id;
+    }
     if (slot===mainSlot) return main!.id;
     if (slot===returnSlot) return returningNormal!.id;
     let guest=createNormalVisitor(state.visitorSeed,state.day,slot);

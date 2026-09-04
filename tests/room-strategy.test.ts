@@ -1,3 +1,4 @@
+import { createEstablishedHotel } from './established-hotel.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -20,7 +21,7 @@ import {
 } from '../game/room-manager.ts';
 
 function placeEleanor(roomNumber: number) {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.guests = state.guests.map((guest) =>
     guest.id === ELEANOR_ID
       ? { ...guest, currentRoomNumber: roomNumber }
@@ -34,7 +35,7 @@ function placeEleanor(roomNumber: number) {
 }
 
 test('1. 객실 배정 중에도 게임 단계는 프론트에 머문다', () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.phase = 'desk';
   const rooms = assignGuest(state.rooms, 301, ELEANOR_ID);
   assert.equal(state.phase, 'desk');
@@ -45,7 +46,7 @@ test('1. 객실 배정 중에도 게임 단계는 프론트에 머문다', () =>
 });
 
 test('2. 초기 상태는 203호를 자동 배정하지 않는다', () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   assert.equal(
     state.rooms.find((room) => room.roomNumber === 203)?.occupied,
     false,
@@ -54,14 +55,14 @@ test('2. 초기 상태는 203호를 자동 배정하지 않는다', () => {
   assert.equal(state.resources.fuel, 62);
 });
 
-test('3. 호텔은 30개의 빈 객실로 시작한다', () => {
-  const state = createInitialGameState();
+test('3. 복구 완료 시나리오는 30개 객실을 사용할 수 있다', () => {
+  const state = createEstablishedHotel();
   assert.equal(state.rooms.length, 30);
   assert.equal(state.rooms.filter(isRoomSelectable).length, 30);
 });
 
 test('4. 사용 중인 객실은 선택할 수 없다', () => {
-  const rooms = assignGuest(createInitialGameState().rooms, 203, ELEANOR_ID);
+  const rooms = assignGuest(createEstablishedHotel().rooms, 203, ELEANOR_ID);
   assert.equal(
     isRoomSelectable(rooms.find((room) => room.roomNumber === 203)!),
     false,
@@ -218,7 +219,7 @@ test('13. 파손된 선호 객실은 점유하지 않고 사용 가능한 빈방
 });
 
 test('14. 객실 그리드는 하드코딩 이름 대신 실제 점유 NPC 이름을 표시한다', () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   const room = assignGuest(state.rooms, 202, 'samuel').find(
     (candidate) => candidate.roomNumber === 202,
   )!;
@@ -234,13 +235,13 @@ test('14. 객실 그리드는 하드코딩 이름 대신 실제 점유 NPC 이�
 });
 
 test('15. Aura가 없는 NPC는 객실 영향 범위와 잘못된 라벨을 만들지 않는다', () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   const guest = { ...state.guests[0], aura: null, currentRoomNumber: 203 };
   assert.deepEqual(getAffectedRoomNumbers(state.rooms, guest), []);
 });
 
 test('16. 빈 객실·파손·봉쇄 상태는 객실 화면에 한국어로 표시된다', () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   const [empty, damaged, locked] = state.rooms.slice(0, 3);
   assert.equal(getRoomOccupantLabel(empty, state.guests), '비어 있음');
   assert.equal(
@@ -254,7 +255,7 @@ test('16. 빈 객실·파손·봉쇄 상태는 객실 화면에 한국어로 표
 });
 
 test('17. 손상 저장의 객실 상태 수치는 0~100 범위의 유효한 값으로 복구된다', () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.rooms[0].roomCondition = Number.NaN;
   state.rooms[1].roomCondition = 500;
   state.rooms[2].roomCondition = -20;

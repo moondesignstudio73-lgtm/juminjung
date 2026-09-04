@@ -1,3 +1,4 @@
+import { createEstablishedHotel } from './established-hotel.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { recalculateRoomEffects } from '../game/aura-effect-manager.ts';
@@ -23,7 +24,7 @@ import {
 import type { GameState } from '../game/types.ts';
 
 const activate = (ids: string[], day = 5): GameState => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.day = day;
   state.phase = 'desk';
   state.visitorSeed = 7123;
@@ -215,7 +216,7 @@ test('의료 담당자는 다른 환자가 없을 때 자신의 부상도 치료
   );
 });
 
-test('야간 정산은 주방 절약과 근무 결과를 장부에 남기고 퇴실 담당자를 배치에서 제거한다', () => {
+test('야간 정산은 주방 절약과 근무 결과를 남기고 장기 주민 담당을 유지한다', () => {
   const state = activate(['walter', 'noah']);
   state.phase = 'night';
   state.staffAssignments = { MAINTENANCE: 'walter', KITCHEN: 'noah' };
@@ -236,7 +237,7 @@ test('야간 정산은 주방 절약과 근무 결과를 장부에 남기고 퇴
       (result) => result.dutyId === 'MAINTENANCE',
     ),
   );
-  assert.equal(resolved.staffAssignments.MAINTENANCE, undefined);
+  assert.equal(resolved.staffAssignments.MAINTENANCE, 'walter');
   assert.equal(resolved.staffAssignments.KITCHEN, 'noah');
   assert.ok(
     resolved.eventHistory.some((entry) => entry.message.includes('근무 정산')),

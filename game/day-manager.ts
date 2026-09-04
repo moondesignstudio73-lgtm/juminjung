@@ -37,7 +37,7 @@ export function resolveDay(state: GameState): GameState {
   const staying = auraNight.guests.filter((guest) => guest.status === "STAYING" && guest.currentRoomNumber !== null);
   const stayingIds = new Set(staying.map((guest) => guest.id));
   const microgridActive = state.flags.generator_network_stable === true;
-  const staffPlan = getNightStaffPlan({ staffAssignments: state.staffAssignments, guests: auraNight.guests });
+  const staffPlan = getNightStaffPlan({ ...state, guests: auraNight.guests });
   const baseFoodDemand = auraNight.foodDemand + powerPlan.extraFoodDemand;
   const staffAdjustedFoodDemand = Math.max(0, baseFoodDemand - staffPlan.foodSaving);
   const rationPlan = getRationPlan(staffAdjustedFoodDemand, state.foodRationPolicy);
@@ -60,7 +60,7 @@ export function resolveDay(state: GameState): GameState {
     const unprotectedHealth = Math.min(100, unprotectedHealthBeforeStaff + (guest.id === staffPlan.healingGuestId ? staffPlan.healing : 0));
     if (preparedGuest.stress !== unprotectedStress || health !== unprotectedHealth) priorityRationGuestIds.push(guest.id);
     if (guest.id === staffPlan.healingGuestId) appliedStaffHealing = health - healthBeforeStaff;
-    if (guest.npcType === "MAIN" && guest.storyLockedResident) return { ...preparedGuest, health, remainingNights: Math.max(0,guest.remainingNights-1) };
+    if (guest.residency !== 'TEMPORARY' || guest.npcType === 'NORMAL' || guest.storyLockedResident) return { ...preparedGuest, health, remainingNights: guest.npcType === 'MAIN' ? Math.max(0, guest.remainingNights - 1) : 0 };
     const remainingNights = Math.max(0, guest.remainingNights - 1);
     if (remainingNights === 0) {
       checkedOutGuestIds.push(guest.id);
@@ -181,6 +181,11 @@ export function resolveDay(state: GameState): GameState {
     lastNightEventId: night.event.id,
   };
   nextState.worldState = determineWorldState(nextState);
+  nextState.dayFlow = { day: nextDay, stage: 'report', visited: ['report'], operationLocation: null };
+  summary.guestChanges = beforeNight.guests.filter(g => g.alive && g.status === 'STAYING').flatMap(g => {
+    const after = nextState.guests.find(a => a.id === g.id);
+    return after && (after.health !== g.health || after.stress !== g.stress) ? [{ id:g.id, name:g.name, healthBefore:g.health, healthAfter:after.health, stressBefore:g.stress, stressAfter:after.stress }] : [];
+  });
   nextState.lastNightPresentation = createNightPresentation(beforeNight, night.state, nextState, night.event.title, night.choice.label);
   const endings = evaluateEndings(nextState);
   return queueNightEventCutscene({ ...nextState, availableEndings: endings.available, endingProgress: endings.progress }, night.event.id, night.choice.id, summary.completedDay);

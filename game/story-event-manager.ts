@@ -27,7 +27,8 @@ export function advanceHotelStories(guests: Guest[], day: number, rooms: Room[] 
       if (stage === "CONFLICT" && authoredConflict) continue;
       if (stage === "RESOLUTION" && authoredResolution) continue;
       if (stage === "RESOLUTION" && authoredConflict && conflictIncomplete) continue;
-      const allowed = stage === "ARRIVAL" || stage === "LIFE_AT_HOTEL" || (stage === "CONFLICT" && latest.remainingNights <= Math.max(1, latest.stayDuration - 1)) || (stage === "RESOLUTION" && latest.remainingNights <= 1);
+      const residenceAge = day - (latest.checkedInDay ?? day);
+      const allowed = stage === "ARRIVAL" || stage === "LIFE_AT_HOTEL" || (stage === "CONFLICT" && (latest.npcType === 'NORMAL' ? residenceAge >= 2 : latest.remainingNights <= Math.max(1, latest.stayDuration - 1))) || (stage === "RESOLUTION" && (latest.npcType === 'NORMAL' ? residenceAge >= 6 : latest.remainingNights <= 1));
       if (!allowed) continue;
       const result = completeEventStage(current, guest.id, stage);
       current = result.guests;

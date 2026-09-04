@@ -1,3 +1,4 @@
+import { createEstablishedHotel } from './established-hotel.ts';
 import test from "node:test";
 import assert from "node:assert/strict";
 import { applyStoryChoice, canChooseStoryChoice, getPendingStoryChoice } from "../game/story-choice-manager.ts";
@@ -19,7 +20,7 @@ import { assignStaffDuty, getScavengeChance, runScavengeMission, SAFE_ROUTE_SCAV
 import { VULNERABLE_RATION_PROTECTION_DESCRIPTION } from "../game/daily-survival-manager.ts";
 
 function conflictState(guestId: string) {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.day = 12;
   state.guests = state.guests.map((guest) => guest.id === guestId ? { ...guest, status: "STAYING", currentRoomNumber: 301, checkedInDay: 1, remainingNights: Math.max(1, guest.stayDuration - 1) } : guest);
   return state;
@@ -324,7 +325,7 @@ test("다른 컷신이 열린 상태의 미아 재회는 대기열에 보존되�
 });
 
 test("손상된 컷신 대기열은 알 수 없는 ID·중복·이미 본 장면을 제거한다", () => {
-  const state = createInitialGameState();
+  const state = createEstablishedHotel();
   state.seenCutsceneIds = ["first_night"];
   const raw = JSON.parse(serializeGameState(state));
   raw.queuedCutsceneIds = ["mia_daniel_reunion", "unknown_scene", "mia_daniel_reunion", "first_night"];

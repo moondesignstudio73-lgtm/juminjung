@@ -1,3 +1,4 @@
+import { changeTone } from '@/game/ui-guidance';
 import { RESOURCE_LABELS, type ActionFeedback } from '@/game/action-feedback';
 export function ChangeLines({
   changes,
@@ -7,7 +8,7 @@ export function ChangeLines({
   return (
     <dl className="change-lines">
       {changes.map((c) => (
-        <div key={c.resource}>
+        <div key={c.resource} data-tone={changeTone(c.resource,c.before,c.after)}>
           <dt>{RESOURCE_LABELS[c.resource] ?? c.resource}</dt>
           <dd>
             {c.before} → {c.after}{' '}
