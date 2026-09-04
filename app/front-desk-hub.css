@@ -649,3 +649,427 @@
     padding-top: 96px;
   }
 }
+.unified-front-desk.game-shell {
+  height: 100vh;
+  min-height: 0;
+  padding-bottom: 16px;
+  padding-left: 112px;
+  --hub-brass: #c69b55;
+}
+.unified-front-desk .game-header {
+  padding-right: 150px;
+}
+.unified-front-desk .primary-objective {
+  display: none;
+}
+.unified-front-desk .front-desk-goal {
+  top: 18px;
+  right: 340px;
+  width: min(390px, 32vw);
+  padding: 8px 14px;
+  box-shadow: none;
+}
+.unified-front-desk .front-desk-goal span {
+  display: none;
+}
+.unified-front-desk .front-desk-scene {
+  position: absolute;
+  inset: 120px 30px 40px 122px;
+  min-height: 0;
+  padding: 40px 20px;
+  pointer-events: none;
+}
+.unified-front-desk .front-desk-scene::before {
+  display: none;
+}
+.unified-front-desk .front-desk-event {
+  pointer-events: auto;
+  max-height: 100%;
+  overflow: auto;
+}
+.unified-front-desk .desk-scene {
+  min-height: 0;
+  height: calc(100vh - 145px);
+}
+.unified-front-desk .front-desk-quick {
+  padding-top: 104px;
+}
+.unified-front-desk .assignment-open .front-desk-quick {
+  pointer-events: none;
+}
+.unified-front-desk .tutorial-callout {
+  max-width: 450px;
+}
+.room-assignment-overlay {
+  display: grid;
+  place-items: center;
+  padding: 26px 22px 26px 118px;
+  z-index: 65;
+}
+.room-assignment-overlay .front-desk-assignment {
+  width: 100%;
+  max-width: 1190px;
+  min-height: 0;
+  max-height: calc(100vh - 52px);
+  overflow: auto;
+  padding: 20px;
+  background: #151812f5;
+  border: 1px solid #806944;
+  box-shadow: 0 25px 70px #000b;
+}
+.room-assignment-overlay .front-desk-assignment h1 {
+  font-size: 24px;
+}
+.room-assignment-overlay .room-layout {
+  grid-template-columns: minmax(0, 1fr) 310px;
+  gap: 12px;
+}
+.room-assignment-overlay .room-board,
+.room-assignment-overlay .aura-preview {
+  padding: 12px;
+}
+.room-assignment-overlay .hotel-cutaway {
+  min-width: 0;
+  padding: 8px;
+  gap: 8px;
+}
+.room-assignment-overlay .room-cell {
+  min-height: 64px;
+}
+.room-assignment-overlay .room-cell i {
+  font-size: 10px;
+}
+.room-assignment-overlay .room-cell i svg {
+  width: 12px;
+  height: 12px;
+}
+.room-assignment-overlay .room-board {
+  overflow: visible;
+  min-width: 0;
+}
+.placement-map-scroll {
+  overflow-x: auto;
+}
+.room-assignment-overlay .hotel-floor {
+  grid-template-columns: 25px 1fr;
+}
+.ledger-shortcuts {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.ledger-consumption {
+  padding: 14px 0;
+  color: #c2b79f;
+  line-height: 1.7;
+}
+.guest-inline-note {
+  padding: 14px;
+  border-left: 2px solid #c69b55;
+  background: #10130f;
+  line-height: 1.6;
+}
+.placement-intro,
+.placement-comparison {
+  padding: 12px 16px;
+  border-left: 2px solid #997c4e;
+  background: #10150f;
+  color: #d9cbb1;
+  line-height: 1.55;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.placement-intro strong,
+.placement-comparison strong {
+  color: #c9a66c;
+}
+.placement-intro p,
+.placement-comparison p {
+  margin: 4px 0;
+}
+.placement-comparison {
+  margin: 12px 0 0;
+  min-height: 110px;
+}
+.placement-comparison small {
+  color: #b8b5a7;
+  overflow-wrap: anywhere;
+}
+.room-assignment-overlay .placement-recommended {
+  border-color: #ad8b52;
+}
+.room-recommendation {
+  display: block;
+  color: #d6b779;
+  font-size: 10px;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+.placement-tip {
+  border-top: 1px solid #53604b;
+  margin-top: 10px;
+  padding-top: 9px;
+}
+.room-assignment-overlay .room-cell:enabled:hover,
+.room-assignment-overlay .room-cell.selected {
+  transform: none;
+  box-shadow: inset 0 0 0 1px #b89a62;
+}
+.room-assignment-overlay .room-cell.aura {
+  background: #29352b;
+  box-shadow: inset 0 0 0 1px #758466;
+}
+.room-assignment-overlay .room-cell:focus-visible {
+  outline: 2px solid #e4cb9c;
+  outline-offset: 2px;
+}
+.room-assignment-overlay .aura-preview .aura-card {
+  margin: 12px 0;
+  padding: 12px;
+}
+.placement-feedback {
+  position: fixed;
+  z-index: 70;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(540px, calc(100vw - 32px));
+  background: #182018f5;
+  color: #e2d4b8;
+  border: 1px solid #a08758;
+  padding: 16px 20px;
+  line-height: 1.6;
+  pointer-events: none;
+  box-shadow: 0 8px 30px #0008;
+}
+@media (max-width: 600px) {
+  .room-assignment-overlay {
+    padding: 8px;
+  }
+  .room-assignment-overlay .front-desk-assignment {
+    padding: 12px;
+    max-height: calc(100dvh - 16px);
+  }
+  .room-assignment-overlay .front-desk-assignment h1 {
+    font-size: 20px;
+  }
+  .room-assignment-overlay .hotel-cutaway {
+    min-width: 580px;
+  }
+  .room-assignment-overlay .room-board {
+    min-width: 0;
+  }
+  .room-assignment-overlay .aura-preview {
+    min-width: 0;
+  }
+  .room-assignment-overlay .room-layout {
+    min-width: 0;
+  }
+  .placement-feedback {
+    bottom: 12px;
+    font-size: 13px;
+  }
+}
+@media (max-width: 900px) {
+  .unified-front-desk.game-shell {
+    padding-left: 86px;
+  }
+  .unified-front-desk .game-header {
+    padding-right: 90px;
+  }
+  .unified-front-desk .front-desk-goal {
+    position: absolute;
+    top: 100px;
+    left: 100px;
+    right: auto;
+    width: 230px;
+  }
+  .room-assignment-overlay {
+    padding-left: 86px;
+  }
+  .room-assignment-overlay .room-layout {
+    grid-template-columns: 1fr;
+  }
+  .room-assignment-overlay .aura-preview {
+    order: 0;
+  }
+}
+@media (max-width: 600px) {
+  .room-assignment-overlay {
+    padding: 8px;
+  }
+  .room-assignment-overlay .room-cell i {
+    display: none;
+  }
+  .room-assignment-overlay .hotel-cutaway {
+    min-width: 650px;
+  }
+  .room-assignment-overlay .room-cell {
+    height: 94px;
+  }
+  .room-assignment-overlay .room-board::before {
+    content: '객실 지도는 좌우로 밀어 볼 수 있습니다.';
+    display: block;
+    margin-bottom: 10px;
+    color: #c4b18d;
+    font-size: 12px;
+  }
+}
+.resource-change-toast {
+  position: fixed;
+  z-index: 90;
+  right: 22px;
+  top: 120px;
+  width: min(350px, calc(100vw - 32px));
+  padding: 16px 18px;
+  color: #e3d6ba;
+  background: #151d17f7;
+  border: 1px solid #a18756;
+  box-shadow: 0 12px 40px #0009;
+  pointer-events: none;
+}
+.resource-change-toast > strong {
+  color: #d4b67e;
+  font-size: 15px;
+}
+.resource-change-toast p {
+  font-size: 12px;
+  line-height: 1.55;
+  margin: 8px 0 0;
+}
+.change-lines {
+  margin: 10px 0;
+  font-size: 12px;
+}
+.change-lines > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 0;
+}
+.change-lines dd {
+  margin: 0;
+}
+.change-lines b {
+  margin-left: 8px;
+  color: #d7b980;
+}
+.desk-status-bar {
+  position: absolute;
+  top: 78px;
+  left: 128px;
+  right: 24px;
+  display: flex;
+  gap: 18px;
+  font-size: 12px;
+  color: #b6b6a7;
+  z-index: 11;
+}
+.desk-status-bar b {
+  color: #e0cda7;
+  margin-left: 4px;
+}
+.desk-status-bar .status-changed {
+  color: #f2d39a;
+  background: #463b23;
+}
+.night-conclusion {
+  min-height: 100dvh;
+  height: auto;
+}
+.night-conclusion > section {
+  position: relative;
+  max-width: 640px;
+  margin: 70px auto 25px;
+}
+.event-screen.night-conclusion h1 {
+  font-size: clamp(26px, 3vw, 36px);
+  line-height: 1.25;
+  margin: 12px 0 22px;
+  color: #e0cfaa;
+}
+.night-conclusion p {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.archive-settlement {
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid #504a36;
+  font-size: 12px;
+}
+.night-conclusion .night-recap {
+  margin: 24px 0;
+  padding-top: 18px;
+  border-top: 1px solid #655539;
+}
+.night-recap p {
+  font-size: 14px;
+  color: #abae9e;
+}
+.night-conclusion .advance {
+  min-height: 48px;
+  width: 100%;
+}
+.night-event-cost {
+  max-width: 360px;
+  padding: 12px;
+  border-left: 2px solid #957643;
+  background: #151913;
+}
+.hotel-archive {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid #66573d;
+}
+.hotel-archive summary {
+  cursor: pointer;
+  color: #d4b67e;
+}
+.hotel-archive nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 15px 0;
+}
+.hotel-archive nav button {
+  padding: 8px 10px;
+  border: 1px solid #726244;
+}
+.hotel-archive nav button[aria-pressed='true'] {
+  background: #393723;
+  color: #ead19e;
+}
+.hotel-archive .journal-list {
+  max-height: 420px;
+  overflow: auto;
+}
+.hotel-archive article {
+  padding: 10px 0;
+  border-bottom: 1px solid #393b2b;
+}
+.hotel-archive article p {
+  line-height: 1.6;
+}
+@media (max-width: 600px) {
+  .desk-status-bar {
+    left: 90px;
+    top: 76px;
+    right: 8px;
+    gap: 5px 10px;
+    flex-wrap: wrap;
+    font-size: 10px;
+  }
+  .resource-change-toast {
+    right: 12px;
+    bottom: auto;
+    top: 116px;
+    font-size: 12px;
+  }
+  .night-conclusion > section {
+    margin: 65px auto 20px;
+  }
+  .event-screen.night-conclusion h1 {
+    font-size: 30px;
+  }
+}

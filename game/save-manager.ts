@@ -1,4 +1,5 @@
 import { recalculateRoomEffects } from './aura-effect-manager.ts';
+import { normalizeGamePhase } from './game-phase.ts';
 import { createEventFlags } from './event-manager.ts';
 import { createGuests } from './guest-data.ts';
 import { createResources } from './resource-manager.ts';
@@ -225,8 +226,6 @@ export function createInitialGameState(): GameState {
     negotiated: false,
     held: false,
     decision: null,
-    assignmentMode: null,
-    selectedRoomNumber: null,
     eventHistory: [],
     lastDaySummary: null,
     worldState: 'STABLE',
@@ -377,7 +376,7 @@ export function restoreGameState(raw: string | null): GameState {
     const phase =
       parsed.phase === 'ending' && !activeEndingId
         ? 'report'
-        : (parsed.phase ?? base.phase);
+        : normalizeGamePhase(parsed.phase);
     const occupancy = normalizeOccupancy(parsed.rooms!, guests);
     const knownPowerCircuits = new Set(base.powerAllocation);
     const powerAllocation = Array.isArray(parsed.powerAllocation)
@@ -514,6 +513,9 @@ export function restoreGameState(raw: string | null): GameState {
       ...parsed,
       version: 15,
       phase,
+      // Legacy UI-only fields are not restored or serialized.
+      assignmentMode: undefined,
+      selectedRoomNumber: undefined,
       resources: { ...base.resources, ...parsed.resources },
       flags,
       hotelStats: { ...base.hotelStats, ...parsed.hotelStats },

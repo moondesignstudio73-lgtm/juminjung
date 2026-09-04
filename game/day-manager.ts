@@ -1,4 +1,5 @@
 import { getInjuryRecovery, recalculateRoomEffects } from "./aura-effect-manager.ts";
+import { createNightPresentation } from './night-presentation.ts';
 import { checkoutGuest } from "./room-manager.ts";
 import { advanceHotelStories } from "./story-event-manager.ts";
 import { evaluateEndings } from "./ending-manager.ts";
@@ -23,6 +24,7 @@ export function advanceDay(day: number): number { return Math.max(0, day) + 1; }
 export function resolveDay(state: GameState): GameState {
   if (state.phase !== "night") throw new Error("DAY 정산은 야간 단계에서 한 번만 실행할 수 있습니다.");
   const selectedEvent = selectNightEvent(state);
+  const beforeNight = state;
   const fallbackChoice = [...selectedEvent.choices].reverse().find((choice) => canChooseNightChoice(state, choice)) ?? selectedEvent.choices[0];
   const night = applyNightChoice(state, state.selectedNightEventId ?? selectedEvent.id, state.selectedNightChoiceId ?? fallbackChoice.id);
   state = night.state;
@@ -179,6 +181,7 @@ export function resolveDay(state: GameState): GameState {
     lastNightEventId: night.event.id,
   };
   nextState.worldState = determineWorldState(nextState);
+  nextState.lastNightPresentation = createNightPresentation(beforeNight, night.state, nextState, night.event.title, night.choice.label);
   const endings = evaluateEndings(nextState);
   return queueNightEventCutscene({ ...nextState, availableEndings: endings.available, endingProgress: endings.progress }, night.event.id, night.choice.id, summary.completedDay);
 }
