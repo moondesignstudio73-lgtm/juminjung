@@ -15,6 +15,7 @@ import {
 } from './aura-night-manager.ts';
 import { calculatePowerPlan, getRationPlan } from './daily-survival-manager.ts';
 import { getNightStaffPlan } from './staff-operation-manager.ts';
+import { getDayFourMorningBrief } from './day-four-transition.ts';
 
 export type DayStage = NonNullable<GameState['dayFlow']>['stage'];
 export const DAY_STAGES: Array<{ id: DayStage; label: string; day: number }> = [
@@ -253,6 +254,7 @@ export function getMorningBrief(state: GameState): string[] {
       '아버지가 남긴 호텔의 문을 엽니다.',
       '첫 손님의 사정을 듣고, 머물 방을 정해 주세요.',
     ];
+  if (state.day === 4) return getDayFourMorningBrief(state);
   const result = state.lastNightPresentation;
   const lines: string[] = [];
   if (result?.choice) lines.push(`어젯밤의 선택 · ${result.choice}`);

@@ -6,11 +6,25 @@ import { recalculateRoomEffects } from './aura-effect-manager.ts';
 import { pruneStaffAssignments } from './staff-operation-manager.ts';
 import { updateVisitorFinalState } from './visitor-queue-manager.ts';
 
+export function residentReplacementBlockReason(guest: GameState['guests'][number]): string | null {
+  if (
+    guest.storyLockedResident ||
+    guest.residency === 'STORY_LOCKED' ||
+    (guest.npcType === 'MAIN' && guest.eventChain.some((event) => !event.completed))
+  )
+    return '현재 진행 중인 사건과 관련된 주민입니다.';
+  return null;
+}
+
 export function expelResident(state: GameState, id: string): GameState {
   const departing = state.guests.find(
     (g) => g.id === id && g.status === 'STAYING',
   );
-  if (!departing || !['desk', 'night_management'].includes(state.phase))
+  if (
+    !departing ||
+    residentReplacementBlockReason(departing) ||
+    !['desk', 'night_management'].includes(state.phase)
+  )
     return state;
   const guests = state.guests.map((g) =>
     g.id === id

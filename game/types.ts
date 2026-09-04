@@ -599,6 +599,7 @@ export type StoryChoiceEvent = {
 };
 export type CutsceneId =
   | 'first_night'
+  | 'hotel_policy_changed'
   | 'first_monster_sighting'
   | 'guest_attacked'
   | 'generator_blackout'

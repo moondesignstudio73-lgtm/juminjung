@@ -6,6 +6,12 @@
   --game-negative: #d18a79;
   --game-meta: #b6b0a2;
 }
+html {
+  scrollbar-gutter: stable;
+}
+body[data-room-assignment-open='true'] {
+  overflow: hidden;
+}
 body button {
   letter-spacing: 0.025em;
 }
@@ -570,4 +576,96 @@ body .day-flow-visitors {
  body .hotel-map header { padding-bottom:8px; }
  body .hotel-map footer { padding-top:8px; }
  body .day-flow-page>header p { margin:0 0 5px; }
+}
+
+/* DAY 4: the shelter becomes a hotel with visible house rules. */
+.lodging-contribution {
+  margin-top: 10px;
+  padding: 9px 10px;
+  background: #201d15;
+  border-left: 2px solid #b58e50;
+}
+.lodging-contribution > span {
+  display: block;
+  color: #c8a665;
+  font: 9px var(--font-display);
+  letter-spacing: 0.08em;
+}
+.lodging-contribution > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+.lodging-contribution b {
+  padding: 3px 6px;
+  color: #e5d5b5;
+  background: #12140f;
+  border: 1px solid #554b36;
+  font: 9px var(--font-display);
+}
+.lodging-contribution em {
+  color: #8fb59f;
+  font: normal 8px Pretendard, 'Noto Sans KR', sans-serif;
+}
+.lodging-contribution p {
+  margin: 5px 0 0;
+  color: #aaa292;
+  font-size: 9px;
+  line-height: 1.4;
+}
+.hotel-policy-sign {
+  position: absolute;
+  z-index: 3;
+  top: 17%;
+  right: 27%;
+  transform: rotate(1.2deg);
+}
+.hotel-policy-sign > button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 132px;
+  padding: 9px 13px;
+  color: #baaa89;
+  background: #17150ff0;
+  border: 1px solid #756345;
+  box-shadow: 0 9px 20px #000a, inset 0 0 18px #0008;
+  cursor: pointer;
+}
+.hotel-policy-sign > button:hover,
+.hotel-policy-sign > button:focus-visible {
+  color: #e3cfa7;
+  border-color: #9b7e4b;
+}
+.hotel-policy-sign small { font: 7px var(--font-display); letter-spacing: 0.16em; }
+.hotel-policy-sign strong { margin: 3px 0; color: #d4b577; font: 12px var(--font-display); }
+.hotel-policy-sign span { font-size: 8px; }
+.hotel-policy-sign > output {
+  position: absolute;
+  top: calc(100% + 7px);
+  right: 0;
+  width: 225px;
+  padding: 10px 12px;
+  color: #cfc3ac;
+  background: #12130ff5;
+  border: 1px solid #66583f;
+  box-shadow: 0 12px 30px #000c;
+}
+.hotel-policy-sign > output b,
+.hotel-policy-sign > output span,
+.hotel-policy-sign > output small { display: block; }
+.hotel-policy-sign > output b { color: #c9a45f; font: 9px var(--font-display); }
+.hotel-policy-sign > output span { margin-top: 5px; font-size: 9px; line-height: 1.45; }
+.hotel-policy-sign > output small { margin-top: 5px; color: #8f8d83; font-size: 8px; }
+.day-four-facility-note {
+  padding: 10px 12px;
+  background: #1d1b14;
+  border-left: 2px solid #b58e50;
+}
+@media(max-width:900px) {
+  .hotel-policy-sign { top: 76px; right: 18px; }
+  .hotel-policy-sign > output { display: none; }
+  .lodging-contribution { padding: 7px 8px; }
+  .policy-unlock-callout { max-width: 390px; }
 }

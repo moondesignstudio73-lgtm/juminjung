@@ -74,7 +74,7 @@ export function NightManagement({
   onInspect: () => void;
   onAssign: (id: string | null) => void;
   onUpgrade: () => void;
-  onRestoreRoom: (room:number, worker:string|null) => void;
+  onRestoreRoom: (room: number, worker: string | null) => void;
 }) {
   const Container = embedded ? 'section' : 'main';
   const location = state.nightShift?.location ?? 'front';
@@ -266,16 +266,23 @@ export function NightManagement({
                   ? '독립 마이크로그리드가 발전기 고장에 대비합니다.'
                   : '내구도 70 이하: 경미 이상 / 35 이하: 정전 위험 / 20 이하: 대형 파손. 투숙객·시설·폭풍·누적 마모에 따라 노후화됩니다.'}
               </p>
-              <Button
-                variant="outline"
-                disabled={!!repairBlockReason(state, null)}
-                onClick={() => onRepair(null)}
-              >
-                직접{' '}
-                {generator.activeProblem === 'major'
-                  ? '대형 파손 복구 · 부품 5 / 90분 / 내구도 +45'
-                  : '수리 · 부품 3 / 45분 / 내구도 +30'}
-              </Button>
+              {state.day >= 5 ? (
+                <Button
+                  variant="outline"
+                  disabled={!!repairBlockReason(state, null)}
+                  onClick={() => onRepair(null)}
+                >
+                  직접{' '}
+                  {generator.activeProblem === 'major'
+                    ? '대형 파손 복구 · 부품 5 / 90분 / 내구도 +45'
+                    : '수리 · 부품 3 / 45분 / 내구도 +30'}
+                </Button>
+              ) : (
+                <p className="night-help day-four-facility-note">
+                  첫 점검에서는 상태만 확인합니다. 경미한 이상은 다음 운영일에
+                  수리할 수 있습니다.
+                </p>
+              )}
               <Button
                 variant="outline"
                 onClick={onInspect}
@@ -289,7 +296,15 @@ export function NightManagement({
                   : '발전기 점검 · 15분 / 마모 -3'}
               </Button>
               <p>
-                {{NORMAL:'정상',WARNING:'주의',URGENT:'위험',CRITICAL:'긴급'}[facility.severity]} · {facility.mode} · LV.
+                {
+                  {
+                    NORMAL: '정상',
+                    WARNING: '주의',
+                    URGENT: '위험',
+                    CRITICAL: '긴급',
+                  }[facility.severity]
+                }{' '}
+                · {facility.mode} · LV.
                 {generator.automationLevel} · 마모 {generator.wear}
               </p>
               {facility.alert && <p role="status">⚠ {facility.alert}</p>}
@@ -336,39 +351,36 @@ export function NightManagement({
                       담당 해제 · 10분
                     </Button>
                   )}
-                  <div className="night-workers">
-                    {workers.filter(isGeneratorSpecialist).map((g) => (
-                      <div className="night-worker" key={g.id}>
-                        <img src={g.portrait} alt="" />
-                        <div>
-                          <strong>{g.name}</strong>
-                          <small>
-                            {g.role} · {g.currentRoomNumber}호 ·{' '}
-                            {statusLabels[getWorkerStatus(state, g)]}
-                          </small>
-                          <Button
-                            variant="outline"
-                            disabled={
-                              facility.assignedWorker === g.id ||
-                              getWorkerStatus(state, g) !== 'AVAILABLE' ||
-                              !canSpendNightTime(state, 10)
-                            }
-                            onClick={() => onAssign(g.id)}
+                  {workers.some(isGeneratorSpecialist) ? (
+                    <label className="night-worker-select">
+                      담당자 선택
+                      <select
+                        value={facility.assignedWorker ?? ''}
+                        onChange={(event) =>
+                          onAssign(event.target.value || null)
+                        }
+                        disabled={!canSpendNightTime(state, 10)}
+                      >
+                        <option value="">담당 없음</option>
+                        {workers.filter(isGeneratorSpecialist).map((g) => (
+                          <option
+                            key={g.id}
+                            value={g.id}
+                            disabled={getWorkerStatus(state, g) !== 'AVAILABLE'}
                           >
-                            {facility.assignedWorker === g.id
-                              ? '지속 배정 중'
-                              : `${g.name} 발전기 담당으로 배정 · 10분`}
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                    {!workers.some(isGeneratorSpecialist) && (
-                      <p>
-                        정비공·전기기사·엔지니어를 받으면 매일 반복 점검을 대신
-                        맡길 수 있습니다.
-                      </p>
-                    )}
-                  </div>
+                            {g.name} · {g.role} ·{' '}
+                            {statusLabels[getWorkerStatus(state, g)]}
+                          </option>
+                        ))}
+                      </select>
+                      <small>담당 변경 · 10분</small>
+                    </label>
+                  ) : (
+                    <p>
+                      정비공·전기기사·엔지니어가 입실하면 반복 점검을 맡길 수
+                      있습니다.
+                    </p>
+                  )}
                 </>
               )}
               {work && (
@@ -406,7 +418,7 @@ export function NightManagement({
                       aria-pressed={selectedRoom === r.roomNumber}
                       onClick={() => setSelectedRoom(r.roomNumber)}
                     >
-                      <RoomContents room={r} guests={state.guests}/>
+                      <RoomContents room={r} guests={state.guests} />
                     </Button>
                   ))}
               </div>
@@ -422,10 +434,17 @@ export function NightManagement({
                 {actionButton('community_outreach', '투숙객과 이야기하기')}
                 {actionButton('repair_hotel', '객실과 호텔 보수')}
               </div>
-              {selectedRoom!==null && <RoomRecovery key={selectedRoom} state={state} roomNumber={selectedRoom} onRestore={onRestoreRoom}/>}
+              {selectedRoom !== null && (
+                <RoomRecovery
+                  key={selectedRoom}
+                  state={state}
+                  roomNumber={selectedRoom}
+                  onRestore={onRestoreRoom}
+                />
+              )}
               <small>
-                대화: 투숙객 신뢰 +5 · 보수: 호텔 상태 +8. 잠긴 객실은 선택 후 별도로 복구합니다.
-                기존 호텔 운영 효과를 사용합니다.
+                대화: 투숙객 신뢰 +5 · 보수: 호텔 상태 +8. 잠긴 객실은 선택 후
+                별도로 복구합니다. 기존 호텔 운영 효과를 사용합니다.
               </small>
             </>
           )}
@@ -502,12 +521,24 @@ export function NightManagement({
               </p>
               {staying
                 .filter((g) => g.health < 80 || g.infectionState !== 'HEALTHY')
+                .slice(0, 4)
                 .map((g) => (
                   <p key={g.id}>
                     {g.currentRoomNumber}호 {g.name} · {g.conditionLabel} · 체력{' '}
                     {g.health}
                   </p>
                 ))}
+              {staying.filter(
+                (g) => g.health < 80 || g.infectionState !== 'HEALTHY',
+              ).length > 4 && (
+                <small>
+                  그 외 치료 필요 주민{' '}
+                  {staying.filter(
+                    (g) => g.health < 80 || g.infectionState !== 'HEALTHY',
+                  ).length - 4}
+                  명 · 주민 관리에서 확인
+                </small>
+              )}
               <p>
                 기존 돌봄 능력과 의무실 담당자의 처치는 밤이 지난 뒤 적용됩니다.
                 정전 시 진료 회로가 정지합니다.

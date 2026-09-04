@@ -71,10 +71,10 @@ export function getOnboardingGuide(day: number): OnboardingGuide {
   if (day === 4)
     return {
       stage: 'SUPPLIES',
-      title: '식량이 부족해지기 전에 배급을 정하세요',
+      title: '새 숙박 규칙으로 호텔을 운영하세요',
       instruction:
-        '장부에서 남은 식량 일수를 확인하고 오늘 밤의 배급 방식을 하나 선택하세요.',
-      unlocked: '새 시스템 · 식량과 배급',
+        '제공 물자와 진술을 확인한 뒤 입실을 결정하고, 밤에는 발전기 상태를 점검하세요.',
+      unlocked: '새 운영 규칙 · 숙박 대가와 방문자 확인',
       showResources: true,
       showFood: true,
       showPower: false,

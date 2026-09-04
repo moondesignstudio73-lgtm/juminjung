@@ -1,0 +1,741 @@
+/* Viewport-owned game screens: long datasets move through pages/tabs, never the browser page. */
+html,
+body {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  scrollbar-gutter: auto;
+}
+
+body > div:first-of-type {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.day-flow-nav {
+  height: 62px;
+  min-height: 62px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.day-flow-nav button {
+  min-height: 34px !important;
+}
+
+.day-flow-page {
+  height: calc(100dvh - 62px);
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  padding-block: clamp(14px, 2.5vh, 30px);
+  overflow: hidden;
+}
+
+.hotel-status-strip ~ .day-flow-page {
+  height: calc(100dvh - 104px);
+}
+
+.day-flow-page > header {
+  margin-bottom: clamp(10px, 2vh, 20px);
+  padding-bottom: clamp(8px, 1.5vh, 16px);
+}
+
+.day-flow-content {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.facility-page {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.facility-screen-content {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+}
+
+.flow-facility,
+.flow-facility .night-hotel,
+.flow-facility .night-layout,
+.flow-facility .night-location-detail {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.day-flow-page > footer {
+  min-height: 58px;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.resident-short-list {
+  max-height: none;
+  overflow: hidden;
+}
+
+.resident-detail {
+  position: relative;
+  max-height: 100%;
+  padding: 10px 12px;
+  overflow: hidden;
+}
+
+.resident-detail h3,
+.resident-detail p,
+.resident-detail .community-detail p {
+  margin-block: 4px;
+  line-height: 1.4;
+}
+
+.resident-detail .community-detail {
+  padding-block: 6px;
+}
+
+.resident-expel-confirm {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  padding: 18px;
+  background: #211714;
+  border: 1px solid #9f4c40;
+}
+
+.archive-lines {
+  max-height: none;
+  overflow: hidden;
+  display: grid;
+  gap: 6px;
+  margin-block: 10px;
+}
+
+.archive-lines li {
+  padding: 7px 10px;
+  background: #151914;
+  border-left: 2px solid #665637;
+  line-height: 1.35;
+}
+
+.game-pagination {
+  display: grid;
+  grid-template-columns: minmax(88px, auto) auto minmax(88px, auto);
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+  color: #c69b55;
+  font: 11px var(--font-display);
+}
+
+.game-pagination button {
+  min-height: 32px !important;
+  padding: 5px 10px !important;
+}
+
+.panel-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 3px;
+  background: #0c0f0c;
+  border: 1px solid #494536;
+}
+
+.panel-tabs button {
+  min-height: 36px;
+  color: #9e988c;
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.panel-tabs button[aria-pressed='true'] {
+  color: #f0d8a8;
+  background: #2b281e;
+  border-color: #886d43;
+}
+
+.unified-front-desk.game-shell {
+  height: calc(100dvh - 104px) !important;
+  min-height: 0 !important;
+  overflow: hidden;
+}
+
+.unified-front-desk .desk-scene {
+  height: calc(100% - 67px) !important;
+  min-height: 0 !important;
+}
+
+.unified-front-desk .front-desk-event {
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.front-desk-drawer {
+  height: 100dvh;
+  max-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  padding-bottom: 24px;
+  overflow: hidden;
+}
+
+.front-desk-drawer > header {
+  position: relative;
+  top: auto;
+  margin: 0 0 20px;
+}
+
+.front-desk-drawer > :not(header) {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.hub-guests-panel {
+  height: 100%;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.guest-list,
+.guest-detail-card {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.guest-detail-card {
+  position: relative;
+}
+
+.guest-list > button {
+  min-height: 62px;
+  padding-block: 7px;
+  overflow: hidden;
+}
+
+.guest-list-avatar {
+  overflow: hidden;
+}
+
+.guest-list-avatar img {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0;
+  max-height: 100%;
+  object-fit: cover;
+}
+
+.day-flow-visitors .game-header {
+  height: 57px;
+  min-height: 57px;
+}
+
+.guest-list .game-pagination {
+  margin-top: auto;
+}
+
+.ledger-panel,
+.hub-resources-panel,
+.hub-staff-panel,
+.hub-events-panel,
+.hub-advanced-panel,
+.hub-rooms-panel {
+  height: 100%;
+  overflow: hidden;
+}
+
+.ledger-panel .ledger-summary article,
+.ledger-panel .ledger-vitals article {
+  padding: 12px 14px;
+}
+
+.ledger-panel .ledger-priority {
+  margin-top: 10px;
+  padding: 12px 16px;
+}
+
+.ledger-panel .ledger-priority p {
+  margin-block: 5px;
+  line-height: 1.4;
+}
+
+.hub-resources-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+}
+
+.hub-resources-panel .resource-strip {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.hub-resources-panel .ration-plan,
+.hub-resources-panel .power-plan,
+.hub-resources-panel .night-preparation-plan {
+  min-height: 0;
+  margin-top: 0;
+  padding: 12px;
+  overflow: hidden;
+}
+
+.staff-operations,
+.investigation-panel,
+.monster-codex-panel {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.hub-staff-panel .staff-operations {
+  margin: 0;
+  padding: 12px;
+}
+
+.hub-staff-panel .staff-grid {
+  margin-bottom: 0;
+}
+
+.staff-grid,
+.scavenge-grid {
+  align-content: start;
+}
+
+.hotel-archive[open] {
+  position: absolute;
+  z-index: 5;
+  inset: 92px 24px 24px;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  padding: 16px;
+  overflow: hidden;
+  background: #11130f;
+  border: 1px solid #806944;
+  box-shadow: 0 20px 70px #000c;
+}
+
+.hotel-archive[open] .journal-list {
+  max-height: none;
+  overflow: hidden;
+}
+
+.guide-sheet {
+  height: min(520px, calc(100dvh - 90px));
+  max-height: none;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+.guide-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin: 12px 0;
+}
+
+.guide-tabs button {
+  min-height: 34px;
+  color: #b8aa8f;
+  background: #10120e;
+  border: 1px solid #494536;
+}
+
+.guide-tabs button[aria-pressed='true'] {
+  color: #efd7a7;
+  border-color: #a17e45;
+  background: #30291d;
+}
+
+.room-assignment-overlay .room-board {
+  grid-template-rows: minmax(0, 1fr) auto 200px;
+}
+
+.room-assignment-overlay .placement-map-scroll,
+.room-assignment-overlay .room-detail-panel,
+.room-assignment-overlay .assignment-guest-scroll {
+  overflow: hidden;
+  scrollbar-gutter: auto;
+}
+
+.room-assignment-overlay .room-detail-panel {
+  min-height: 200px;
+  max-height: 200px;
+}
+
+.room-assignment-overlay .room-detail-content {
+  min-height: 0;
+}
+
+.room-assignment-overlay .room-cell,
+.room-assignment-overlay .room-row {
+  height: 72px;
+  min-height: 72px;
+  grid-auto-rows: 72px;
+}
+
+.room-assignment-overlay .room-cell {
+  padding: 5px 2px;
+}
+
+.room-assignment-overlay .room-cell > span {
+  min-height: 18px;
+  max-height: 18px;
+  margin-top: 4px;
+  line-height: 9px;
+}
+
+.room-assignment-overlay .room-state-icon {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 10px;
+  height: 10px;
+}
+
+.room-assignment-overlay .room-resident-face {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 24px;
+  height: 24px;
+}
+
+.room-recovery-compact {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 14px;
+  margin-bottom: 8px !important;
+  padding: 8px 10px !important;
+}
+
+.room-recovery-compact strong {
+  grid-row: 1 / 3;
+}
+
+.room-recovery-compact p,
+.room-recovery-compact small {
+  margin: 0 !important;
+  line-height: 1.35 !important;
+}
+
+.room-assignment-overlay .capacity-versus {
+  margin-top: 4px;
+}
+
+.room-assignment-overlay .capacity-person {
+  padding: 5px 8px;
+}
+
+.room-assignment-overlay .capacity-person > small {
+  line-height: 12px;
+}
+
+.room-assignment-overlay .capacity-person > strong {
+  line-height: 17px;
+}
+
+.room-assignment-overlay .capacity-person > span,
+.room-assignment-overlay .capacity-person > p {
+  margin-block: 2px;
+  line-height: 12px;
+}
+
+.room-assignment-overlay .capacity-person > p {
+  font-size: 8px;
+  line-height: 15px;
+}
+
+.room-assignment-overlay .capacity-person dl {
+  margin-top: 5px;
+}
+
+.room-assignment-overlay .capacity-person dl div {
+  min-height: 0;
+  padding: 2px 0;
+  line-height: 15px;
+}
+
+.room-assignment-overlay .capacity-person > em {
+  margin-top: 4px;
+  padding-block: 1px;
+  line-height: 15px;
+}
+
+.room-assignment-overlay .capacity-impact,
+.room-assignment-overlay .capacity-history {
+  margin-top: 4px;
+  padding: 5px 8px;
+}
+
+.room-assignment-overlay .capacity-impact > div,
+.room-assignment-overlay .capacity-impact p,
+.room-assignment-overlay .capacity-history p,
+.room-assignment-overlay .capacity-history small {
+  margin-top: 2px;
+  line-height: 12px;
+}
+
+.night-hotel {
+  height: 100dvh;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  padding-block: clamp(14px, 2.5vh, 30px);
+  overflow: hidden;
+}
+
+.day-flow-nav ~ .event-screen,
+.day-flow-nav ~ .report-screen {
+  height: calc(100dvh - 62px) !important;
+  min-height: 0 !important;
+  max-height: calc(100dvh - 62px) !important;
+}
+
+.day-flow-nav ~ .event-screen {
+  contain: strict;
+}
+
+.day-flow-nav ~ .event-screen::before {
+  animation: none;
+  transform: none;
+}
+
+.night-layout,
+.night-location-detail {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.night-hotel-map .hotel-location {
+  min-height: 76px;
+  padding: 10px 14px;
+}
+
+.night-rooms {
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+}
+
+.night-rooms button {
+  min-height: 48px;
+  padding: 5px !important;
+}
+
+.night-worker-select {
+  display: grid;
+  grid-template-columns: auto minmax(220px, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #10140f;
+  border-left: 2px solid var(--night-brass);
+}
+
+.night-worker-select select {
+  min-width: 0;
+  padding: 8px;
+  color: #ede1ca;
+  background: #171b16;
+  border: 1px solid #665637;
+}
+
+.night-finish {
+  min-height: 58px;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.report-screen,
+.event-screen,
+.room-screen,
+.cinematic-screen,
+.title-screen {
+  height: 100dvh;
+  min-height: 0;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.ending-cutscene .cutscene-copy,
+body .pause-menu {
+  max-height: calc(100dvh - 32px);
+  overflow: hidden;
+}
+
+.pause-menu nav {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.pause-menu nav > .resume {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 801px) and (max-height: 850px) {
+  .day-flow-page {
+    padding-block: 8px;
+  }
+
+  .day-flow-page h1 {
+    font-size: 26px;
+  }
+
+  .day-flow-page > header {
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+  }
+
+  .day-flow-page > header p,
+  .day-flow-page > header h1 {
+    margin-block: 2px;
+  }
+
+  .day-flow-page > footer {
+    min-height: 48px;
+    margin-top: 6px;
+    padding-top: 6px;
+  }
+
+  .morning-lines li {
+    padding: 8px 14px;
+    margin-bottom: 7px;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .living-layout {
+    gap: 24px;
+  }
+
+  .hotel-map {
+    height: 100%;
+    min-height: 0;
+    padding: 10px;
+    overflow: hidden;
+  }
+
+  .hotel-map header {
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+  }
+
+  .hotel-map-floors {
+    gap: 5px;
+  }
+
+  .hotel-map .map-floor {
+    padding: 5px 7px;
+  }
+
+  .hotel-map .map-room {
+    min-height: 27px;
+    gap: 1px;
+  }
+
+  .hotel-map .map-service-floor {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .hotel-map .map-place {
+    min-height: 66px;
+    padding: 6px 9px;
+  }
+
+  .hotel-map footer {
+    margin-top: 5px;
+    padding-top: 4px;
+  }
+
+  .room-assignment-overlay .front-desk-assignment {
+    height: calc(100dvh - 52px);
+  }
+
+  .room-assignment-overlay .room-cell,
+  .room-assignment-overlay .room-row {
+    height: 64px;
+    min-height: 64px;
+    grid-auto-rows: 64px;
+  }
+
+  .room-assignment-overlay .hotel-cutaway {
+    gap: 5px;
+    padding: 8px;
+  }
+
+  .room-assignment-overlay .room-detail-panel {
+    min-height: 200px;
+    max-height: 200px;
+  }
+
+  .room-assignment-overlay .room-board {
+    grid-template-rows: minmax(0, 1fr) auto 200px;
+  }
+
+  .guest-detail-card {
+    padding: 14px;
+  }
+
+  .guest-detail-card dl div {
+    padding: 7px 0;
+  }
+
+  .night-heading {
+    padding-bottom: 10px;
+  }
+
+  .night-objective {
+    margin: 8px 0;
+  }
+
+  .night-location-detail {
+    padding: 14px;
+  }
+
+  .night-location-detail h2 {
+    margin-bottom: 8px;
+    font-size: 23px;
+  }
+
+  .night-location-detail h3,
+  .night-location-detail p,
+  .night-stock div {
+    margin-block: 7px;
+  }
+
+  .flow-facility .night-location-detail {
+    padding: 10px 14px;
+  }
+
+  .flow-facility .night-location-detail h2 {
+    margin-bottom: 4px;
+  }
+
+  .flow-facility .night-location-detail h3,
+  .flow-facility .night-location-detail p {
+    margin-block: 3px;
+    line-height: 1.35;
+  }
+
+  .flow-facility .night-location-detail button {
+    min-height: 34px;
+    margin-block: 2px;
+  }
+
+  .flow-facility .generator-gauge {
+    gap: 3px;
+  }
+
+  .flow-facility .generator-gauge strong {
+    font-size: 32px;
+  }
+}

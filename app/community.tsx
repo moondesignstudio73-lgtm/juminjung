@@ -7,7 +7,10 @@ import {
   JOB_NAMES,
   residenceLabel,
 } from '@/game/community-data';
-import { recoveryQuote } from '@/game/community-manager';
+import {
+  recoveryQuote,
+  residentReplacementBlockReason,
+} from '@/game/community-manager';
 
 export function ResidentDetails({
   state,
@@ -20,6 +23,7 @@ export function ResidentDetails({
 }) {
   const [confirm, setConfirm] = useState(false),
     profile = communityProfile(guest);
+  const expelBlockReason = residentReplacementBlockReason(guest);
   const duties = Object.entries(state.staffAssignments)
     .filter(([, id]) => id === guest.id)
     .map(([duty]) =>
@@ -53,7 +57,12 @@ export function ResidentDetails({
             ? '서두르는 손길: 객실 복구 시간 -30분, 부품 +1'
             : '차분함: 표준 복구 시간과 비용'}
       </p>
-      {onExpel &&
+      {onExpel && expelBlockReason && (
+        <p className="resident-expel-blocked">
+          퇴실 불가 · {expelBlockReason}
+        </p>
+      )}
+      {onExpel && !expelBlockReason &&
         (!confirm ? (
           <Button
             variant="outline"
@@ -63,11 +72,16 @@ export function ResidentDetails({
             퇴실 요청
           </Button>
         ) : (
-          <div role="group" aria-label="퇴실 확인">
+          <div
+            className="resident-expel-confirm"
+            role="group"
+            aria-label="퇴실 확인"
+          >
             <p>{guest.name}을 호텔에서 내보내시겠습니까?</p>
             <p>
               {duties.length ? `${duties.join(', ')} 해제. ` : ''}이 주민의 자원
-              소비가 중단되고 객실이 비워집니다. 다른 주민이 있다면 신뢰가 최대 2 낮아집니다.
+              소비가 중단되고 객실이 비워집니다. 다른 주민이 있다면 신뢰가 최대
+              2 낮아집니다.
             </p>
             <Button variant="secondary" onClick={() => setConfirm(false)}>
               취소
@@ -90,10 +104,12 @@ export function RoomRecovery({
   state,
   roomNumber,
   onRestore,
+  compact = false,
 }: {
   state: GameState;
   roomNumber: number;
   onRestore?: (room: number, worker: string | null) => void;
+  compact?: boolean;
 }) {
   const [worker, setWorker] = useState<string | null>(null);
   const room = state.rooms.find((r) => r.roomNumber === roomNumber);
@@ -113,6 +129,26 @@ export function RoomRecovery({
     );
   const quote = recoveryQuote(state, roomNumber, worker),
     direct = recoveryQuote(state, roomNumber);
+  if (compact)
+    return (
+      <section
+        className="guest-inline-note community-detail room-recovery-compact"
+        aria-label={`${roomNumber}호 복구 요약`}
+      >
+        <strong>
+          {roomNumber}호 · {quote.definition.label}
+        </strong>
+        <p>
+          필요: 부품 {direct.parts}
+          {direct.medicine ? ` · 약품 ${direct.medicine}` : ''} ·{' '}
+          {direct.minutes}분
+        </p>
+        <small>
+          추천: {JOB_NAMES[quote.definition.job]} · 복구 작업은 야간 객실
+          관리에서 진행합니다.
+        </small>
+      </section>
+    );
   return (
     <section
       className="guest-inline-note community-detail"

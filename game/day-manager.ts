@@ -7,7 +7,7 @@ import { determineWorldState } from "./world-state-manager.ts";
 import { applyNightChoice, canChooseNightChoice, selectNightEvent } from "./night-event-manager.ts";
 import { getFacilityEconomy } from "./hotel-action-manager.ts";
 import { FACILITIES } from "./facility-data.ts";
-import { queueNightEventCutscene } from "./cutscene-manager.ts";
+import { queueHotelPolicyTransition, queueNightEventCutscene } from "./cutscene-manager.ts";
 import { resolveAuraNight } from "./aura-night-manager.ts";
 import { getNextRevisitDay } from "./visitor-manager.ts";
 import { applySurvivalGuestEffects, calculatePowerPlan, getRationPlan, PRIORITY_RATION_LIMITED_STRESS_DELTA, PRIORITY_RATION_SEVERE_STRESS_DELTA, RATION_POLICIES } from "./daily-survival-manager.ts";
@@ -188,5 +188,6 @@ export function resolveDay(state: GameState): GameState {
   });
   nextState.lastNightPresentation = createNightPresentation(beforeNight, night.state, nextState, night.event.title, night.choice.label);
   const endings = evaluateEndings(nextState);
-  return queueNightEventCutscene({ ...nextState, availableEndings: endings.available, endingProgress: endings.progress }, night.event.id, night.choice.id, summary.completedDay);
+  const withNightCutscene = queueNightEventCutscene({ ...nextState, availableEndings: endings.available, endingProgress: endings.progress }, night.event.id, night.choice.id, summary.completedDay);
+  return queueHotelPolicyTransition(withNightCutscene, summary.completedDay);
 }

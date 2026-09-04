@@ -2,6 +2,17 @@ import type { CutsceneDefinition } from "./types.ts";
 
 export const CUTSCENES: CutsceneDefinition[] = [
   {
+    id: 'hotel_policy_changed',
+    triggerEventId: 'hotel_policy_transition',
+    priority: 170,
+    kicker: 'FRONT DESK · NEW HOUSE RULES',
+    title: '호의만으로는 지킬 수 없는 문',
+    body: '찾아오는 발걸음은 늘고, 열쇠와 비축품은 줄어들었습니다. 아버지의 장부 마지막 여백에는 짧은 문장이 남아 있었습니다. “호의만으로 호텔은 굴러가지 않는다.” 당신은 프런트 입구에 낡은 판자를 걸고, 내일부터 방을 원하는 사람의 말과 가져온 물자를 함께 확인하기로 합니다.',
+    quote: '방을 내어 주는 일은 끝나지 않았다. 이제 그 문을 내일도 열 수 있어야 한다.',
+    image: '/juminjung/assets/front-desk-night.png',
+    imageAlt: '비 내리는 밤의 JUJU HOTEL 프런트에서 객실 열쇠와 줄어든 비축 장부 옆에 새 숙박 규칙판이 놓인 장면.',
+  },
+  {
     id: "lily_truth_broadcast",
     triggerStoryEventId: "lily-truth",
     triggerStoryChoiceId: "broadcast",

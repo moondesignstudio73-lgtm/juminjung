@@ -85,17 +85,22 @@ export function DayFlowPage({
   children?: ReactNode;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
-  const [showAll, setShowAll] = useState(false);
+  const [residentPage, setResidentPage] = useState(0);
   const forecast = getLivingForecast(state),
     residents = [...forecast.residents].sort(
       (a, b) => residentStatus(b).rank - residentStatus(a).rank,
     );
   const troubled = residents.filter((g) => residentStatus(g).rank > 0);
-  const visible = showAll
-    ? residents
-    : troubled.length
-      ? troubled.slice(0, 4)
-      : residents.slice(0, 3);
+  const residentPageSize = 4;
+  const residentPageCount = Math.max(
+    1,
+    Math.ceil(residents.length / residentPageSize),
+  );
+  const safeResidentPage = Math.min(residentPage, residentPageCount - 1);
+  const visible = residents.slice(
+    safeResidentPage * residentPageSize,
+    (safeResidentPage + 1) * residentPageSize,
+  );
   const guest = residents.find((g) => g.id === selected);
   const duty = (id: string) =>
     STAFF_DUTIES.find((d) => state.staffAssignments[d.id] === id)?.name ??
@@ -122,9 +127,11 @@ export function DayFlowPage({
       <section className="day-flow-content" key={`${state.day}-${stage}`}>
         {stage === 'report' && (
           <ol className="morning-lines">
-            {getMorningBrief(state).map((line, i) => (
-              <li key={i}>{line}</li>
-            ))}
+            {getMorningBrief(state)
+              .slice(0, 5)
+              .map((line, i) => (
+                <li key={i}>{line}</li>
+              ))}
           </ol>
         )}
         {stage === 'visitors' && (
@@ -159,36 +166,10 @@ export function DayFlowPage({
                   처음 보는 생활 관리 · 주민은 매일 식량과 물을 필요로 합니다.
                 </p>
               )}
-              {!troubled.length && !showAll && (
+              {!troubled.length && (
                 <p className="quiet-status">✓ 지금은 위급한 주민이 없습니다.</p>
               )}
-              <div className="resident-short-list">
-                {visible.map((g) => (
-                  <Button
-                    variant="ghost"
-                    key={g.id}
-                    onClick={() => setSelected(selected === g.id ? null : g.id)}
-                    aria-expanded={selected === g.id}
-                  >
-                    <img src={g.portrait} alt="" />
-                    <span>
-                      <strong>{g.name}</strong>
-                      <small>
-                        {g.role} · {duty(g.id)}
-                      </small>
-                      <em>{residentStatus(g).label}</em>
-                    </span>
-                  </Button>
-                ))}
-              </div>
-              {(residents.length > visible.length || showAll) && (
-                <Button variant="link" onClick={() => setShowAll(!showAll)}>
-                  {showAll
-                    ? '주요 상태만 보기'
-                    : `주민 ${residents.length}명 모두 보기`}
-                </Button>
-              )}
-              {guest && (
+              {guest ? (
                 <article className="resident-detail">
                   <h3>
                     {guest.name} · {guest.currentRoomNumber}호
@@ -209,9 +190,54 @@ export function DayFlowPage({
                     onExpel={readOnly ? undefined : onExpel}
                   />
                   <Button variant="outline" onClick={() => setSelected(null)}>
-                    상세 닫기
+                    주민 목록으로
                   </Button>
                 </article>
+              ) : (
+                <>
+                  <div className="resident-short-list">
+                    {visible.map((g) => (
+                      <Button
+                        variant="ghost"
+                        key={g.id}
+                        onClick={() => setSelected(g.id)}
+                      >
+                        <img src={g.portrait} alt="" />
+                        <span>
+                          <strong>{g.name}</strong>
+                          <small>
+                            {g.role} · {duty(g.id)}
+                          </small>
+                          <em>{residentStatus(g).label}</em>
+                        </span>
+                      </Button>
+                    ))}
+                  </div>
+                  {residentPageCount > 1 && (
+                    <nav
+                      className="game-pagination"
+                      aria-label="주민 목록 페이지"
+                    >
+                      <Button
+                        variant="outline"
+                        disabled={safeResidentPage === 0}
+                        onClick={() => setResidentPage(safeResidentPage - 1)}
+                      >
+                        ‹ 이전
+                      </Button>
+                      <span>
+                        {safeResidentPage + 1} / {residentPageCount}
+                      </span>
+                      <Button
+                        variant="outline"
+                        disabled={safeResidentPage === residentPageCount - 1}
+                        onClick={() => setResidentPage(safeResidentPage + 1)}
+                      >
+                        다음 ›
+                      </Button>
+                    </nav>
+                  )}
+                </>
               )}
             </section>
             <section>
@@ -329,7 +355,15 @@ export function FlowArchive({
   state: GameState;
   onClose: () => void;
 }) {
-  const [limit, setLimit] = useState(40);
+  const [page, setPage] = useState(0);
+  const pageSize = 6;
+  const entries = [...state.eventHistory].reverse();
+  const pageCount = Math.max(1, Math.ceil(entries.length / pageSize));
+  const safePage = Math.min(page, pageCount - 1);
+  const visibleEntries = entries.slice(
+    safePage * pageSize,
+    (safePage + 1) * pageSize,
+  );
   return (
     <main className="day-flow-page">
       <header>
@@ -371,19 +405,32 @@ export function FlowArchive({
         </div>
         <p>아버지의 흔적 · 진행 기록 {state.fatherStoryProgress}</p>
         <ol className="archive-lines">
-          {state.eventHistory
-            .slice(-limit)
-            .reverse()
-            .map((e, i) => (
-              <li key={i}>
-                DAY {e.day} · {e.message}
-              </li>
-            ))}
+          {visibleEntries.map((e, i) => (
+            <li key={i}>
+              DAY {e.day} · {e.message}
+            </li>
+          ))}
         </ol>
-        {state.eventHistory.length > limit && (
-          <Button variant="outline" onClick={() => setLimit(limit + 40)}>
-            이전 기록 더 보기
-          </Button>
+        {pageCount > 1 && (
+          <nav className="game-pagination" aria-label="장부 기록 페이지">
+            <Button
+              variant="outline"
+              disabled={safePage === 0}
+              onClick={() => setPage(safePage - 1)}
+            >
+              최근 기록
+            </Button>
+            <span>
+              {safePage + 1} / {pageCount}
+            </span>
+            <Button
+              variant="outline"
+              disabled={safePage === pageCount - 1}
+              onClick={() => setPage(safePage + 1)}
+            >
+              이전 기록
+            </Button>
+          </nav>
         )}
       </section>
       <footer>

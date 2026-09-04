@@ -57,12 +57,14 @@ const HELP = [
 ];
 export function SystemMenu({
   state,
+  blocked = false,
   muted,
   onMutedChange,
   onLoad,
   onTitle,
 }: {
   state: GameState;
+  blocked?: boolean;
   muted: boolean;
   onMutedChange: (value: boolean) => void;
   onLoad: (state: GameState) => void;
@@ -113,7 +115,7 @@ export function SystemMenu({
   }, [largeText, quietMotion]);
   useEffect(() => {
     const handle = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !open) {
+      if (event.key === 'Escape' && !open && !blocked) {
         event.preventDefault();
         setView('main');
         setOpen(true);
@@ -131,7 +133,7 @@ export function SystemMenu({
     };
     window.addEventListener('keydown', handle);
     return () => window.removeEventListener('keydown', handle);
-  }, [open]);
+  }, [open, blocked]);
   useEffect(() => {
     const saved = (event: Event) => {
       const ok = (event as CustomEvent<{ ok: boolean }>).detail.ok;

@@ -8,6 +8,16 @@ const activateOrQueue = (state: GameState, cutsceneId: CutsceneId | undefined): 
     : { ...state, activeCutsceneId: cutsceneId };
 };
 
+export function queueCutscene(state: GameState, cutsceneId: CutsceneId): GameState {
+  return activateOrQueue(state, cutsceneId);
+}
+
+export function queueHotelPolicyTransition(state: GameState, completedDay: number): GameState {
+  return completedDay === 3
+    ? activateOrQueue(state, 'hotel_policy_changed')
+    : state;
+}
+
 export function queueNightEventCutscene(state: GameState, eventId: string, choiceId: string, completedDay: number): GameState {
   const specificity = (candidate: (typeof CUTSCENES)[number]) => Number(candidate.triggerEventId !== undefined) + Number(candidate.triggerChoiceId !== undefined);
   const cutscene = [...CUTSCENES].sort((a, b) => specificity(b) - specificity(a) || b.priority - a.priority || a.id.localeCompare(b.id)).find((candidate) => (candidate.triggerEventId === undefined || candidate.triggerEventId === eventId)
