@@ -1,0 +1,527 @@
+/* Readable game-scale tokens. Layout stays viewport-owned; no zoom/transform scaling. */
+:root {
+  /* Next injects these in its document shell; the Vite/Pages build also needs
+     concrete fallbacks or every `font:` shorthand using them becomes invalid. */
+  --font-display: 'Arial Narrow', 'Roboto Condensed', 'Noto Sans KR', sans-serif;
+  --font-typewriter: 'Courier New', 'Noto Serif KR', monospace;
+  --font-xs: 0.75rem;
+  --font-sm: 0.8125rem;
+  --font-md: 0.9375rem;
+  --font-lg: 1.125rem;
+  --font-xl: 1.75rem;
+  --space-xs: 0.375rem;
+  --space-sm: 0.625rem;
+  --space-md: 0.875rem;
+  --space-lg: 1.25rem;
+  --control-sm: 2.5rem;
+  --control-md: 2.75rem;
+  --control-lg: 3rem;
+}
+
+body[data-ui-scale='compact'] {
+  --font-xs: 0.6875rem;
+  --font-sm: 0.75rem;
+  --font-md: 0.875rem;
+  --font-lg: 1rem;
+  --font-xl: 1.5625rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1rem;
+  --control-sm: 2.25rem;
+  --control-md: 2.5rem;
+  --control-lg: 2.75rem;
+}
+
+body[data-ui-scale='large'] {
+  --font-xs: 0.8125rem;
+  --font-sm: 0.875rem;
+  --font-md: 1.0625rem;
+  --font-lg: 1.25rem;
+  --font-xl: 1.9375rem;
+  --space-sm: 0.6875rem;
+  --space-md: 1rem;
+  --space-lg: 1.375rem;
+  --control-sm: 2.75rem;
+  --control-md: 3rem;
+  --control-lg: 3.25rem;
+}
+
+body {
+  font-size: var(--font-md);
+  line-height: 1.45;
+}
+
+/* Metadata used to be the least readable part of the interface (often 8-10px).
+   Keep it secondary through color and weight, not by making it illegible. */
+body small {
+  font-size: var(--font-xs) !important;
+  line-height: 1.4;
+}
+
+body [data-slot='button'],
+body button,
+body select {
+  min-height: var(--control-sm);
+}
+
+body [data-slot='button'] {
+  padding-inline: var(--space-md);
+  font-size: var(--font-sm);
+}
+
+body .flow-primary,
+body .front-desk-primary,
+body .assignment-actions .checkin,
+body .desk-actions .checkin,
+body .decision-bar button {
+  min-height: var(--control-lg) !important;
+  font-size: var(--font-md) !important;
+}
+
+/* Use the monitor as a game canvas instead of keeping a narrow web-page column. */
+body .day-flow-page {
+  padding-inline: max(var(--space-lg), 3vw);
+}
+
+body .day-flow-page > header,
+body .day-flow-content,
+body .day-flow-page > footer {
+  width: 100%;
+  max-width: min(2304px, 92vw);
+  margin-inline: auto;
+}
+
+body .day-flow-page h1 {
+  font-size: clamp(1.75rem, 2.15vw, 2.5rem);
+}
+
+body .day-flow-page h2,
+body .hotel-map h2 {
+  font-size: var(--font-lg);
+}
+
+body .day-flow-page p,
+body .guest-inline-note p,
+body .night-location-detail p,
+body .game-help p {
+  font-size: var(--font-md);
+  line-height: 1.5;
+}
+
+body .day-flow-page small,
+body .night-location-detail small,
+body .case-file > p,
+body .case-file dl,
+body .front-desk-drawer small,
+body .hotel-map header span,
+body .hotel-map footer {
+  font-size: var(--font-sm);
+  line-height: 1.45;
+}
+
+/* Persistent HUD and navigation. */
+body .day-flow-nav {
+  min-height: 68px;
+  height: 68px;
+  gap: var(--space-sm);
+  padding-block: var(--space-sm);
+  padding-left: max(112px, 3vw);
+}
+
+body .day-flow-nav > span {
+  font-size: var(--font-lg);
+}
+
+body .day-flow-nav button {
+  min-height: var(--control-sm) !important;
+  font-size: var(--font-sm);
+}
+
+body .hotel-status-strip {
+  min-height: 46px;
+  gap: var(--space-lg);
+  padding-block: var(--space-sm);
+  font-size: var(--font-md);
+}
+
+body .hotel-status-strip svg {
+  width: 18px;
+  height: 18px;
+}
+
+body .hotel-status-strip small,
+body .game-hint {
+  font-size: var(--font-sm);
+}
+
+body .system-menu-trigger {
+  min-height: var(--control-md);
+  padding: 0 var(--space-md);
+  font-size: var(--font-sm);
+}
+
+body .system-menu-trigger svg {
+  width: 18px;
+  height: 18px;
+}
+
+body .system-menu-trigger kbd {
+  padding: 4px 7px;
+  font-size: var(--font-xs);
+}
+
+/* Front desk: larger dossier and controls, still one-screen. */
+body .day-flow-visitors .game-header {
+  min-height: 62px;
+  height: 62px;
+}
+
+body .day-flow-visitors .game-header h1,
+body .front-desk-topbar h1 {
+  font-size: clamp(1.625rem, 2.25vw, 2.375rem);
+}
+
+body .front-desk-quick {
+  width: 112px;
+  padding-inline: var(--space-sm);
+}
+
+body .day-flow-visitors .front-desk-quick button {
+  min-height: 64px;
+  gap: var(--space-xs);
+  font-size: var(--font-sm);
+}
+
+body .front-desk-quick button svg {
+  width: 21px;
+  height: 21px;
+}
+
+body .front-desk-quick small,
+body .front-desk-goal small {
+  font-size: var(--font-xs);
+}
+
+body .left-panel {
+  width: min(300px, 25vw);
+  padding: var(--space-lg);
+}
+
+body .case-file h2 {
+  font-size: clamp(1.25rem, 1.55vw, 1.75rem);
+}
+
+body .case-file dl div,
+body .resource-line,
+body .speaker,
+body .dialogue-card p {
+  font-size: var(--font-sm);
+}
+
+body .dialogue-card {
+  width: min(760px, calc(100% - 52px));
+  padding: var(--space-md) var(--space-lg);
+}
+
+body .action-row button {
+  min-height: var(--control-sm) !important;
+  padding-inline: var(--space-sm) !important;
+  font-size: var(--font-sm) !important;
+}
+
+body .item {
+  width: 128px;
+  min-height: 82px;
+  padding: var(--space-sm);
+}
+
+body .item span { font-size: var(--font-sm); }
+body .item small { font-size: var(--font-xs); }
+
+/* Drawers, residents and comparison records. */
+body .front-desk-drawer {
+  width: min(720px, calc(100vw - 112px));
+  padding: var(--space-lg);
+}
+
+body .front-desk-drawer > header h2,
+body .guest-detail-card h3 {
+  font-size: var(--font-xl);
+}
+
+body .front-desk-drawer > header .modal-close-button {
+  width: var(--control-md);
+  height: var(--control-md);
+}
+
+body .guest-list > button {
+  min-height: 70px;
+  padding: var(--space-sm);
+}
+
+body .guest-list strong,
+body .capacity-person > strong {
+  font-size: var(--font-lg);
+}
+
+body .guest-list small,
+body .guest-list em,
+body .guest-detail-card > p,
+body .guest-detail-card dl div,
+body .capacity-person > span,
+body .capacity-person > p,
+body .capacity-empty-state p,
+body .capacity-empty-state dl div,
+body .capacity-person dl div,
+body .capacity-impact > div,
+body .capacity-impact p,
+body .capacity-history p,
+body .capacity-history small {
+  font-size: var(--font-sm);
+  line-height: 1.45;
+}
+
+body .npc-rank {
+  min-width: 27px;
+  height: 23px;
+  padding: 2px 6px 0;
+  font-size: var(--font-xs);
+}
+
+body .npc-identity-line,
+body .npc-economy-grid p,
+body .npc-stat-list > div,
+body .compact-stat {
+  font-size: var(--font-sm);
+}
+
+body .npc-economy-grid small,
+body .npc-profile-page h4,
+body .npc-compact-record h4,
+body .capacity-person > small,
+body .capacity-person > em {
+  font-size: var(--font-xs);
+}
+
+body .npc-profile-ledger > nav button {
+  min-height: var(--control-sm);
+  font-size: var(--font-sm);
+}
+
+body .stat-help-button,
+body .compact-stat button,
+body .stat-explanation button,
+body .capacity-stat-explanation button {
+  width: var(--control-sm);
+  min-width: var(--control-sm);
+  height: var(--control-sm);
+  font-size: var(--font-xs);
+}
+
+body .npc-profile-page {
+  height: 176px;
+  padding-block: var(--space-sm);
+}
+
+body .npc-identity-line,
+body .npc-traits > div,
+body .npc-traits small,
+body .stat-explanation,
+body .capacity-stat-explanation,
+body .capacity-person > p,
+body .capacity-person > em,
+body .capacity-impact p,
+body .capacity-history p,
+body .ledger-vitals span,
+body .room-choice-summary p,
+body .placement-summary,
+body .placement-reason,
+body .resident-expel-blocked,
+body .room-assignment-overlay .capacity-person > p {
+  font-size: var(--font-xs);
+  line-height: 1.4;
+}
+
+body .desk-guide-badge::before,
+body .desk-guide-badge::after,
+body .decision-guidance::before,
+body .decision-guidance::after {
+  font-size: var(--font-xs);
+}
+
+body .hotel-policy-sign small,
+body .hotel-policy-sign span,
+body .hotel-policy-sign > output b,
+body .hotel-policy-sign > output span,
+body .hotel-policy-sign > output small {
+  font-size: var(--font-xs) !important;
+  line-height: 1.35;
+}
+
+body .capacity-panel-body,
+body .capacity-panel {
+  overflow: hidden;
+}
+
+body .capacity-person,
+body .capacity-impact,
+body .capacity-history {
+  padding: var(--space-md);
+}
+
+/* Rooms: numbers and locked states must be readable at 100% browser zoom. */
+body .room-screen {
+  padding: var(--space-lg) max(var(--space-lg), 3vw);
+}
+
+body .room-screen > header,
+body .room-layout {
+  max-width: min(2304px, 92vw);
+}
+
+body .room-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+  gap: var(--space-lg);
+}
+
+body .room-board,
+body .aura-preview,
+body .hotel-map,
+body .staff-operations {
+  padding: var(--space-lg);
+}
+
+body .room-cell {
+  min-height: 88px;
+  padding: var(--space-sm) var(--space-xs);
+}
+
+body .room-cell b {
+  font-size: var(--font-lg);
+}
+
+body .room-cell span,
+body .room-cell i,
+body .room-legend,
+body .map-room,
+body .map-place > span,
+body .map-place > small {
+  font-size: var(--font-xs);
+  line-height: 1.35;
+}
+
+body .map-room { min-height: 48px; }
+body .hotel-map .map-place { min-height: 104px; }
+
+body .staff-grid strong,
+body .scavenge-grid strong { font-size: var(--font-sm); }
+body .staff-grid small,
+body .staff-grid select,
+body .scavenge-grid p,
+body .scavenge-grid small { font-size: var(--font-xs); }
+
+/* ESC/settings remain roomy without internal scrolling. */
+body .pause-menu {
+  width: min(620px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: var(--space-lg);
+  overflow: hidden;
+}
+
+body .pause-menu header strong,
+body .pause-menu [data-slot='dialog-title'] {
+  font-size: var(--font-xl);
+}
+
+body .pause-menu header span,
+body .pause-menu header small,
+body .pause-menu small,
+body .slot-context {
+  font-size: var(--font-sm);
+}
+
+body .pause-menu nav > button,
+body .settings-list > button {
+  min-height: var(--control-md);
+  font-size: var(--font-md);
+}
+
+.ui-scale-setting {
+  display: grid;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: #11130f;
+  border: 1px solid #4b4536;
+}
+
+.ui-scale-setting > strong { font-size: var(--font-md); color: #dfc48e; }
+.ui-scale-setting > small { color: #9d998d; }
+.ui-scale-setting > div { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-xs); }
+.ui-scale-setting button { min-height: var(--control-md); }
+.ui-scale-setting button[aria-pressed='true'] {
+  color: #17150f;
+  background: #c69b55;
+  border-color: #e0bd79;
+}
+
+/* 1366×768: compact the rhythm, never return to unreadable 8–10px UI. */
+@media (min-width: 801px) and (max-height: 850px) {
+  :root {
+    --space-xs: 0.25rem;
+    --space-sm: 0.4375rem;
+    --space-md: 0.625rem;
+    --space-lg: 0.875rem;
+  }
+
+  body .day-flow-nav { min-height: 58px; height: 58px; }
+  body .hotel-status-strip { min-height: 40px; padding-block: 5px; }
+  body .day-flow-page { height: calc(100dvh - 58px); padding-block: 8px; }
+  body .hotel-status-strip ~ .day-flow-page { height: calc(100dvh - 98px); }
+  body .day-flow-visitors .game-header { min-height: 54px; height: 54px; }
+  body .day-flow-visitors .desk-scene { height: calc(100svh - 190px); }
+  body .front-desk-quick { padding-top: 104px; }
+  body .day-flow-visitors .front-desk-quick button { min-height: 56px; }
+  body .npc-profile-page { height: 158px; }
+  body .room-cell { min-height: 68px; }
+  body .map-room { min-height: 34px; }
+  body .hotel-map .map-place { min-height: 72px; }
+}
+
+/* Large monitors keep UI present instead of shrinking into the center. */
+@media (min-width: 2400px) and (min-height: 1250px) {
+  :root {
+    --font-xs: 0.8125rem;
+    --font-sm: 0.9375rem;
+    --font-md: 1.0625rem;
+    --font-lg: 1.3125rem;
+    --font-xl: 2rem;
+    --control-sm: 2.75rem;
+    --control-md: 3rem;
+    --control-lg: 3.25rem;
+  }
+
+  body .title-lockup {
+    width: min(780px, calc(100% - 8vw));
+  }
+
+  body .title-lockup h1 {
+    font-size: 168px;
+  }
+
+  body .title-lockup > p:first-child,
+  body .title-tagline {
+    font-size: var(--font-sm);
+  }
+
+  body .start-button {
+    min-height: var(--control-lg) !important;
+    padding-inline: var(--space-lg) !important;
+    font-size: var(--font-md);
+  }
+}
+
+@media (max-width: 800px) {
+  body .front-desk-quick { width: 100%; }
+  body .front-desk-drawer { width: 100%; }
+  body .room-layout { grid-template-columns: 1fr; }
+}

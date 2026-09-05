@@ -244,6 +244,7 @@ import type {
   StaffDutyId,
 } from '@/game/types';
 import './no-scroll.css';
+import './ui-scale.css';
 
 type UiSave = GameState & { prologue: number };
 const makeInitial = (): UiSave => ({

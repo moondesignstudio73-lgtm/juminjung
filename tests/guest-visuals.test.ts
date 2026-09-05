@@ -5,6 +5,7 @@ import { createGuests } from "../game/guest-data.ts";
 import { getGuestVisualState, getNightEventPortraits, getStoryEventExpression } from "../game/guest-visual-manager.ts";
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
 import { STORY_CHOICE_EVENTS } from "../game/story-choice-data.ts";
+import { createNormalVisitor } from "../game/normal-visitor-data.ts";
 
 const guest = (id: string) => createGuests().find((item) => item.id === id)!;
 
@@ -266,4 +267,18 @@ test("과거 저장의 오래된 초상화 경로는 최신 카탈로그 자산�
   assert.equal(mia.portrait, "/juminjung/assets/portraits/mia/neutral-v1.png");
   assert.deepEqual(mia.portraitVariants, { afraid: "/juminjung/assets/portraits/mia/afraid-v1.png", happy: "/juminjung/assets/portraits/mia/happy-v1.png" });
   assert.equal(mia.expressions.length, 7);
+});
+
+test("레나 하트는 전용 방문객 초상을 사용하고 기존 저장도 새 자산으로 복원된다", () => {
+  let lena: ReturnType<typeof createNormalVisitor> | null = null;
+  for (let seed = 1; seed <= 10000 && !lena; seed += 1) {
+    const visitor = createNormalVisitor(seed, 5, 1);
+    if (visitor.name === "레나 하트") lena = visitor;
+  }
+  assert.ok(lena);
+  assert.equal(lena.portrait, "/juminjung/assets/portraits/visitors/lena-hart/neutral-v1.png");
+  const state = createInitialGameState();
+  state.guests.push({ ...lena, portrait: "/juminjung/assets/portraits/hazel/neutral-v1.png" });
+  const restored = restoreGameState(serializeGameState(state));
+  assert.equal(restored.guests.find((item) => item.id === lena.id)?.portrait, "/juminjung/assets/portraits/visitors/lena-hart/neutral-v1.png");
 });

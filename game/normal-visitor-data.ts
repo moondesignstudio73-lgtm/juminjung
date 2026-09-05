@@ -367,6 +367,12 @@ const PORTRAITS = {
   여성: ['grace', 'hazel', 'lily', 'rosa', 'ruth'],
   남성: ['daniel', 'eli', 'jack', 'noah', 'samuel'],
 } as const;
+const DEDICATED_VISITOR_PORTRAITS: Readonly<Record<string, string>> = {
+  '레나 하트': '/juminjung/assets/portraits/visitors/lena-hart/neutral-v1.png',
+};
+export function resolveNormalVisitorPortrait(name: string, gender: string, fallback?: string): string {
+  return DEDICATED_VISITOR_PORTRAITS[name] ?? fallback ?? `/juminjung/assets/portraits/${gender === '여성' ? 'grace' : 'daniel'}/neutral-v1.png`;
+}
 const SKILL_LABELS: Record<keyof GuestSkills, string> = {
   work: '작업',
   combat: '전투',
@@ -512,7 +518,7 @@ export function createNormalVisitor(
     age,
     gender,
     description: `무너진 도로를 지나 JUJU HOTEL의 불빛을 찾아온 ${profile.role}.`,
-    portrait: `/juminjung/assets/portraits/${portraitTemplate}/neutral-v1.png`,
+    portrait: resolveNormalVisitorPortrait(name, gender, `/juminjung/assets/portraits/${portraitTemplate}/neutral-v1.png`),
     portraitVariants: {},
     expressions: [
       'neutral',

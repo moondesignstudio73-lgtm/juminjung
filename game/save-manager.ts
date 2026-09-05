@@ -28,6 +28,7 @@ import { DEFAULT_NIGHT_PREPARATION } from './night-preparation-data.ts';
 import { normalizeNightPreparation } from './night-preparation-manager.ts';
 import { getNpcRank } from './npc-rank.ts';
 import { withRankedUpkeep } from './npc-upkeep.ts';
+import { resolveNormalVisitorPortrait } from './normal-visitor-data.ts';
 import type {
   FacilityId,
   GameState,
@@ -323,7 +324,10 @@ export function restoreGameState(raw: string | null): GameState {
           typeof guest.id === 'string' &&
           !catalogGuests.some((catalogGuest) => catalogGuest.id === guest.id),
       )
-      .map((guest) => guest as Guest);
+      .map((guest) => ({
+        ...guest,
+        portrait: resolveNormalVisitorPortrait(String(guest.name ?? ''), String(guest.gender ?? ''), typeof guest.portrait === 'string' && guest.portrait ? guest.portrait : undefined),
+      }) as Guest);
     const guests = [...catalogGuests, ...generatedGuests].map((guest) =>
       withRankedUpkeep({
         ...guest,

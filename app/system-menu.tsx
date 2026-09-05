@@ -77,8 +77,9 @@ export function SystemMenu({
     [notice, setNotice] = useState(''),
     [failed, setFailed] = useState(false),
     [pending, setPending] = useState<number | null>(null);
-  const [largeText, setLargeText] = useState(false),
-    [quietMotion, setQuietMotion] = useState(false);
+  const [uiScale, setUiScale] = useState<'compact' | 'normal' | 'large'>('normal'),
+    [quietMotion, setQuietMotion] = useState(false),
+    [preferencesReady, setPreferencesReady] = useState(false);
   const busy = useRef(false);
   useEffect(() => {
     if (open) emitUiCue('navigation', muted);
@@ -101,18 +102,29 @@ export function SystemMenu({
   };
   useEffect(() => {
     try {
-      setLargeText(localStorage.getItem('juju-large-text') === 'true');
+      const savedScale = localStorage.getItem('juju-ui-scale');
+      setUiScale(
+        savedScale === 'compact' || savedScale === 'large' || savedScale === 'normal'
+          ? savedScale
+          : localStorage.getItem('juju-large-text') === 'true'
+            ? 'large'
+            : 'normal',
+      );
       setQuietMotion(localStorage.getItem('juju-quiet-motion') === 'true');
     } catch {}
+    setPreferencesReady(true);
   }, []);
   useEffect(() => {
-    document.body.dataset.largeText = String(largeText);
+    if (!preferencesReady) return;
+    document.body.dataset.uiScale = uiScale;
+    delete document.body.dataset.largeText;
     document.body.dataset.quietMotion = String(quietMotion);
     try {
-      localStorage.setItem('juju-large-text', String(largeText));
+      localStorage.setItem('juju-ui-scale', uiScale);
+      localStorage.removeItem('juju-large-text');
       localStorage.setItem('juju-quiet-motion', String(quietMotion));
     } catch {}
-  }, [largeText, quietMotion]);
+  }, [preferencesReady, uiScale, quietMotion]);
   useEffect(() => {
     const handle = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !open && !blocked) {
@@ -372,13 +384,26 @@ export function SystemMenu({
                     효과음 연결 지점을 준비했습니다. 새 임시 음원은 넣지
                     않았습니다.
                   </small>
-                  <Button
-                    variant="outline"
-                    aria-pressed={largeText}
-                    onClick={() => setLargeText(!largeText)}
-                  >
-                    큰 글씨 {largeText ? '켬' : '끔'}
-                  </Button>
+                  <section className="ui-scale-setting" aria-labelledby="ui-scale-title">
+                    <strong id="ui-scale-title">UI 크기</strong>
+                    <small>브라우저 확대 없이 게임 화면의 글자와 조작 크기를 바꿉니다.</small>
+                    <div role="group" aria-label="UI 크기 선택">
+                      {([
+                        ['compact', '작게'],
+                        ['normal', '보통'],
+                        ['large', '크게'],
+                      ] as const).map(([value, label]) => (
+                        <Button
+                          key={value}
+                          variant="outline"
+                          aria-pressed={uiScale === value}
+                          onClick={() => setUiScale(value)}
+                        >
+                          {label}
+                        </Button>
+                      ))}
+                    </div>
+                  </section>
                   <Button
                     variant="outline"
                     aria-pressed={quietMotion}
