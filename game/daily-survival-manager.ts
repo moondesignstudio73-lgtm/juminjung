@@ -49,9 +49,10 @@ export function configureFoodRation(state: GameState, policy: FoodRationPolicy):
 
 export function getRationPlan(baseFoodDemand: number, policy: FoodRationPolicy): { foodDemand: number; stressDelta: number; healthDelta: number } {
   if (baseFoodDemand <= 0) return { foodDemand: 0, stressDelta: 0, healthDelta: 0 };
-  if (policy === "LIMITED") return { foodDemand: Math.max(1, Math.ceil(baseFoodDemand * .7)), stressDelta: 5, healthDelta: 0 };
-  if (policy === "SEVERE") return { foodDemand: Math.max(1, Math.ceil(baseFoodDemand * .4)), stressDelta: 15, healthDelta: -3 };
-  return { foodDemand: baseFoodDemand, stressDelta: -5, healthDelta: 0 };
+  const round1 = (value:number) => Math.round(value*10)/10;
+  if (policy === "LIMITED") return { foodDemand: Math.max(.1, round1(baseFoodDemand * .7)), stressDelta: 5, healthDelta: 0 };
+  if (policy === "SEVERE") return { foodDemand: Math.max(.1, round1(baseFoodDemand * .4)), stressDelta: 15, healthDelta: -3 };
+  return { foodDemand: round1(baseFoodDemand), stressDelta: -5, healthDelta: 0 };
 }
 
 export function getResidentRationEffects(

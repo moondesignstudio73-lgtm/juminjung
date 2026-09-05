@@ -1,9 +1,9 @@
-import { communityProfile } from './community-data.ts';
 import {
   createRankedSkills,
   getRankProfessionalTrait,
   rollNpcRank,
 } from './npc-rank.ts';
+import { withRankedUpkeep } from './npc-upkeep.ts';
 import type {
   AuraDefinition,
   Guest,
@@ -341,6 +341,8 @@ const POSITIVE_TRAITS = [
   'Loyal',
   'Clean',
   'Handy',
+  'SmallEater',
+  'Frugal',
 ] as const;
 const NEGATIVE_TRAITS = [
   'Thief',
@@ -352,6 +354,8 @@ const NEGATIVE_TRAITS = [
   'Alcoholic',
   'Paranoid',
   'Noisy',
+  'BigEater',
+  'Thirsty',
 ] as const;
 const CONDITIONAL_TRAITS = [
   'Religious',
@@ -603,25 +607,7 @@ export function createNormalVisitor(
         }
       : {}),
   };
-  const baseCommunity = communityProfile(visitor);
-  const demandingElite = ['SS', 'SSS'].includes(rank);
-  return {
-    ...visitor,
-    community: {
-      ...baseCommunity,
-      consumption: {
-        food: demandingElite
-          ? Math.min(5, baseCommunity.consumption.food + 1)
-          : rank === 'F'
-            ? 1
-            : baseCommunity.consumption.food,
-        water:
-          rank === 'SSS'
-            ? Math.min(5, baseCommunity.consumption.water + 1)
-            : baseCommunity.consumption.water,
-      },
-    },
-  };
+  return withRankedUpkeep(visitor);
 }
 
 export const NORMAL_VISITOR_JOBS = JOBS.map(({ role, minAge, maxAge }) => ({

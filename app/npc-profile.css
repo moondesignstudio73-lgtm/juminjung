@@ -1,19 +1,23 @@
 .npc-name-with-rank {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  line-height: 1.15;
 }
 
 .npc-rank {
-  display: inline-grid;
-  place-items: center;
-  min-width: 24px;
-  height: 20px;
-  padding-inline: 5px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 22px;
+  height: 18px;
+  padding: 1px 4px 0;
   color: #aaa59a;
   background: #171812;
   border: 1px solid #5e5a50;
-  font: 10px/1 var(--font-display);
+  font: 600 9px/1 var(--font-display);
   letter-spacing: 0;
   vertical-align: middle;
 }

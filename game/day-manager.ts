@@ -9,6 +9,7 @@ import { getFacilityEconomy } from "./hotel-action-manager.ts";
 import { FACILITIES } from "./facility-data.ts";
 import { queueHotelPolicyTransition, queueNightEventCutscene } from "./cutscene-manager.ts";
 import { resolveAuraNight } from "./aura-night-manager.ts";
+import { getWorkWaterSurcharge } from './npc-upkeep.ts';
 import { getNextRevisitDay } from "./visitor-manager.ts";
 import { applySurvivalGuestEffects, calculatePowerPlan, getRationPlan, PRIORITY_RATION_LIMITED_STRESS_DELTA, PRIORITY_RATION_SEVERE_STRESS_DELTA, RATION_POLICIES } from "./daily-survival-manager.ts";
 import { getNightStaffPlan, pruneStaffAssignments } from "./staff-operation-manager.ts";
@@ -18,6 +19,7 @@ import type { DaySummary, GameState, HotelLogEntry, StaffDutyResult } from "./ty
 
 const FACILITY_NAMES = Object.fromEntries(FACILITIES.map((facility) => [facility.id, facility.name])) as Record<string, string>;
 export const BASE_GENERATOR_FUEL_DEMAND = 1;
+const roundResource = (value:number) => Math.round(value*10)/10;
 
 export function advanceDay(day: number): number { return Math.max(0, day) + 1; }
 
@@ -38,10 +40,14 @@ export function resolveDay(state: GameState): GameState {
   const stayingIds = new Set(staying.map((guest) => guest.id));
   const microgridActive = state.flags.generator_network_stable === true;
   const staffPlan = getNightStaffPlan({ ...state, guests: auraNight.guests });
+  const laborWaterDemand = roundResource(staffPlan.results.reduce((total,result) => {
+    const worker = auraNight.guests.find((guest) => guest.id === result.guestId);
+    return total + (worker ? getWorkWaterSurcharge(worker, result.dutyId) : 0);
+  },0));
   const baseFoodDemand = auraNight.foodDemand + powerPlan.extraFoodDemand;
   const staffAdjustedFoodDemand = Math.max(0, baseFoodDemand - staffPlan.foodSaving);
   const rationPlan = getRationPlan(staffAdjustedFoodDemand, state.foodRationPolicy);
-  const demand = { food: rationPlan.foodDemand, water: auraNight.waterDemand, fuel: powerPlan.fuelDemand + preparationPlan.fuelCost };
+  const demand = { food: rationPlan.foodDemand, water: roundResource(auraNight.waterDemand + laborWaterDemand), fuel: powerPlan.fuelDemand + preparationPlan.fuelCost };
   const consumed = { food: Math.min(state.resources.food, demand.food), water: Math.min(state.resources.water, demand.water), fuel: Math.min(state.resources.fuel, demand.fuel) };
   const checkedOutGuestIds: string[] = [];
   const priorityRationGuestIds: string[] = [];
@@ -73,8 +79,8 @@ export function resolveDay(state: GameState): GameState {
   const nextDay = advanceDay(state.day);
   const afterGuestConsumption = {
     ...state.resources,
-    food: Math.max(0, state.resources.food - consumed.food + auraNight.tradeBonus.food),
-    water: Math.max(0, state.resources.water - consumed.water),
+    food: roundResource(Math.max(0, state.resources.food - consumed.food + auraNight.tradeBonus.food)),
+    water: roundResource(Math.max(0, state.resources.water - consumed.water)),
     fuel: Math.max(0, state.resources.fuel - consumed.fuel),
     parts: state.resources.parts + auraNight.tradeBonus.parts,
   };
@@ -112,13 +118,14 @@ export function resolveDay(state: GameState): GameState {
     if (result.dutyId==="MEDICAL") return appliedStaffHealing?[{...result,effect:result.effect.replace(/Health \+\d+/,`Health +${appliedStaffHealing}`)}]:[];
     return appliedStaffFoodSaving?[{...result,effect:`식량 수요 -${appliedStaffFoodSaving}`}]:[];
   });
-  const summary: DaySummary = { completedDay: state.day, nextDay, occupiedGuests: staying.length, consumed, baseFoodDemand, foodRationPolicy: state.foodRationPolicy, poweredCircuits: powerPlan.activeCircuits, powerCapacity: powerPlan.capacity, survivalWarnings: [...powerPlan.warnings, ...preparationPlan.warnings], facilityProduction: economy.production, facilityUpkeep: economy.upkeep, facilityUpkeepSaving: economy.upkeepSaving, inactiveFacilities: economy.inactiveFacilities, staffFoodSaving: appliedStaffFoodSaving, staffDutyResults, priorityRationGuestIds, familyZoneGuestIds: auraNight.familyZoneGuestIds, nightPreparationOptionIds: preparationPlan.active.map((option) => option.id), checkedOutGuestIds };
+  const summary: DaySummary = { completedDay: state.day, nextDay, occupiedGuests: staying.length, consumed, baseFoodDemand, laborWaterDemand, foodRationPolicy: state.foodRationPolicy, poweredCircuits: powerPlan.activeCircuits, powerCapacity: powerPlan.capacity, survivalWarnings: [...powerPlan.warnings, ...preparationPlan.warnings], facilityProduction: economy.production, facilityUpkeep: economy.upkeep, facilityUpkeepSaving: economy.upkeepSaving, inactiveFacilities: economy.inactiveFacilities, staffFoodSaving: appliedStaffFoodSaving, staffDutyResults, priorityRationGuestIds, familyZoneGuestIds: auraNight.familyZoneGuestIds, nightPreparationOptionIds: preparationPlan.active.map((option) => option.id), checkedOutGuestIds };
   const rationName = RATION_POLICIES.find((policy) => policy.id === state.foodRationPolicy)?.name ?? state.foodRationPolicy;
   const rationSaving = Math.max(0, staffAdjustedFoodDemand - demand.food);
   const entries: HotelLogEntry[] = [
     night.entry,
     ...story.entries,
     { day: state.day, type: "RESOURCE", message: `식량 ${consumed.food}, 물 ${consumed.water}, 연료 ${consumed.fuel} 소비` },
+    ...(laborWaterDemand ? [{ day: state.day, type: "RESOURCE" as const, message: `고강도 근무 · 물 ${laborWaterDemand} 추가 소비` }] : []),
     { day: state.day, type: "RESOURCE", message: `${rationName} · 식량 수요 ${baseFoodDemand}${appliedStaffFoodSaving?` → 근무 ${staffAdjustedFoodDemand}`:""} → 배급 ${demand.food}${rationSaving ? ` · 배급 ${rationSaving} 절감` : ""}` },
     { day: state.day, type: "RESOURCE", message: `전력 배분 · ${powerPlan.activeCircuits.length ? powerPlan.activeCircuits.join(" · ") : "전체 정지"} · ${powerPlan.activeCircuits.length}/${powerPlan.capacity} 회로` },
     { day: state.day, type: "EVENT", message: `야간 준비 · ${preparationPlan.active.map((option) => option.name).join(" · ")}${preparationPlan.codexApplied ? ` · CODEX ${preparationPlan.codexAppliedNames.join(" · ")}` : ""}` },

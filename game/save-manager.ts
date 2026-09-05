@@ -27,6 +27,7 @@ import {
 import { DEFAULT_NIGHT_PREPARATION } from './night-preparation-data.ts';
 import { normalizeNightPreparation } from './night-preparation-manager.ts';
 import { getNpcRank } from './npc-rank.ts';
+import { withRankedUpkeep } from './npc-upkeep.ts';
 import type {
   FacilityId,
   GameState,
@@ -226,7 +227,7 @@ export function createInitialGameState(): GameState {
     phase: 'title',
     day: 0,
     rooms: createRooms(),
-    guests: createGuests(),
+    guests: createGuests().map((guest) => withRankedUpkeep(guest, true)),
     resources: createResources(),
     flags: createEventFlags(),
     asked: [],
@@ -323,15 +324,17 @@ export function restoreGameState(raw: string | null): GameState {
           !catalogGuests.some((catalogGuest) => catalogGuest.id === guest.id),
       )
       .map((guest) => guest as Guest);
-    const guests = [...catalogGuests, ...generatedGuests].map((guest) => ({
-      ...guest,
-      rank: getNpcRank(guest),
-      claimedRank: guest.claimedRank ?? null,
-      rankRevealed: guest.rankRevealed ?? true,
-      professionalTraits: Array.isArray(guest.professionalTraits)
-        ? guest.professionalTraits.slice(0, 2)
-        : [],
-    }));
+    const guests = [...catalogGuests, ...generatedGuests].map((guest) =>
+      withRankedUpkeep({
+        ...guest,
+        rank: getNpcRank(guest),
+        claimedRank: guest.claimedRank ?? null,
+        rankRevealed: guest.rankRevealed ?? true,
+        professionalTraits: Array.isArray(guest.professionalTraits)
+          ? guest.professionalTraits.slice(0, 2)
+          : [],
+      }, guest.community?.upkeepVersion !== 2),
+    );
     const savedFacilities = (parsed.facilities ?? {}) as Record<
       string,
       unknown

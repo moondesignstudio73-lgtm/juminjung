@@ -71,7 +71,7 @@ test("Victor의 교역 Aura가 야간 자원 보너스를 만든다", () => {
 test("Noah의 식량 Aura는 여러 투숙객의 실제 식량 수요를 줄인다", () => {
   const state = place([["noah",202],["claire",201],["walter",203],["mia",101],["samuel",102],["ruth",103],["hazel",301]]);
   const result = resolveAuraNight(state.rooms, state.guests, 7, "STABLE", 0);
-  assert.equal(result.foodDemand, 6);
+  assert.equal(result.foodDemand, 5.9);
   assert.ok(result.foodDemand < result.guests.filter((guest) => guest.status === "STAYING").length);
 });
 
@@ -84,7 +84,7 @@ test("Noah의 공동 식당은 두 명 이상이 식사할 때 최종 식량 수
   assert.equal(withKitchen.communityKitchenFoodSaving,1);
 });
 
-test("공동 식당 수요는 배정된 투숙객만 세고 Aura 하한과 올림 뒤 정확히 1을 절감한다", () => {
+test("공동 식당 수요는 배정된 투숙객만 세고 Aura 하한과 소수점 정산 뒤 정확히 1을 절감한다", () => {
   const state = place([["walter",101],["claire",102]]);
   state.rooms = state.rooms.map((room) => room.roomNumber===101 ? {
     ...room,
@@ -96,8 +96,8 @@ test("공동 식당 수요는 배정된 투숙객만 세고 Aura 하한과 올�
   state.guests = state.guests.map((guest) => guest.id==="mia" ? {...guest,status:"STAYING" as const,currentRoomNumber:null} : guest.id==="samuel" ? {...guest,status:"WAITING" as const,currentRoomNumber:103} : guest);
   const withoutKitchen = getNightFoodDemand(state.rooms,state.guests);
   const withKitchen = getNightFoodDemand(state.rooms,state.guests,{noah_community_kitchen:true});
-  assert.deepEqual(withoutKitchen,{demand:2,saving:0});
-  assert.deepEqual(withKitchen,{demand:1,saving:1});
+  assert.deepEqual(withoutKitchen,{demand:1.3,saving:0});
+  assert.deepEqual(withKitchen,{demand:.3,saving:1});
 });
 
 test("공동 식당은 혼자 남은 투숙객의 식량 수요를 0으로 만들지 않는다", () => {
@@ -131,7 +131,7 @@ test("보존식 임계값은 투숙객 수가 아니라 Aura 보정 뒤 식량 �
     ...room,
     permanentEffects:[...room.permanentEffects,{id:`test-low-ration-${room.roomNumber}`,sourceGuestId:room.guestId!,name:"절약 배급",metric:"foodUse",operation:"ADD",value:-100}],
   }:room);
-  assert.deepEqual(getNightFoodDemandBreakdown(threeResidents.rooms,threeResidents.guests,{noah_ration_system:true}),{demand:2,saving:0,communityKitchenSaving:0,rationLabSaving:0});
+  assert.deepEqual(getNightFoodDemandBreakdown(threeResidents.rooms,threeResidents.guests,{noah_ration_system:true}),{demand:1.4,saving:0,communityKitchenSaving:0,rationLabSaving:0});
 });
 
 test("서로 배타적인 Noah 결말 플래그가 함께 남아도 식량 절감은 중첩되지 않는다", () => {

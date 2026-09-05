@@ -188,6 +188,7 @@ export type Guest = {
     job: string;
     traits: Array<'CAREFUL' | 'FAST_WASTEFUL' | 'STEADY'>;
     consumption: { food: number; water: number };
+    upkeepVersion?: 2;
     repairsCompleted: number;
   };
   placement?: {
@@ -356,6 +357,7 @@ export type DaySummary = {
   occupiedGuests: number;
   consumed: { food: number; water: number; fuel: number };
   baseFoodDemand?: number;
+  laborWaterDemand?: number;
   foodRationPolicy?: FoodRationPolicy;
   poweredCircuits?: PowerCircuitId[];
   powerCapacity?: number;

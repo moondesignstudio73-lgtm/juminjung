@@ -23,12 +23,13 @@ import {
   NpcRankBadge,
 } from './npc-profile';
 import type { ProfessionalStat } from '@/game/npc-rank';
+import { formatUpkeep, getNpcUpkeep } from '@/game/npc-upkeep';
 import { expelResident, restoreRoom } from '@/game/community-manager';
 import {
   getCapacityComparison,
   residentReplacementBlockReason,
 } from '@/game/capacity-manager';
-import { residenceLabel, communityProfile } from '@/game/community-data';
+import { residenceLabel } from '@/game/community-data';
 import { HotelStatus, RoomContents } from './hotel-ui';
 import { canUseShortcut, roomCaption } from '@/game/ui-guidance';
 import { getLivingForecast } from '@/game/day-flow-manager';
@@ -1248,8 +1249,8 @@ export default function Home() {
                   <div>
                     <dt>일일 유지비</dt>
                     <dd>
-                      식량 −{communityProfile(visitor).consumption.food} · 물 −
-                      {communityProfile(visitor).consumption.water}
+                      식량 −{formatUpkeep(getNpcUpkeep(visitor).food)} · 물 −
+                      {formatUpkeep(getNpcUpkeep(visitor).water)}
                     </dd>
                   </div>
                 )}
@@ -2435,11 +2436,35 @@ function FullCapacityPanel({
               <strong>교체 후 예상 변화</strong>
               <div>
                 <span>식량 소비</span>
-                <b>{comparison.before.food} → {comparison.after.food} / DAY</b>
+                <b>{formatUpkeep(comparison.before.food)} → {formatUpkeep(comparison.after.food)} / DAY</b>
               </div>
               <div>
                 <span>물 소비</span>
-                <b>{comparison.before.water} → {comparison.after.water} / DAY</b>
+                <b>{formatUpkeep(comparison.before.water)} → {formatUpkeep(comparison.after.water)} / DAY</b>
+              </div>
+              <div>
+                <span>식량 유지 가능</span>
+                <b>
+                  {comparison.before.food > 0
+                    ? (state.resources.food / comparison.before.food).toFixed(1)
+                    : '∞'}{' '}
+                  →{' '}
+                  {comparison.after.food > 0
+                    ? (state.resources.food / comparison.after.food).toFixed(1)
+                    : '∞'}일
+                </b>
+              </div>
+              <div>
+                <span>물 유지 가능</span>
+                <b>
+                  {comparison.before.water > 0
+                    ? (state.resources.water / comparison.before.water).toFixed(1)
+                    : '∞'}{' '}
+                  →{' '}
+                  {comparison.after.water > 0
+                    ? (state.resources.water / comparison.after.water).toFixed(1)
+                    : '∞'}일
+                </b>
               </div>
               <p className="capacity-loss">
                 잃는 것 · {comparison.current.duties.length

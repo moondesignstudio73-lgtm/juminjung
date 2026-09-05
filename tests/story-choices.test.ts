@@ -1418,7 +1418,7 @@ test("부엌에서 내보낸 Noah의 보존식 연구는 실제 대규모 식량
   assert.equal(restored.flags.noah_ration_system,true);
   assert.equal(restored.flags.noah_community_kitchen,false);
   assert.equal(restored.activeCutsceneId,"noah_ration_lab");
-  assert.deepEqual(getNightFoodDemand(restored.rooms,restored.guests,restored.flags),{demand:4,saving:2});
+  assert.deepEqual(getNightFoodDemand(restored.rooms,restored.guests,restored.flags),{demand:4.7,saving:1});
 });
 
 test("Noah의 두 식량 결말 컷씬은 다른 장면 뒤에 큐로 저장되어 유실되지 않는다", () => {

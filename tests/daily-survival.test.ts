@@ -15,6 +15,7 @@ import { isVulnerableResident } from "../game/resident-vulnerability.ts";
 import { resolveDay } from "../game/day-manager.ts";
 import { performHotelAction } from "../game/hotel-action-manager.ts";
 import { createInitialGameState, restoreGameState, serializeGameState } from "../game/save-manager.ts";
+import { getNpcUpkeep } from "../game/npc-upkeep.ts";
 
 test("새 게임은 하루 3 AP와 세 개의 기본 전력 회로로 시작한다", () => {
   const state = createInitialGameState();
@@ -96,10 +97,11 @@ test("정상 배급은 실제 야간 투숙객의 Stress를 낮추고 장부에 
   state.day = 1;
   state.phase = "night";
   state.guests[0] = { ...state.guests[0], status: "STAYING", currentRoomNumber: 101, remainingNights: 2, stress: 30 };
+  const expectedFood = getNpcUpkeep(state.guests[0]).food;
   const resolved = resolveDay(state);
   assert.equal(resolved.guests[0].stress, 20);
   assert.equal(resolved.lastDaySummary?.foodRationPolicy, "NORMAL");
-  assert.equal(resolved.lastDaySummary?.baseFoodDemand, 1);
+  assert.equal(resolved.lastDaySummary?.baseFoodDemand, expectedFood);
 });
 
 test("주방·방호·진료 회로 정지는 식량, 위협, 치안, 환자 Health에 모두 반영된다", () => {
@@ -109,11 +111,13 @@ test("주방·방호·진료 회로 정지는 식량, 위협, 치안, 환자 Hea
   state.powerAllocation = [];
   state.foodRationPolicy = "SEVERE";
   state.guests[0] = { ...state.guests[0], status: "STAYING", currentRoomNumber: 101, remainingNights: 2, infectionState: "INJURED", health: 70 };
+  const expectedBaseFood = Math.round((getNpcUpkeep(state.guests[0]).food + 1) * 10) / 10;
+  const expectedConsumedFood = Math.round(expectedBaseFood * .4 * 10) / 10;
   const beforeSecurity = state.hotelStats.security;
   const beforeThreat = Number(state.flags.monster_threat ?? 0);
   const resolved = resolveDay(state);
-  assert.equal(resolved.lastDaySummary?.baseFoodDemand, 2);
-  assert.equal(resolved.lastDaySummary?.consumed.food, 1);
+  assert.equal(resolved.lastDaySummary?.baseFoodDemand, expectedBaseFood);
+  assert.equal(resolved.lastDaySummary?.consumed.food, expectedConsumedFood);
   assert.equal(resolved.guests[0].health, 64);
   assert.equal(resolved.hotelStats.security, beforeSecurity - 4);
   assert.equal(Number(resolved.flags.monster_threat), beforeThreat + 3);

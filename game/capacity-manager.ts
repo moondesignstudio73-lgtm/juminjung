@@ -1,4 +1,5 @@
 import { communityProfile, JOB_NAMES } from './community-data.ts';
+import { getNpcUpkeep } from './npc-upkeep.ts';
 import { residentReplacementBlockReason } from './community-manager.ts';
 import { STAFF_DUTIES } from './staff-operation-manager.ts';
 import type { GameState, Guest, StaffDutyId } from './types.ts';
@@ -78,7 +79,7 @@ export function getCapacityComparison(
   const staying = state.guests.filter((guest) => guest.status === 'STAYING');
   const total = staying.reduce(
     (sum, guest) => {
-      const consumption = communityProfile(guest).consumption;
+      const consumption = getNpcUpkeep(guest);
       return {
         food: sum.food + consumption.food,
         water: sum.water + consumption.water,
@@ -88,13 +89,15 @@ export function getCapacityComparison(
   );
   const current = communityProfile(resident);
   const incoming = communityProfile(visitor);
+  const currentConsumption = getNpcUpkeep(resident);
+  const incomingConsumption = getNpcUpkeep(visitor);
   const duties = getAssignedDutyLabels(state, resident.id);
   const residentNeed = getGuestCapacityNeed(state, resident);
   const visitorNeed = getGuestCapacityNeed(state, visitor);
   return {
     current: {
       job: JOB_NAMES[current.job] ?? resident.role,
-      consumption: current.consumption,
+      consumption: currentConsumption,
       duties,
       abilities: [resident.aura?.name, ...duties].filter(Boolean) as string[],
       need: residentNeed,
@@ -103,7 +106,7 @@ export function getCapacityComparison(
     },
     incoming: {
       job: JOB_NAMES[incoming.job] ?? visitor.role,
-      consumption: incoming.consumption,
+      consumption: incomingConsumption,
       duties: getAvailableDutyLabels(visitor),
       abilities: [visitor.aura?.name, ...getAvailableDutyLabels(visitor)].filter(
         Boolean,
@@ -111,9 +114,9 @@ export function getCapacityComparison(
       need: visitorNeed,
     },
     after: {
-      food: total.food - current.consumption.food + incoming.consumption.food,
+      food: Math.round((total.food - currentConsumption.food + incomingConsumption.food) * 10) / 10,
       water:
-        total.water - current.consumption.water + incoming.consumption.water,
+        Math.round((total.water - currentConsumption.water + incomingConsumption.water) * 10) / 10,
     },
     before: total,
   };

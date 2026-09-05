@@ -63,7 +63,7 @@ export function communityProfile(
     const saved = guest.community;
     const finite = (value: unknown, fallback: number, max: number) =>
       typeof value === 'number' && Number.isFinite(value)
-        ? Math.max(1, Math.min(max, value))
+        ? Math.max(0.2, Math.min(max, value))
         : fallback;
     return {
       job: JOB_NAMES[saved.job] ? saved.job : 'RESIDENT',
@@ -81,6 +81,7 @@ export function communityProfile(
         Number.isFinite(saved.repairsCompleted)
           ? Math.max(0, Math.floor(saved.repairsCompleted))
           : 0,
+      ...(saved.upkeepVersion === 2 ? { upkeepVersion: 2 as const } : {}),
     };
   }
   const role = guest.role;

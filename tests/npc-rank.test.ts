@@ -65,7 +65,8 @@ test('F등급도 실제 능력과 낮은 유지비라는 활용 가치를 가진
   ).find((guest) => guest.rank === 'F');
   assert.ok(visitor);
   assert.ok(getProfessionalStats(visitor!).every((stat) => stat.value.length > 0));
-  assert.equal(visitor!.community!.consumption.food, 1);
+  assert.ok(visitor!.community!.consumption.food >= .3);
+  assert.ok(visitor!.community!.consumption.food <= .6);
 });
 
 test('등급은 저장되며 기존 무등급 저장은 스킬에서 결정적으로 마이그레이션된다', () => {

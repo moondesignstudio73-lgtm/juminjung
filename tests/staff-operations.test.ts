@@ -231,7 +231,10 @@ test('야간 정산은 주방 절약과 근무 결과를 남기고 장기 주민
       : guest,
   );
   const resolved = resolveDay(state);
-  assert.equal(resolved.lastDaySummary?.staffFoodSaving, 2);
+  assert.equal(
+    resolved.lastDaySummary?.staffFoodSaving,
+    Math.min(2, resolved.lastDaySummary?.baseFoodDemand ?? 0),
+  );
   assert.ok(
     resolved.lastDaySummary?.staffDutyResults?.some(
       (result) => result.dutyId === 'MAINTENANCE',

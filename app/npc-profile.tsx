@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { CircleHelp } from 'lucide-react';
-import { communityProfile } from '@/game/community-data';
 import {
   getJobLabel,
   getNpcRank,
@@ -11,6 +10,7 @@ import {
   type ProfessionalStat,
 } from '@/game/npc-rank';
 import type { Guest, Resources } from '@/game/types';
+import { formatUpkeep, getNpcUpkeep } from '@/game/npc-upkeep';
 
 const RESOURCE_LABELS: Record<keyof Resources, string> = {
   food: '식량',
@@ -38,11 +38,14 @@ const TRAIT_LABELS: Record<string, string> = {
   Thief: '절도 성향', Violent: '폭력 성향', Coward: '겁이 많음', Sickly: '허약함',
   Greedy: '탐욕적', Liar: '거짓말 성향', Alcoholic: '알코올 의존',
   Paranoid: '편집적', Noisy: '소란스러움',
+  SmallEater: '소식가', BigEater: '대식가', Thirsty: '물을 많이 마심',
+  Frugal: '절약형',
 };
 
 const NEGATIVE_TRAITS = new Set([
   'Thief', 'Violent', 'Coward', 'Sickly', 'Greedy', 'Liar', 'Alcoholic',
   'Paranoid', 'Noisy', 'Tired', 'Calculating', 'Unknown',
+  'BigEater', 'Thirsty',
 ]);
 
 function contributionLines(guest: Guest, negotiated = false) {
@@ -122,7 +125,7 @@ export function NpcProfileLedger({
   const [tab, setTab] = useState<'life' | 'skills' | 'traits'>('life');
   const [explained, setExplained] = useState<ProfessionalStat | null>(null);
   const contribution = contributionLines(guest, negotiated);
-  const profile = communityProfile(guest);
+  const upkeep = getNpcUpkeep(guest);
   const stats = getProfessionalStats(guest);
   const traits = visibleTraits(guest);
   return (
@@ -162,8 +165,8 @@ export function NpcProfileLedger({
             </section>
             <section>
               <h4>일일 유지비</h4>
-              <p>식량 −{profile.consumption.food}</p>
-              <p>물 −{profile.consumption.water}</p>
+              <p>식량 −{formatUpkeep(upkeep.food)}</p>
+              <p>물 −{formatUpkeep(upkeep.water)}</p>
               <small>배급과 객실 효과에 따라 실제 소비가 달라집니다.</small>
             </section>
           </div>
@@ -221,7 +224,7 @@ export function NpcCompactRecord({
   onExplain: (owner: string, stat: ProfessionalStat) => void;
 }) {
   const contribution = contributionLines(guest, negotiated);
-  const profile = communityProfile(guest);
+  const upkeep = getNpcUpkeep(guest);
   const stats = getProfessionalStats(guest).slice(0, 2);
   const traits = visibleTraits(guest).slice(0, 2);
   return (
@@ -232,7 +235,7 @@ export function NpcCompactRecord({
       </section>
       <section>
         <h4>일일 유지비</h4>
-        <p>식량 −{profile.consumption.food} · 물 −{profile.consumption.water}</p>
+        <p>식량 −{formatUpkeep(upkeep.food)} · 물 −{formatUpkeep(upkeep.water)}</p>
       </section>
       <section>
         <h4>전문 능력</h4>

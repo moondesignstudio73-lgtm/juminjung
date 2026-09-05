@@ -1,6 +1,6 @@
 import { getAffectedRoomNumbers, getDiseaseChance } from "./aura-effect-manager.ts";
 import { isVulnerableResident } from "./resident-vulnerability.ts";
-import { communityProfile } from './community-data.ts';
+import { getNpcUpkeep } from './npc-upkeep.ts';
 import type { AuraMetric, EventFlags, Guest, Room, WorldState } from "./types.ts";
 
 export type AuraNightResolution = {
@@ -30,6 +30,7 @@ export type AuraNightResolution = {
 };
 
 const clamp = (value:number,min=0,max=100) => Math.max(min,Math.min(max,value));
+const round1 = (value:number) => Math.round(value*10)/10;
 const effectsFor = (room:Room|undefined, metric:AuraMetric) => room ? [...room.permanentEffects,...room.temporaryEffects].filter((effect)=>effect.metric===metric) : [];
 const additiveValue = (room:Room|undefined, metric:AuraMetric) => effectsFor(room,metric).reduce((sum,effect)=>sum+effect.value,0);
 const diseaseBaseChance:Record<WorldState,number> = {STABLE:2,UNREST:6,COLLAPSE:12,CRITICAL:20,END_STAGE:28};
@@ -69,15 +70,15 @@ export function getNightFoodDemandBreakdown(rooms:Room[], guests:Guest[], flags:
   const staying = guests.filter((guest)=>guest.status==="STAYING"&&guest.currentRoomNumber!==null);
   const foodUnits = staying.reduce((total,guest)=>{
     const room = rooms.find((candidate)=>candidate.roomNumber===guest.currentRoomNumber);
-    return total+Math.max(.25,communityProfile(guest).consumption.food*(1+additiveValue(room,"foodUse")/100));
+    return total+Math.max(.2,getNpcUpkeep(guest).food*(1+additiveValue(room,"foodUse")/100));
   },0);
-  const demandBeforePrograms = Math.ceil(foodUnits);
+  const demandBeforePrograms = round1(foodUnits);
   const communityKitchenSaving = flags.noah_community_kitchen===true&&staying.length>=2 ? Math.min(COMMUNITY_KITCHEN_FOOD_SAVING,demandBeforePrograms) : 0;
   const rationLabSaving = flags.noah_ration_system===true&&communityKitchenSaving===0
     ? Math.min(NOAH_RATION_LAB_MAX_FOOD_SAVING,Math.floor(demandBeforePrograms/NOAH_RATION_LAB_DEMAND_PER_SAVING))
     : 0;
   const saving = communityKitchenSaving+rationLabSaving;
-  return {demand:demandBeforePrograms-saving,saving,communityKitchenSaving,rationLabSaving};
+  return {demand:round1(Math.max(0,demandBeforePrograms-saving)),saving,communityKitchenSaving,rationLabSaving};
 }
 
 export function getNightFoodDemand(rooms:Room[], guests:Guest[], flags:EventFlags={}):{demand:number;saving:number} {
@@ -88,7 +89,7 @@ export function getNightFoodDemand(rooms:Room[], guests:Guest[], flags:EventFlag
 export function getNightWaterDemand(guests:Guest[], flags:EventFlags={}):{demand:number;saving:number} {
   const residentCount = guests.filter((guest)=>guest.status==="STAYING"&&guest.currentRoomNumber!==null).length;
   const saving = flags.rosa_household_network===true&&residentCount>=2 ? Math.min(HOUSEHOLD_NETWORK_WATER_SAVING,residentCount) : 0;
-  return {demand:Math.max(0,guests.filter(g=>g.status==='STAYING'&&g.currentRoomNumber!==null).reduce((sum,g)=>sum+communityProfile(g).consumption.water,0)-saving),saving};
+  return {demand:round1(Math.max(0,guests.filter(g=>g.status==='STAYING'&&g.currentRoomNumber!==null).reduce((sum,g)=>sum+getNpcUpkeep(g).water,0)-saving)),saving};
 }
 
 export function resolveAuraNight(rooms:Room[], guests:Guest[], day:number, worldState:WorldState, baseDiseaseChance=diseaseBaseChance[worldState], flags:EventFlags={}, diseaseChanceAdjustment=0):AuraNightResolution {
